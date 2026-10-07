@@ -32,6 +32,8 @@ func TestRunExitCodes(t *testing.T) {
 				address = free.Addr().String()
 				free.Close()
 			}
+			t.Setenv("DATABASE_URL", "postgres://test:example@127.0.0.1:5432/hostelhive?sslmode=disable")
+			t.Setenv("DATABASE_CHECK_TIMEOUT", "1s")
 			t.Setenv("APP_ENV", tc.environment)
 			t.Setenv("HTTP_ADDR", address)
 			for _, key := range []string{"HTTP_READ_HEADER_TIMEOUT", "HTTP_READ_TIMEOUT", "HTTP_WRITE_TIMEOUT", "HTTP_IDLE_TIMEOUT", "HTTP_SHUTDOWN_TIMEOUT"} {

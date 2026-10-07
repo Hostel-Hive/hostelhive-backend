@@ -20,7 +20,7 @@ func TestRunReportsBindFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer listener.Close()
-	cfg := config.Config{HTTPAddr: listener.Addr().String()}
+	cfg := config.Config{HTTPAddr: listener.Addr().String(), DatabaseURL: "postgres://test:example@127.0.0.1:5432/hostelhive?sslmode=disable", DatabaseCheckTimeout: time.Second}
 	err = Run(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err == nil || !strings.Contains(err.Error(), "listen on HTTP_ADDR") {
 		t.Fatalf("expected bind error, got %v", err)

@@ -1,13 +1,13 @@
 package server
 
 import (
+	"context"
 	"io"
 	"net/http"
+	"time"
 )
 
-// Readiness currently covers application startup only. Register dependency
-// checks here when database integration is implemented.
-func newHandler() http.Handler {
+func newHandler(ping func(context.Context) error, timeout time.Duration) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -15,7 +15,14 @@ func newHandler() http.Handler {
 		_, _ = io.WriteString(w, "{\"status\":\"ok\"}\n")
 	})
 	mux.HandleFunc("GET /ready", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		defer cancel()
 		w.Header().Set("Content-Type", "application/json")
+		if err := ping(ctx); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = io.WriteString(w, "{\"status\":\"not_ready\"}\n")
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, "{\"status\":\"ready\"}\n")
 	})

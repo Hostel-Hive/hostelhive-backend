@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -11,13 +12,15 @@ import (
 )
 
 type Config struct {
-	Environment       string
-	HTTPAddr          string
-	ReadHeaderTimeout time.Duration
-	ReadTimeout       time.Duration
-	WriteTimeout      time.Duration
-	IdleTimeout       time.Duration
-	ShutdownTimeout   time.Duration
+	DatabaseURL          string
+	DatabaseCheckTimeout time.Duration
+	Environment          string
+	HTTPAddr             string
+	ReadHeaderTimeout    time.Duration
+	ReadTimeout          time.Duration
+	WriteTimeout         time.Duration
+	IdleTimeout          time.Duration
+	ShutdownTimeout      time.Duration
 }
 
 // Load applies documented defaults to unset variables. Explicit empty or
@@ -36,6 +39,7 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 	cfg := Config{
 		Environment: value("APP_ENV", "development"),
 		HTTPAddr:    value("HTTP_ADDR", "127.0.0.1:8080"),
+		DatabaseURL: value("DATABASE_URL", ""),
 	}
 	switch cfg.Environment {
 	case "development", "test", "production":
@@ -63,12 +67,18 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		{"HTTP_WRITE_TIMEOUT", "15s", &cfg.WriteTimeout},
 		{"HTTP_IDLE_TIMEOUT", "60s", &cfg.IdleTimeout},
 		{"HTTP_SHUTDOWN_TIMEOUT", "10s", &cfg.ShutdownTimeout},
+		{"DATABASE_CHECK_TIMEOUT", "2s", &cfg.DatabaseCheckTimeout},
 	} {
 		d, err := time.ParseDuration(value(setting.key, setting.fallback))
 		if err != nil || d <= 0 {
 			return Config{}, fmt.Errorf("%s must be a positive duration, such as 5s", setting.key)
 		}
 		*setting.target = d
+	}
+	u, err := url.Parse(cfg.DatabaseURL)
+	if err != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") ||
+		u.Hostname() == "" || u.User == nil || u.User.Username() == "" || strings.Trim(u.Path, "/") == "" {
+		return Config{}, fmt.Errorf("DATABASE_URL must be a PostgreSQL URL with host, user and database")
 	}
 	return cfg, nil
 }
