@@ -278,7 +278,7 @@ go build ./...
 
 The selected baseline uses Firebase Authentication (ADR-002), containerized PostgreSQL (ADR-003), backend-published Firebase RTDB projections (ADR-004) and Nginx HTTPS routing (ADR-005). This scaffold does not issue local user JWTs or store user passwords. ADRs live in the continued documents repository: https://github.com/Hostel-Hive/Design-and-Development-Project.
 
-Account provisioning, role-specific authorization, scanner contracts, business modules, Docker infrastructure and CI are separate tickets. Add packages when their functionality is implemented instead of creating empty domain directories.
+Account provisioning, endpoint-specific permissions, scanner contracts, business modules, Docker infrastructure and CI are separate tickets. Add packages when their functionality is implemented instead of creating empty domain directories.
 
 When using the port override above, check http://127.0.0.1:18080/health and http://127.0.0.1:18080/ready.
 
@@ -374,3 +374,63 @@ An optional real PostgreSQL lookup test uses TEST_DATABASE_URL against a databas
 migrated to version 2; its fixture is rolled back automatically. Live Firebase
 valid/expired/revoked/disabled token checks require the project's credentials and
 test identities and are not claimed by the offline tests.
+
+## Role-based authorization (issue #18)
+
+RequireRoles restricts a handler to explicitly listed local PostgreSQL roles.
+Wrap authentication around authorization so that the verified, active local
+account is loaded before its role is checked:
+
+```go
+// Illustrative registration for a future business endpoint; not a live route.
+mux.Handle("GET /api/v1/warden-example", authenticate(
+    authentication.RequireRoles(
+        authentication.RoleWarden,
+        authentication.RoleSubWarden,
+    )(wardenHandler),
+))
+```
+
+Here authenticate is the middleware constructed with authentication.Middleware,
+and wardenHandler is that endpoint's http.Handler. Authentication runs first,
+then RequireRoles, then the business handler if the role is allowed.
+
+Supported constants map to migration 2: RoleAdmin (admin), RoleWarden (warden),
+RoleSubWarden (sub_warden), RoleSecurityStaff (security_staff), RoleStudent (student).
+An admin is permitted only when RoleAdmin is explicitly listed. Roles are exact
+and case-sensitive; there is no implicit role hierarchy. Empty policies or any
+unsupported configured role deny access to all authenticated callers.
+
+| Condition | Result |
+| --- | --- |
+| No authenticated account in the request context | 401 unauthorized |
+| Current local role is not in the endpoint's allowed roles | 403 forbidden |
+| Inactive account or invalid role/policy | 403 forbidden |
+| Active account with an explicitly allowed role | Business handler runs |
+
+Denials use JSON with Cache-Control: no-store. Client query/body/header roles
+and Firebase custom claims do not override the verified local account. Every
+protected request rechecks PostgreSQL through authentication, so role changes
+and deactivation take effect on the next request without requiring a new token.
+Resource ownership (for example, a student accessing only their own records)
+remains a separate check inside each business feature.
+
+This ticket adds reusable authorization middleware and its tests. It does not
+invent business routes or permission assignments. GET /api/v1/me remains
+available to every authenticated active account; /health and /ready remain public.
+Business tickets must declare their role policies when registering endpoints.
+
+Run the role authorization matrix and authentication integration tests:
+
+```powershell
+go test -count=1 -timeout=30s -v ./internal/authentication
+go vet ./...
+go test -count=1 -timeout=30s ./...
+go build -o ./bin/hostelhive-server.exe ./cmd/server
+```
+
+The deterministic tests exercise all five roles, policies with multiple roles,
+missing/failed authentication, denied requests never reaching business handlers,
+unsafe or empty policies, caller mutation of a policy, client role spoofing and
+fresh local role/active-state changes. No Firebase credentials are needed for
+these tests. No new environment variables or database migrations are required.
