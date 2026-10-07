@@ -32,23 +32,49 @@ try {
     }
     $env:DATABASE_URL = "postgres://hostelhive:$($env:POSTGRES_PASSWORD)@$address/hostelhive?sslmode=disable"
     $schemaSQL = "SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'hostelhive')::text;"
+    $usersSQL = "SELECT to_regclass('hostelhive.users') IS NOT NULL;"
+    $functionSQL = "SELECT to_regprocedure('hostelhive.users_touch_updated_at()') IS NOT NULL;"
+    $versionSQL = "SELECT version::text || ': ' || dirty::text FROM public.schema_migrations;"
+    $latestVersion = (Get-ChildItem -LiteralPath (Join-Path $repoRoot 'migrations') -Filter '*.up.sql' |
+        ForEach-Object { [long]($_.Name.Split('_')[0]) } | Measure-Object -Maximum).Maximum
+    $expectedVersion = "$($latestVersion): false"
+    $accountTests = Get-Content -LiteralPath (Join-Path $repoRoot 'tests/sql/user_accounts.sql') -Raw
+
     Assert-SQL $schemaSQL 'false'
     Push-Location -LiteralPath ([IO.Path]::GetTempPath())
     try { & (Join-Path $PSScriptRoot 'migrate.ps1') up } finally { Pop-Location }
     Assert-SQL $schemaSQL 'true'
-    Assert-SQL "SELECT version::text || ': ' || dirty::text FROM public.schema_migrations;" '1: false'
+    Assert-SQL $usersSQL 't'
+    Assert-SQL $versionSQL $expectedVersion
     & (Join-Path $PSScriptRoot 'migrate.ps1') version
-    # Applying the same migration again must leave schema and version unchanged.
+
+    $accountTests | & docker exec -i $container psql -U hostelhive -d hostelhive -v ON_ERROR_STOP=1
+    if ($LASTEXITCODE -ne 0) { throw 'User-account constraints failed.' }
+    Assert-SQL 'SELECT count(*)::text FROM hostelhive.users;' '0'
     & (Join-Path $PSScriptRoot 'migrate.ps1') up
-    Assert-SQL "SELECT version::text || ': ' || dirty::text FROM public.schema_migrations;" '1: false'
+    Assert-SQL $versionSQL $expectedVersion
+
+    # Rollback migration 2 while preserving the previously applied baseline.
+    & (Join-Path $PSScriptRoot 'migrate.ps1') down
+    Assert-SQL $schemaSQL 'true'
+    Assert-SQL $usersSQL 'f'
+    Assert-SQL $functionSQL 'f'
+    Assert-SQL $versionSQL '1: false'
+
+    # Upgrade an existing version-1 database and verify constraints again.
+    & (Join-Path $PSScriptRoot 'migrate.ps1') up
+    Assert-SQL $versionSQL $expectedVersion
+    $accountTests | & docker exec -i $container psql -U hostelhive -d hostelhive -v ON_ERROR_STOP=1
+    if ($LASTEXITCODE -ne 0) { throw 'User-account constraints failed after reapply.' }
+
+    & (Join-Path $PSScriptRoot 'migrate.ps1') down
     & (Join-Path $PSScriptRoot 'migrate.ps1') down
     Assert-SQL $schemaSQL 'false'
     Assert-SQL 'SELECT count(*)::text FROM public.schema_migrations;' '0'
-    Push-Location -LiteralPath ([IO.Path]::GetTempPath())
-    try { & (Join-Path $PSScriptRoot 'migrate.ps1') up } finally { Pop-Location }
-    Assert-SQL $schemaSQL 'true'
-    Assert-SQL "SELECT version::text || ': ' || dirty::text FROM public.schema_migrations;" '1: false'
-    Write-Output 'PASS: apply, version, repeated apply, rollback and reapply.'
+    & (Join-Path $PSScriptRoot 'migrate.ps1') up
+    Assert-SQL $usersSQL 't'
+    Assert-SQL $versionSQL $expectedVersion
+    Write-Output 'PASS: user-account constraints, version-1 upgrade, apply, rollback and reapply.'
 } finally {
     if ($created) {
         & docker rm -f -v $container | Out-Null
