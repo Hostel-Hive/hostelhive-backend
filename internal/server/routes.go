@@ -5,9 +5,11 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/Hostel-Hive/hostelhive-backend/internal/authentication"
 )
 
-func newHandler(ping func(context.Context) error, timeout time.Duration) http.Handler {
+func newHandler(ping func(context.Context) error, timeout time.Duration, protected ...func(http.Handler) http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -26,5 +28,8 @@ func newHandler(ping func(context.Context) error, timeout time.Duration) http.Ha
 		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, "{\"status\":\"ready\"}\n")
 	})
+	if len(protected) == 1 {
+		mux.Handle("GET /api/v1/me", protected[0](http.HandlerFunc(authentication.Me)))
+	}
 	return mux
 }

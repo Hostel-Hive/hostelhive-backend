@@ -12,15 +12,17 @@ import (
 )
 
 type Config struct {
-	DatabaseURL          string
-	DatabaseCheckTimeout time.Duration
-	Environment          string
-	HTTPAddr             string
-	ReadHeaderTimeout    time.Duration
-	ReadTimeout          time.Duration
-	WriteTimeout         time.Duration
-	IdleTimeout          time.Duration
-	ShutdownTimeout      time.Duration
+	FirebaseProjectID     string
+	AuthenticationTimeout time.Duration
+	DatabaseURL           string
+	DatabaseCheckTimeout  time.Duration
+	Environment           string
+	HTTPAddr              string
+	ReadHeaderTimeout     time.Duration
+	ReadTimeout           time.Duration
+	WriteTimeout          time.Duration
+	IdleTimeout           time.Duration
+	ShutdownTimeout       time.Duration
 }
 
 // Load applies documented defaults to unset variables. Explicit empty or
@@ -37,9 +39,13 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		return fallback
 	}
 	cfg := Config{
-		Environment: value("APP_ENV", "development"),
-		HTTPAddr:    value("HTTP_ADDR", "127.0.0.1:8080"),
-		DatabaseURL: value("DATABASE_URL", ""),
+		Environment:       value("APP_ENV", "development"),
+		HTTPAddr:          value("HTTP_ADDR", "127.0.0.1:8080"),
+		DatabaseURL:       value("DATABASE_URL", ""),
+		FirebaseProjectID: value("FIREBASE_PROJECT_ID", ""),
+	}
+	if cfg.FirebaseProjectID == "" || strings.ContainsAny(cfg.FirebaseProjectID, " \t\r\n/") {
+		return Config{}, fmt.Errorf("FIREBASE_PROJECT_ID must be a nonempty project ID without whitespace or slashes")
 	}
 	switch cfg.Environment {
 	case "development", "test", "production":
@@ -68,6 +74,7 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		{"HTTP_IDLE_TIMEOUT", "60s", &cfg.IdleTimeout},
 		{"HTTP_SHUTDOWN_TIMEOUT", "10s", &cfg.ShutdownTimeout},
 		{"DATABASE_CHECK_TIMEOUT", "2s", &cfg.DatabaseCheckTimeout},
+		{"AUTH_TIMEOUT", "5s", &cfg.AuthenticationTimeout},
 	} {
 		d, err := time.ParseDuration(value(setting.key, setting.fallback))
 		if err != nil || d <= 0 {

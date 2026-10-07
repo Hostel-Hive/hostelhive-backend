@@ -6,6 +6,9 @@ import (
 	"log/slog"
 	"net"
 	"testing"
+
+	"github.com/Hostel-Hive/hostelhive-backend/internal/config"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/server"
 )
 
 func TestRunExitCodes(t *testing.T) {
@@ -32,6 +35,7 @@ func TestRunExitCodes(t *testing.T) {
 				address = free.Addr().String()
 				free.Close()
 			}
+			t.Setenv("FIREBASE_PROJECT_ID", "hostelhive-test")
 			t.Setenv("DATABASE_URL", "postgres://test:example@127.0.0.1:5432/hostelhive?sslmode=disable")
 			t.Setenv("DATABASE_CHECK_TIMEOUT", "1s")
 			t.Setenv("APP_ENV", tc.environment)
@@ -41,7 +45,11 @@ func TestRunExitCodes(t *testing.T) {
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-			if code := run(ctx, slog.New(slog.NewTextHandler(io.Discard, nil))); code != tc.want {
+			start := server.Run
+			if tc.name == "clean_shutdown" {
+				start = func(context.Context, config.Config, *slog.Logger) error { return nil }
+			}
+			if code := runWithServer(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), start); code != tc.want {
 				t.Fatalf("exit code = %d, want %d", code, tc.want)
 			}
 		})
