@@ -11,7 +11,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL startup failed.' }
     $ready = $false
     for ($n=0; $n -lt 30; $n++) {
-        & docker exec $container pg_isready -U hostelhive -d hostelhive 2>$null | Out-Null
+        & docker exec $container pg_isready -h 127.0.0.1 -U hostelhive -d hostelhive 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) { $ready=$true; break }
         Start-Sleep -Milliseconds 500
     }
@@ -23,7 +23,7 @@ try {
     $env:TEST_DATABASE_URL = $env:DATABASE_URL
     Push-Location -LiteralPath $repoRoot
     try {
-        & go test -count=1 -timeout=45s -v ./internal/students
+        & go test -count=1 -timeout=45s -v ./tests/integration/student
         if ($LASTEXITCODE -ne 0) { throw 'Student integration tests failed.' }
     } finally { Pop-Location }
 } finally {

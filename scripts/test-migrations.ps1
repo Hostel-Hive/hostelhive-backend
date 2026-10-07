@@ -21,7 +21,7 @@ try {
     $created = $true
     $ready = $false
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
-        & docker exec $container pg_isready -U hostelhive -d hostelhive 2>$null | Out-Null
+        & docker exec $container pg_isready -h 127.0.0.1 -U hostelhive -d hostelhive 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) { $ready = $true; break }
         Start-Sleep -Milliseconds 500
     }
@@ -38,7 +38,7 @@ try {
     $latestVersion = (Get-ChildItem -LiteralPath (Join-Path $repoRoot 'migrations') -Filter '*.up.sql' |
         ForEach-Object { [long]($_.Name.Split('_')[0]) } | Measure-Object -Maximum).Maximum
     $expectedVersion = "$($latestVersion): false"
-    $accountTests = Get-Content -LiteralPath (Join-Path $repoRoot 'tests/sql/user_accounts.sql') -Raw
+    $accountTests = Get-Content -LiteralPath (Join-Path $repoRoot 'tests/migration/user_accounts.sql') -Raw
 
     Assert-SQL $schemaSQL 'false'
     Push-Location -LiteralPath ([IO.Path]::GetTempPath())

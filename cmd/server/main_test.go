@@ -7,8 +7,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/Hostel-Hive/hostelhive-backend/internal/app"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/config"
-	"github.com/Hostel-Hive/hostelhive-backend/internal/server"
 )
 
 func TestRunExitCodes(t *testing.T) {
@@ -45,7 +45,7 @@ func TestRunExitCodes(t *testing.T) {
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-			start := server.Run
+			start := app.Run
 			if tc.name == "clean_shutdown" {
 				start = func(context.Context, config.Config, *slog.Logger) error { return nil }
 			}
