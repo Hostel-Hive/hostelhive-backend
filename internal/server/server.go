@@ -8,7 +8,9 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"time"
 
+	"github.com/Hostel-Hive/hostelhive-backend/internal/accountmanagement"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/authentication"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/config"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/database"
@@ -32,8 +34,17 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	}
 	protected := authentication.Middleware(authentication.NewVerifier(firebaseClient), authentication.NewPostgresAccounts(pool), cfg.AuthenticationTimeout)
 	userService := provisioning.NewService(provisioning.NewPostgresRepository(pool), provisioning.NewFirebaseIdentities(firebaseClient))
+	managementStore := accountmanagement.NewStore(pool)
+	revoker := accountmanagement.NewFirebaseRevoker(firebaseClient)
+	workerCtx, stopWorker := context.WithCancel(ctx)
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+		managementStore.RunRetries(workerCtx, revoker, cfg.AccountManagementTimeout, 30*time.Second)
+	}()
+	defer func() { stopWorker(); <-workerDone }()
 	srv := &http.Server{
-		Handler:           newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, provisioning.Handler(userService, cfg.ProvisioningTimeout)),
+		Handler:           newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, provisioning.Handler(userService, cfg.ProvisioningTimeout), accountmanagement.NewAPI(managementStore, revoker, cfg.AccountManagementTimeout)),
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
