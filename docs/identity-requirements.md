@@ -27,6 +27,7 @@ Firebase authentication security equivalence and project password/abuse settings
 must be confirmed against ADR-002 and the course requirements.
 
 Next audit student FR006–FR009 against the existing implementation, including
-image support and search/filter. Resolve the SRS Warden versus SDS Admin
-permission discrepancy before changing student access rules. Bulk import and
+image support and search/filter. The user resolved the SRS requirement-table Warden versus UC003 Admin
+permission discrepancy on 7 October 2026 by selecting Admin and Warden;
+issue #30 implements and documents that policy. Bulk import and
 self-service are not assumed requirements without an agreed source.

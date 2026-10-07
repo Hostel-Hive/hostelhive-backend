@@ -842,7 +842,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/v1/students/$($student.studen
 ```
 
 Before deletion, repeat the original POST with the same user_id/index_no for 409,
-and test with a non-admin token for 403. Never include tokens or real guardian
+and test with a Student or other non-staff token for 403. Never include tokens or real guardian
 information in issue comments. Use fictional profile details for verification.
 
 ```powershell
@@ -917,3 +917,25 @@ The account integration script uses disposable PostgreSQL and mocked Firebase
 responses; SDK transport tests exercise the pinned Firebase SDK without network
 credentials. Real Firebase sign-in and teammate review remain manual gates.
 See [identity requirements](docs/identity-requirements.md) for module readiness.
+
+## Student profile images (issue #30)
+
+Admin and Warden can manage student profiles and images under the agreed
+7 October 2026 permission decision. Other roles remain denied. This does not
+grant Warden access to administrator identity/account-management endpoints.
+
+Migration 000006 supports private Cloudflare R2 image upload, retrieval,
+replacement/removal and durable cleanup. JPEG/PNG images are validated and
+re-encoded. Uploads are limited to 5 MiB, 4096 pixels per dimension and 12 million
+pixels. `profile_image_url` is an authenticated API path, not a public R2 URL.
+
+R2 defaults to disabled. Set `R2_ENABLED=true`, `R2_ACCOUNT_ID`, `R2_BUCKET`,
+`R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in the server terminal to enable it.
+Credentials must stay outside Git. Apply migrations before running the updated
+server even when R2 is disabled; existing student queries now use migration 6.
+Image endpoints return 503 when disabled; other endpoints remain available.
+
+See [student image setup and verification](docs/student-images.md) for complete
+PowerShell commands, API/error contracts, cleanup/retry behavior and permission
+verification. Automated lifecycle tests run with `scripts/test-student-profiles.ps1`.
+Live R2 verification and teammate review are required before closing issue #30.

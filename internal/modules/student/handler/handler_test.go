@@ -99,14 +99,14 @@ func request(h http.Handler, method, path, body string, token bool) *httptest.Re
 
 func body(v any) string { b, _ := json.Marshal(v); return string(b) }
 
-func TestAllStudentRoutesRequireAdmin(t *testing.T) {
+func TestAllStudentRoutesRequireAdminOrWarden(t *testing.T) {
 	routes := []struct{ method, path, body string }{{"GET", "/api/v1/students", ""}, {"GET", "/api/v1/students/" + testID, ""}, {"POST", "/api/v1/students", body(sdto.CreateInput{UserID: testID, Details: validDetails()})}, {"PUT", "/api/v1/students/" + testID, body(validDetails())}, {"DELETE", "/api/v1/students/" + testID, ""}}
 	for _, role := range []string{"admin", "warden", "sub_warden", "security_staff", "student"} {
 		for _, r := range routes {
 			s := &fakeStore{}
 			w := request(handler(s, role, true), r.method, r.path, r.body, true)
 			want := 403
-			if role == "admin" {
+			if role == "admin" || role == "warden" {
 				want = 200
 				if r.method == "POST" {
 					want = 201
@@ -115,7 +115,7 @@ func TestAllStudentRoutesRequireAdmin(t *testing.T) {
 					want = 204
 				}
 			}
-			if w.Code != want || (role != "admin" && s.calls != 0) {
+			if w.Code != want || (role != "admin" && role != "warden" && s.calls != 0) {
 				t.Fatalf("%s %s %d", role, r.path, w.Code)
 			}
 			w = request(handler(&fakeStore{}, role, true), r.method, r.path, r.body, false)

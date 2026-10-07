@@ -18,7 +18,7 @@ type Store struct{ pool *pgxpool.Pool }
 
 func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
-const profileColumns = "s.student_id::text,s.user_id::text,s.index_no,s.full_name,s.faculty,s.year,s.contact_phone,u.email,u.is_active,s.created_at,s.updated_at"
+const profileColumns = "s.student_id::text,s.user_id::text,s.index_no,s.full_name,s.faculty,s.year,s.contact_phone,u.email,u.is_active,s.created_at,s.updated_at,s.profile_image_key"
 
 func dbError(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -33,9 +33,13 @@ func dbError(err error) error {
 
 func scan(row pgx.Row) (sdomain.Profile, error) {
 	var v sdomain.Profile
-	err := row.Scan(&v.StudentID, &v.UserID, &v.IndexNo, &v.FullName, &v.Faculty, &v.Year, &v.ContactPhone, &v.Email, &v.AccountActive, &v.CreatedAt, &v.UpdatedAt)
+	var imageKey *string
+	err := row.Scan(&v.StudentID, &v.UserID, &v.IndexNo, &v.FullName, &v.Faculty, &v.Year, &v.ContactPhone, &v.Email, &v.AccountActive, &v.CreatedAt, &v.UpdatedAt, &imageKey)
 	if err != nil {
 		return v, dbError(err)
+	}
+	if imageKey != nil {
+		v.ProfileImageURL = "/api/v1/students/" + v.StudentID + "/image"
 	}
 	return v, nil
 }
@@ -128,7 +132,7 @@ func (s *Store) begin(ctx context.Context, actor string) (pgx.Tx, error) {
 		return nil, sdomain.ErrUnavailable
 	}
 	var ok bool
-	err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM hostelhive.users WHERE firebase_uid=$1 AND role='admin' AND is_active)", actor).Scan(&ok)
+	err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM hostelhive.users WHERE firebase_uid=$1 AND role IN ('admin','warden') AND is_active)", actor).Scan(&ok)
 	if err != nil {
 		rollback(tx)
 		return nil, sdomain.ErrUnavailable
@@ -221,8 +225,13 @@ func (s *Store) Delete(ctx context.Context, actor, id string) error {
 		return err
 	}
 	defer rollback(tx)
+	// Queue private image deletion atomically with profile removal.
+	if _, err = tx.Exec(ctx, `UPDATE hostelhive.student_image_objects SET cleanup_at=clock_timestamp()
+ WHERE object_key=(SELECT profile_image_key FROM hostelhive.students WHERE student_id=$1)`, id); err != nil {
+		return sdomain.ErrUnavailable
+	}
 	// Keep the row and guardian relationships available for historical references.
-	tag, err := tx.Exec(ctx, `UPDATE hostelhive.students SET deleted_at=COALESCE(deleted_at,clock_timestamp()),
+	tag, err := tx.Exec(ctx, `UPDATE hostelhive.students SET profile_image_key=NULL,deleted_at=COALESCE(deleted_at,clock_timestamp()),
  deleted_by=COALESCE(deleted_by,(SELECT user_id FROM hostelhive.users WHERE firebase_uid=$2)) WHERE student_id=$1`, id, actor)
 	if err != nil {
 		return sdomain.ErrUnavailable
