@@ -1,5 +1,4 @@
-// Package server manages the HTTP server lifecycle. Business routes are added
-// by later tickets; unmatched requests currently return HTTP 404.
+// Package server manages the HTTP server lifecycle and operational endpoints.
 package server
 
 import (
@@ -19,7 +18,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		return fmt.Errorf("listen on HTTP_ADDR: %w", err)
 	}
 	srv := &http.Server{
-		Handler:           http.NewServeMux(),
+		Handler:           newHandler(),
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
