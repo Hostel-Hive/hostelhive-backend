@@ -132,7 +132,7 @@ Apply all pending migrations, then show the database migration version:
     .\scripts\migrate.ps1 up
     .\scripts\migrate.ps1 version
 
-After the baseline alone, version is 1. With account management and revocation tracking, the current version is 4. Repeating up reports no change.
+After the baseline alone, version is 1. With student profiles, the current version is 5. Repeating up reports no change.
 The wrapper pins version tracking to the tool-managed public.schema_migrations table, independently of the effective PostgreSQL search path.
 Before any migration is applied, version reports no migration.
 
@@ -167,8 +167,8 @@ as the test target and restores that environment variable when finished.
 
 Add future migrations as consecutive six-digit version pairs:
 
-    migrations/000005_description.up.sql
-    migrations/000005_description.down.sql
+    migrations/000006_description.up.sql
+    migrations/000006_description.down.sql
 
 Commit both files together. Do not edit an already applied migration; add a new
 version. Keep real credentials and generated migration executables out of Git.
@@ -207,7 +207,7 @@ Apply the migration to your local database with the existing commands:
     .\scripts\migrate.ps1 up
     .\scripts\migrate.ps1 version
 
-Expected current version: 4. In pgAdmin, refresh:
+Expected current version: 5. In pgAdmin, refresh:
 
     hostelhive database -> Schemas -> hostelhive -> Tables -> users
 
@@ -241,6 +241,7 @@ The application reads **process environment variables**, not `.env` files automa
 | AUTH_TIMEOUT | 5s | Positive Go duration for verification and account lookup |
 | PROVISIONING_TIMEOUT | 8s | Positive Go duration for provisioning after authentication |
 | ACCOUNT_MANAGEMENT_TIMEOUT | 8s | Positive Go duration for account management and each revocation retry |
+| STUDENT_PROFILE_TIMEOUT | 8s | Positive Go duration for student-profile operations after authentication |
 | GOOGLE_APPLICATION_CREDENTIALS | ADC | Optional path to an external service-account JSON file; otherwise use platform ADC |
 | DATABASE_CHECK_TIMEOUT | 2s | Positive Go duration; connection and readiness timeout |
 | APP_ENV | development | development, test, production |
@@ -558,7 +559,7 @@ go build -o ./bin/hostelhive-server.exe ./cmd/server
 .\bin\hostelhive-server.exe
 ```
 
-Expected migration version: 4. In a second PowerShell terminal, sign in to Firebase
+Expected migration version: 5. In a second PowerShell terminal, sign in to Firebase
 as the initialized administrator using the existing sign-in procedure and keep
 its ID token in $firebaseIDToken. Create a request key ONCE and enter a new user's
 email and private initial password (do not use the administrator's email):
@@ -708,3 +709,142 @@ transport with the pinned Firebase SDK and no live credentials; live Firebase
 deactivation still needs the manual checks above.
 
 Firebase session reference: https://firebase.google.com/docs/auth/admin/manage-sessions
+
+
+## Student profile management (issue #24)
+
+Traceability: FR006, FR007, FR009; SRS UC003 (PDF page 39); SDS Figure 7
+(PDF page 38), and normalized STUDENT/GUARDIAN entities. UC003 and Figure 7
+identify Admin as the actor: all profile routes require an active local `admin`.
+Wardens, sub-wardens, security staff and students cannot use these routes.
+Account credentials remain in Firebase; the linked users table supplies email
+and account status. Profile-image upload, QR generation and CSV import are
+separate features.
+
+Apply migration 5 before starting this version. `students.student_id` is an
+internal UUID; `index_no` is the human student identification/index number.
+Each profile has exactly one linked user account and one or more guardian rows.
+Create requires an existing active `student` account from provisioning; it
+does not create Firebase credentials or reactivate accounts. Updates keep the
+user_id immutable and preserve the student_id. Changes use transactions and
+recheck administrator privileges against current local account state.
+
+| Method/path | Behavior |
+| --- | --- |
+| POST /api/v1/students | Create profile; 201 with Location header |
+| GET /api/v1/students | Paginated summaries; 200 |
+| GET /api/v1/students/{student_id} | Full profile with guardians; 200 |
+| PUT /api/v1/students/{student_id} | Replace all editable profile fields and guardian list; 200 |
+| DELETE /api/v1/students/{student_id} | Soft-delete profile; empty body required; 204 |
+
+POST body (use the actual local user_id of an active student account):
+
+```json
+{
+  "user_id": "11111111-1111-1111-1111-111111111111",
+  "index_no": "SC/2026/001",
+  "full_name": "Test Student",
+  "faculty": "Science",
+  "year": 1,
+  "contact_phone": "0771234567",
+  "guardians": [
+    {"name": "Test Guardian", "relationship": "Parent", "contact_phone": "0779876543"}
+  ]
+}
+```
+
+PUT uses the same fields except user_id. Every editable field is required; this
+is a full replacement, not PATCH. Guardian rows are replaced atomically, so their
+UUIDs may change; do not use guardian IDs as external historical identifiers.
+Creating/updating returns the full profile including guardians. Listing excludes
+guardian details and supports `limit` (default 20, 1-100), `offset` (default 0,
+0-1000000), `q` (literal case-insensitive substring of index_no/full_name),
+`faculty` (case-insensitive exact match), and `year` (1-10). Filters combine with
+AND. Blank, duplicate or unknown query parameters are rejected. Summaries include
+email/account_active from the linked account. Sorting uses created_at/student_id;
+pagination is not a snapshot across concurrent changes.
+
+Implementation validation bounds: trimmed nonblank index_no up to 64 characters,
+full_name and guardian name up to 200, faculty up to 120, relationship up to 80;
+year 1-10; 1-10 guardians; phones 7-32 ASCII characters using digits, spaces,
+parentheses, plus or hyphen, with at least 7 digits. Unicode names are supported;
+control characters and invalid UTF-8 are rejected. These are implementation
+bounds rather than numeric limits specified in the SRS. Frontends must display
+these fields as escaped text. Payload limit 16 KiB; unknown JSON fields and extra
+JSON documents are rejected. STUDENT_PROFILE_TIMEOUT defaults to 8s; keep it plus
+AUTH_TIMEOUT below HTTP_WRITE_TIMEOUT with a margin.
+
+Deletion sets deleted_at/deleted_by and hides the profile from GET/list/update.
+It retains student/guardian rows and historical foreign-key references; index_no
+and user_id remain reserved even after deletion. Repeating DELETE returns 204;
+an unknown UUID returns 404. This is not irreversible data erasure or account
+deactivation. Use the account deactivation endpoint separately if access must be
+blocked. No profile restoration endpoint is implemented. Future attendance,
+allocation and leave features must reject archived profiles for new activity
+while retaining historical references. Migration rollback removes the new tables
+and their data; it is intended for disposable verification before rollout, with
+RESTRICT protecting future dependent tables.
+
+Other errors: 400 invalid_input, 401 unauthorized, 403 forbidden,
+409 duplicate_student (case-insensitive index or linked-account collision),
+409 active_student_account_required (missing/inactive/non-student account),
+503 student_profiles_unavailable. Responses use no-store and generic errors.
+
+### Local verification
+
+Stop the old server, set your existing database/Firebase environment settings,
+run migrations (expected version 5), rebuild and restart:
+
+```powershell
+.\scripts\migrate.ps1 up
+.\scripts\migrate.ps1 version
+go build -o ./bin/hostelhive-server.exe ./cmd/server
+.\bin\hostelhive-server.exe
+```
+
+In the other terminal use a fresh administrator ID token in $firebaseIDToken.
+Provision a NEW active student test account using POST /api/v1/users first;
+the test account deactivated in issue #22 cannot be used for profile creation.
+
+```powershell
+$adminHeaders = @{ Authorization = "Bearer $firebaseIDToken" }
+$studentAccountID = Read-Host 'Active student account user_id'
+$profileInput = @{
+    user_id = $studentAccountID
+    index_no = 'TEST-' + [Guid]::NewGuid().ToString('N').Substring(0,8)
+    full_name = 'Test Student'
+    faculty = 'Science'
+    year = 1
+    contact_phone = '0771234567'
+    guardians = @(@{ name='Test Guardian'; relationship='Parent'; contact_phone='0779876543' })
+}
+$student = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:18080/api/v1/students' -Headers $adminHeaders -ContentType 'application/json' -Body ($profileInput | ConvertTo-Json -Depth 5)
+$student | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/v1/students/$($student.student_id)" -Headers $adminHeaders
+Invoke-RestMethod -Uri 'http://127.0.0.1:18080/api/v1/students?faculty=Science&year=1&limit=10' -Headers $adminHeaders
+# Full update: omit the immutable account link.
+$profileInput.Remove('user_id')
+$profileInput.full_name = 'Updated Test Student'
+Invoke-RestMethod -Method Put -Uri "http://127.0.0.1:18080/api/v1/students/$($student.student_id)" -Headers $adminHeaders -ContentType 'application/json' -Body ($profileInput | ConvertTo-Json -Depth 5)
+Invoke-RestMethod -Method Delete -Uri "http://127.0.0.1:18080/api/v1/students/$($student.student_id)" -Headers $adminHeaders
+# Expect 404 after deletion:
+Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/v1/students/$($student.student_id)" -Headers $adminHeaders
+```
+
+Before deletion, repeat the original POST with the same user_id/index_no for 409,
+and test with a non-admin token for 403. Never include tokens or real guardian
+information in issue comments. Use fictional profile details for verification.
+
+```powershell
+go test ./...
+go vet ./...
+.\scripts\test-student-profiles.ps1
+.\scripts\test-migrations.ps1
+go build ./...
+```
+
+The student verification script creates its own disposable PostgreSQL container,
+applies migrations and runs CRUD, duplicate-race, account eligibility, filtering,
+transaction and history-reference tests. It never uses the developer database
+and removes its container. Unit tests cover all role/route combinations, input
+validation and safe responses. Live API checks remain a separate manual step.

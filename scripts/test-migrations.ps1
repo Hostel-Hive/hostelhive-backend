@@ -56,12 +56,14 @@ try {
 
     $provisioningSQL = "SELECT to_regclass('hostelhive.user_provisioning') IS NOT NULL;"
     if ($latestVersion -ge 3) { Assert-SQL $provisioningSQL 't' }
+    if ($latestVersion -ge 5) { Assert-SQL "SELECT to_regclass('hostelhive.students') IS NOT NULL AND to_regclass('hostelhive.guardians') IS NOT NULL;" 't' }
     if ($latestVersion -ge 4) { Assert-SQL "SELECT to_regclass('hostelhive.user_revocations') IS NOT NULL;" 't' }
 
     # Roll back newer migrations to exercise upgrading the existing baseline.
     for ($version = $latestVersion; $version -gt 1; $version--) {
         & (Join-Path $PSScriptRoot 'migrate.ps1') down
         Assert-SQL $versionSQL "$($version - 1): false"
+        if ($version -eq 5) { Assert-SQL "SELECT to_regclass('hostelhive.students') IS NOT NULL;" 'f'; Assert-SQL "SELECT to_regclass('hostelhive.guardians') IS NOT NULL;" 'f' }
         if ($version -eq 4) { Assert-SQL "SELECT to_regclass('hostelhive.user_revocations') IS NOT NULL;" 'f' }
         if ($version -eq 3) {
             Assert-SQL $provisioningSQL 'f'
@@ -78,6 +80,7 @@ try {
     $accountTests | & docker exec -i $container psql -U hostelhive -d hostelhive -v ON_ERROR_STOP=1
     if ($LASTEXITCODE -ne 0) { throw 'User-account constraints failed after upgrade.' }
     if ($latestVersion -ge 3) { Assert-SQL $provisioningSQL 't' }
+    if ($latestVersion -ge 5) { Assert-SQL "SELECT to_regclass('hostelhive.students') IS NOT NULL AND to_regclass('hostelhive.guardians') IS NOT NULL;" 't' }
     if ($latestVersion -ge 4) { Assert-SQL "SELECT to_regclass('hostelhive.user_revocations') IS NOT NULL;" 't' }
 
     # Verify complete rollback and fresh reapply with FK-safe ordering.
@@ -90,6 +93,7 @@ try {
     Assert-SQL $usersSQL 't'
     Assert-SQL $versionSQL $expectedVersion
     if ($latestVersion -ge 3) { Assert-SQL $provisioningSQL 't' }
+    if ($latestVersion -ge 5) { Assert-SQL "SELECT to_regclass('hostelhive.students') IS NOT NULL AND to_regclass('hostelhive.guardians') IS NOT NULL;" 't' }
     if ($latestVersion -ge 4) { Assert-SQL "SELECT to_regclass('hostelhive.user_revocations') IS NOT NULL;" 't' }
     Write-Output 'PASS: schema constraints, baseline upgrade, apply, rollback and reapply.'
 } finally {
