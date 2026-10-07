@@ -858,3 +858,62 @@ applies migrations and runs CRUD, duplicate-race, account eligibility, filtering
 transaction and history-reference tests. It never uses the developer database
 and removes its container. Unit tests cover all role/route combinations, input
 validation and safe responses. Live API checks remain a separate manual step.
+
+## Administrator account reactivation
+
+`POST /api/v1/users/{user_id}/activate` requires an active administrator's
+Firebase bearer ID token and an **empty request body**. It returns HTTP 200
+with the account object (`user_id`, `firebase_uid`, `email`, `role`, `is_active`).
+The role and password are preserved. Repeating an activation for an already
+active account returns its current state without changing Firebase again.
+
+The transaction rechecks the administrator and serializes local account writes.
+It rejects pending deactivation jobs (`409 revocation_pending`) and unfinished
+provisioning (`409 provisioning_incomplete`). For inactive accounts, Firebase
+UID and email must match the local account. Old sessions are revoked before
+Firebase sign-in is enabled; local access is enabled only after acknowledgment.
+Revocation-row locks prevent a retry worker from disabling a reactivated account.
+No new database migration is needed.
+
+Other responses: 400 `invalid_input`, 401 `unauthorized`, 403 `forbidden`,
+404 `not_found`, 409 `firebase_identity_missing` or `firebase_identity_mismatch`,
+and 503 `account_management_unavailable`. The operation uses
+`ACCOUNT_MANAGEMENT_TIMEOUT`. A provider failure leaves local access blocked.
+If Firebase succeeds but the database commit fails, local access remains blocked;
+retry the administrator request after recovery. Missing/mismatched identities
+require investigation; this endpoint never recreates credentials.
+
+### Verify reactivation locally
+
+Rebuild and restart the server using the startup instructions above. Use a
+disposable test account, not the only administrator. In the test terminal, obtain
+a fresh administrator ID token using the Firebase sign-in instructions, then:
+
+```powershell
+$adminHeaders = @{ Authorization = "Bearer $firebaseIDToken" }
+$managedUserID = Read-Host 'Disposable test account user_id'
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:18080/api/v1/users/$managedUserID/deactivate" -Headers $adminHeaders
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:18080/api/v1/users/$managedUserID/activate" -Headers $adminHeaders
+```
+
+If activation returns `revocation_pending`, wait for the revocation worker to
+finish and retry. Expect `is_active: True` with the same role. Repeat activation
+to verify idempotence. The test user's old sessions remain revoked: sign in
+again after activation and verify `/api/v1/me` with that user's new ID token.
+A non-admin token must receive 403; a request without a token must receive 401.
+Do not update `is_active` directly in SQL or manually enable Firebase to bypass
+the lifecycle. Keep tokens and passwords out of issue comments.
+
+Automated verification:
+
+```powershell
+go test ./...
+go vet ./...
+go build ./...
+.\scripts\test-account-management.ps1
+```
+
+The account integration script uses disposable PostgreSQL and mocked Firebase
+responses; SDK transport tests exercise the pinned Firebase SDK without network
+credentials. Real Firebase sign-in and teammate review remain manual gates.
+See [identity requirements](docs/identity-requirements.md) for module readiness.

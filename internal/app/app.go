@@ -48,7 +48,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		workers.RunUserRevocations(workerCtx, managementStore, revoker, cfg.AccountManagementTimeout, 30*time.Second)
 	}()
 	defer func() { stopWorker(); <-workerDone }()
-	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), cfg.AccountManagementTimeout))
+	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
 	student.Register(shandler.NewAPI(sservice.New(srepo.NewStore(pool)), cfg.StudentProfileTimeout), handler, protected)
 	srv := &http.Server{
 		Handler:           handler,
