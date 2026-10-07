@@ -19,6 +19,8 @@ internal/config/              Environment parsing and validation tests
 internal/database/            PostgreSQL connection pool and tests
 internal/server/              HTTP lifecycle and shutdown tests
 .env.example                  Supported settings (no secrets)
+migrations/                   Versioned SQL migration pairs
+scripts/                      Migration tool setup and verification
 go.mod                        Go module
 ```
 
@@ -57,7 +59,7 @@ development credentials. Use a different password for shared or deployed databas
 PowerShell:
 
     $env:POSTGRES_PASSWORD = 'local-dev-only'
-    docker run --name hostelhive-postgres -d -p 127.0.0.1:15432:5432 -e POSTGRES_PASSWORD -e POSTGRES_USER=hostelhive -e POSTGRES_DB=hostelhive postgres:16-alpine
+    docker run --name hostelhive-postgres -d -p 127.0.0.1:15433:5432 -e POSTGRES_PASSWORD -e POSTGRES_USER=hostelhive -e POSTGRES_DB=hostelhive postgres:16-alpine
     docker exec hostelhive-postgres pg_isready -U hostelhive -d hostelhive
 
 Wait for accepting connections. If the container already exists, use
@@ -66,7 +68,7 @@ when its database was first initialized. This creates no application tables.
 
 In the backend terminal, set:
 
-    $env:DATABASE_URL = 'postgres://hostelhive:local-dev-only@127.0.0.1:15432/hostelhive?sslmode=disable'
+    $env:DATABASE_URL = 'postgres://hostelhive:local-dev-only@127.0.0.1:15433/hostelhive?sslmode=disable'
     $env:HTTP_ADDR = '127.0.0.1:18080'
     go run ./cmd/server
 
@@ -102,8 +104,73 @@ With the backend running, verify an outage:
     docker start hostelhive-postgres
 
 Health stays 200 and readiness returns 503. After the database accepts connections
-again, /ready returns 200. Schema migrations and deployment Compose belong in
+again, /ready returns 200. Business table migrations and deployment Compose belong in
 separate tickets.
+
+## Database migrations
+
+Migrations use golang-migrate v4.20.1, pinned in .migrate-version.
+The CLI is installed separately into ignored bin/; the HTTP server does not
+apply migrations automatically.
+
+Official tool documentation:
+https://github.com/golang-migrate/migrate/tree/v4.20.1/cmd/migrate
+
+From the backend repository in PowerShell, install the pinned CLI:
+
+    .\scripts\install-migrate.ps1
+
+Go must be on PATH. This installs only the PostgreSQL-enabled migration tool.
+Afterwards, set DATABASE_URL in the same terminal using your local credentials.
+The local example uses port 15433 because 15432 was already occupied.
+
+    $env:DATABASE_URL = 'postgres://hostelhive:local-dev-only@127.0.0.1:15433/hostelhive?sslmode=disable'
+
+Apply all pending migrations, then show the database migration version:
+
+    .\scripts\migrate.ps1 up
+    .\scripts\migrate.ps1 version
+
+After the baseline, version prints 1. Repeating up reports no change.
+The wrapper pins version tracking to the tool-managed public.schema_migrations table, independently of the effective PostgreSQL search path.
+Before any migration is applied, version reports no migration.
+
+The baseline pair is:
+
+- migrations/000001_baseline.up.sql: creates the empty hostelhive schema.
+- migrations/000001_baseline.down.sql: removes that schema using RESTRICT.
+
+Business tables are added in later tickets. Use explicit schema-qualified names
+such as hostelhive.table_name in those migrations and database queries.
+The baseline does not change search_path settings. PostgreSQL may resolve the new schema via its default user-based search path; use explicit schema-qualified names.
+It intentionally fails if an unmanaged hostelhive schema already exists.
+
+Rollback one migration on a disposable development database:
+
+    .\scripts\migrate.ps1 down
+
+This wrapper rolls back exactly one version. The baseline rollback refuses to
+drop a non-empty schema. Roll back later migrations first; do not add CASCADE.
+Review down SQL before using it on a database containing data. A failed migration
+can leave the version dirty: inspect and repair the failed SQL/database before
+changing migration metadata. Do not blindly force a version.
+
+Verify the migration cycle in an isolated database:
+
+    .\scripts\test-migrations.ps1
+
+Docker Desktop must be running. The script creates a uniquely named temporary
+PostgreSQL 16 container, checks apply/version/repeated apply/rollback/reapply,
+and removes its container afterward. It never uses your existing DATABASE_URL
+as the test target and restores that environment variable when finished.
+
+Add future migrations as consecutive six-digit version pairs:
+
+    migrations/000002_description.up.sql
+    migrations/000002_description.down.sql
+
+Commit both files together. Do not edit an already applied migration; add a new
+version. Keep real credentials and generated migration executables out of Git.
 
 ## Configuration
 
@@ -150,6 +217,6 @@ go build ./...
 
 The selected baseline uses Firebase Authentication (ADR-002), containerized PostgreSQL (ADR-003), backend-published Firebase RTDB projections (ADR-004) and Nginx HTTPS routing (ADR-005). This scaffold does not issue local user JWTs or store user passwords. ADRs live in the continued documents repository: https://github.com/Hostel-Hive/Design-and-Development-Project.
 
-Database schema/migrations, Firebase verification and authorization, scanner contracts, business modules, Docker infrastructure and CI are separate tickets. Add packages when their functionality is implemented instead of creating empty domain directories.
+Business table migrations, Firebase verification and authorization, scanner contracts, business modules, Docker infrastructure and CI are separate tickets. Add packages when their functionality is implemented instead of creating empty domain directories.
 
 When using the port override above, check http://127.0.0.1:18080/health and http://127.0.0.1:18080/ready.
