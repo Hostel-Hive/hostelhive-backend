@@ -75,7 +75,7 @@ func TestStudentPostgresIntegration(t *testing.T) {
 	if _, err = s.Create(ctx, uids[0], wrong); !errors.Is(err, sdomain.ErrAccount) {
 		t.Fatal("staff account linked")
 	}
-	if _, err = s.Create(ctx, uids[4], wrong); !errors.Is(err, sdomain.ErrForbidden) {
+	if _, err = s.Create(ctx, uids[1], wrong); !errors.Is(err, sdomain.ErrForbidden) {
 		t.Fatal("stale actor accepted")
 	}
 	if _, err = pool.Exec(ctx, "UPDATE hostelhive.users SET is_active=false WHERE user_id=$1", userIDs[3]); err != nil {

@@ -63,13 +63,13 @@ func failure(w http.ResponseWriter, err error) {
 	}
 }
 
-func admin(w http.ResponseWriter, r *http.Request) (domain.Account, bool) {
+func staff(w http.ResponseWriter, r *http.Request) (domain.Account, bool) {
 	a, ok := authentication.AccountFromContext(r.Context())
 	if !ok {
 		reject(w, 401, "unauthorized")
 		return a, false
 	}
-	if !a.IsActive || a.Role != domain.RoleAdmin {
+	if !a.IsActive || (a.Role != domain.RoleAdmin && a.Role != domain.RoleWarden) {
 		reject(w, 403, "forbidden")
 		return a, false
 	}
@@ -141,7 +141,7 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 }
 
 func (a *API) List(w http.ResponseWriter, r *http.Request) {
-	if _, ok := admin(w, r); !ok {
+	if _, ok := staff(w, r); !ok {
 		return
 	}
 	f, err := parseFilter(r.URL.RawQuery)
@@ -160,7 +160,7 @@ func (a *API) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) Get(w http.ResponseWriter, r *http.Request) {
-	if _, ok := admin(w, r); !ok {
+	if _, ok := staff(w, r); !ok {
 		return
 	}
 	id := r.PathValue("studentID")
@@ -179,7 +179,7 @@ func (a *API) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) Create(w http.ResponseWriter, r *http.Request) {
-	actor, ok := admin(w, r)
+	actor, ok := staff(w, r)
 	if !ok {
 		return
 	}
@@ -199,7 +199,7 @@ func (a *API) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) Update(w http.ResponseWriter, r *http.Request) {
-	actor, ok := admin(w, r)
+	actor, ok := staff(w, r)
 	if !ok {
 		return
 	}
@@ -223,7 +223,7 @@ func (a *API) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) Delete(w http.ResponseWriter, r *http.Request) {
-	actor, ok := admin(w, r)
+	actor, ok := staff(w, r)
 	if !ok {
 		return
 	}
@@ -242,4 +242,4 @@ func (a *API) Delete(w http.ResponseWriter, r *http.Request) {
 	reply(w, 204, nil)
 }
 
-// Register attaches authentication and the explicit UC003 admin policy to every route.
+// Register attaches authentication and the explicit Admin/Warden policy to every route.
