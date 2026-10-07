@@ -35,7 +35,7 @@ func newHandler(ping func(context.Context) error, timeout time.Duration, protect
 	return mux
 }
 
-func newAPIHandler(ping func(context.Context) error, timeout time.Duration, authenticate func(http.Handler) http.Handler, users http.Handler, management ...*accountmanagement.API) http.Handler {
+func newAPIHandler(ping func(context.Context) error, timeout time.Duration, authenticate func(http.Handler) http.Handler, users http.Handler, management ...*accountmanagement.API) *http.ServeMux {
 	mux := newHandler(ping, timeout, authenticate)
 	mux.Handle("POST /api/v1/users", authenticate(authentication.RequireRoles(authentication.RoleAdmin)(users)))
 	if len(management) == 1 {

@@ -15,6 +15,7 @@ import (
 	"github.com/Hostel-Hive/hostelhive-backend/internal/config"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/database"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/provisioning"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/students"
 )
 
 func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
@@ -43,8 +44,10 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		managementStore.RunRetries(workerCtx, revoker, cfg.AccountManagementTimeout, 30*time.Second)
 	}()
 	defer func() { stopWorker(); <-workerDone }()
+	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, provisioning.Handler(userService, cfg.ProvisioningTimeout), accountmanagement.NewAPI(managementStore, revoker, cfg.AccountManagementTimeout))
+	students.NewAPI(students.NewStore(pool), cfg.StudentProfileTimeout).Register(handler, protected)
 	srv := &http.Server{
-		Handler:           newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, provisioning.Handler(userService, cfg.ProvisioningTimeout), accountmanagement.NewAPI(managementStore, revoker, cfg.AccountManagementTimeout)),
+		Handler:           handler,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
