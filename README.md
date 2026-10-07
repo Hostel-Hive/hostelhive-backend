@@ -2,14 +2,14 @@
 
 Go backend for HostelHive. Maintainer: Tasheen. Repository: https://github.com/Hostel-Hive/hostelhive-backend.
 
-This foundation implements environment configuration validation, a bounded HTTP server lifecycle, structured startup/error logging and graceful shutdown. Operational endpoints provide health and PostgreSQL readiness checks. Business routes are not registered yet.
+This foundation implements environment configuration validation, a bounded HTTP server lifecycle, structured startup/error logging and graceful shutdown. Operational endpoints provide health and PostgreSQL readiness checks. GET /api/v1/me verifies Firebase authentication and returns the current local account.
 
 ## Prerequisites
 
 - Go 1.27 or later: https://go.dev/dl/
 - Git
 
-PostgreSQL is now required for readiness. The backend uses pgxpool, with dependencies pinned in go.mod/go.sum. Firebase credentials are not needed yet.
+PostgreSQL is now required for readiness. The backend uses pgxpool, with dependencies pinned in go.mod/go.sum. Firebase Authentication now requires a Firebase project ID and Application Default Credentials (see below).
 
 ## Structure
 
@@ -17,6 +17,7 @@ PostgreSQL is now required for readiness. The backend uses pgxpool, with depende
 cmd/server/main.go             Startup, signals and process exit
 internal/config/              Environment parsing and validation tests
 internal/database/            PostgreSQL connection pool and tests
+internal/authentication/      Firebase verification, local accounts and middleware
 internal/server/              HTTP lifecycle and shutdown tests
 .env.example                  Supported settings (no secrets)
 migrations/                   Versioned SQL migration pairs
@@ -26,7 +27,7 @@ go.mod                        Go module
 
 ## Start locally
 
-Start the local database as described below, then set DATABASE_URL in the backend terminal. From the repository directory:
+Start the local database as described below, apply migrations through version 2, then configure DATABASE_URL and Firebase credentials in the backend terminal. From the repository directory:
 
 ```powershell
 go run ./cmd/server
@@ -236,6 +237,9 @@ The application reads **process environment variables**, not `.env` files automa
 | Variable | Default | Valid values |
 |---|---|---|
 | DATABASE_URL | Required; no default | PostgreSQL URL with host, user and database |
+| FIREBASE_PROJECT_ID | Required | Firebase project ID, not its display name |
+| AUTH_TIMEOUT | 5s | Positive Go duration for verification and account lookup |
+| GOOGLE_APPLICATION_CREDENTIALS | ADC | Optional path to an external service-account JSON file; otherwise use platform ADC |
 | DATABASE_CHECK_TIMEOUT | 2s | Positive Go duration; connection and readiness timeout |
 | APP_ENV | development | development, test, production |
 | HTTP_ADDR | 127.0.0.1:8080 | IP/localhost/empty host plus numeric port 1-65535; IPv6 uses brackets |
@@ -245,7 +249,7 @@ The application reads **process environment variables**, not `.env` files automa
 | HTTP_IDLE_TIMEOUT | 60s | Positive Go duration |
 | HTTP_SHUTDOWN_TIMEOUT | 10s | Positive Go duration |
 
-Unset optional variables use defaults. DATABASE_URL is required. Explicit empty/invalid variables cause an error identifying the setting and a nonzero exit before the server listens.
+Unset optional variables use defaults. DATABASE_URL and FIREBASE_PROJECT_ID are required. Explicit empty/invalid variables cause an error identifying the setting and a nonzero exit before the server listens.
 
 PowerShell override example:
 
@@ -274,6 +278,99 @@ go build ./...
 
 The selected baseline uses Firebase Authentication (ADR-002), containerized PostgreSQL (ADR-003), backend-published Firebase RTDB projections (ADR-004) and Nginx HTTPS routing (ADR-005). This scaffold does not issue local user JWTs or store user passwords. ADRs live in the continued documents repository: https://github.com/Hostel-Hive/Design-and-Development-Project.
 
-Business table migrations, Firebase verification and authorization, scanner contracts, business modules, Docker infrastructure and CI are separate tickets. Add packages when their functionality is implemented instead of creating empty domain directories.
+Account provisioning, role-specific authorization, scanner contracts, business modules, Docker infrastructure and CI are separate tickets. Add packages when their functionality is implemented instead of creating empty domain directories.
 
 When using the port override above, check http://127.0.0.1:18080/health and http://127.0.0.1:18080/ready.
+
+## Firebase authentication (issue #15)
+
+Protected requests follow ADR-002: the Firebase Admin SDK verifies the ID token
+with VerifyIDTokenAndCheckRevoked, then PostgreSQL supplies the current role and
+active status on every request. Client role/custom claims do not override local
+account state. No passwords, local JWT issuer or refresh/reset tokens are stored.
+The Firebase Auth emulator is rejected because it accepts unsigned tokens.
+
+Use your team's Firebase project and enable the chosen sign-in provider. For
+local development, obtain a service-account credential with permission to read
+Firebase Authentication users, so revocation and disabled-account checks work.
+Keep the JSON file outside this repository and never send it to a teammate via
+an issue, PR or chat. On deployed Google infrastructure, use workload credentials
+instead of a downloaded key when available.
+
+Official documentation:
+- https://firebase.google.com/docs/admin/setup
+- https://firebase.google.com/docs/auth/admin/verify-id-tokens
+- https://firebase.google.com/docs/auth/admin/manage-sessions
+
+Set these in the same PowerShell terminal as the server (replace placeholders):
+
+```powershell
+$env:FIREBASE_PROJECT_ID = 'YOUR_FIREBASE_PROJECT_ID'
+$env:GOOGLE_APPLICATION_CREDENTIALS = 'C:/private/hostelhive-service-account.json'
+$env:AUTH_TIMEOUT = '5s'
+$env:HTTP_ADDR = '127.0.0.1:18080'
+# Set DATABASE_URL as shown in the PostgreSQL section and apply migrations first.
+go run ./cmd/server
+```
+
+Startup fails with a generic, credential-safe error if Firebase initialization
+fails. Startup does not verify that credentials have sufficient remote IAM
+permissions; requests fail closed if verification cannot complete. Outbound
+access to Google token certificates, OAuth and Firebase Auth APIs is required.
+AUTH_TIMEOUT bounds both verification and the local account lookup; choose it
+below HTTP_WRITE_TIMEOUT. /health and /ready do not call Firebase.
+
+### Test the protected endpoint
+
+Without a token:
+
+```powershell
+curl.exe -i http://127.0.0.1:18080/api/v1/me
+```
+
+Expected: HTTP 401 and {"error":"unauthorized"}. In the web/mobile Firebase
+client, sign in and obtain an **ID token** (not a custom token). Keep it out of
+logs and GitHub. In a second terminal, use the token held in a local variable:
+
+```powershell
+# Set $firebaseIDToken locally to the client-issued ID token.
+Invoke-RestMethod -Uri 'http://127.0.0.1:18080/api/v1/me' -Headers @{ Authorization = "Bearer $firebaseIDToken" }
+```
+
+The matching row in hostelhive.users must already exist and be active. A Firebase
+identity alone receives HTTP 403; this ticket does not provision or activate
+accounts automatically. Account provisioning is a separate ticket. For live
+verification, use a dedicated test identity and its approved local account.
+
+Successful JSON contains user_id, firebase_uid, email, role and is_active. Error
+responses contain no token, SDK message, database detail or credential paths:
+
+| Condition | HTTP response |
+| --- | --- |
+| Missing/malformed bearer header, invalid/expired/revoked token, disabled Firebase user, verifier failure or timeout | 401 unauthorized |
+| No matching local account, inactive account or unsupported local role | 403 forbidden |
+| Local account lookup failure or timeout | 503 service_unavailable |
+| Verified identity and active local account | 200 with current local account |
+
+Responses use Cache-Control: no-store. After changing the local role or active
+status, the next protected request sees the change. Authentication middleware
+provides AccountFromContext to future protected handlers; each business endpoint
+must still enforce its role and resource-ownership permissions.
+
+### Authentication verification
+
+```powershell
+go test -count=1 -timeout=30s ./internal/authentication ./internal/server ./internal/config
+go vet ./...
+go test -count=1 -timeout=30s ./...
+go build -o ./bin/hostelhive-server.exe ./cmd/server
+```
+
+Deterministic tests use injected verifier/account dependencies, with no real
+credentials. They cover denied tokens, mandatory revocation-check adapter usage,
+UID-based account lookup, SQL parameter binding, fresh roles/deactivation, safe
+errors, duplicate headers, deadlines/cancellation and public probe boundaries.
+An optional real PostgreSQL lookup test uses TEST_DATABASE_URL against a database
+migrated to version 2; its fixture is rolled back automatically. Live Firebase
+valid/expired/revoked/disabled token checks require the project's credentials and
+test identities and are not claimed by the offline tests.
