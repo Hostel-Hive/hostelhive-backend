@@ -14,16 +14,26 @@ PostgreSQL is now required for readiness. The backend uses pgxpool, with depende
 ## Structure
 
 ```text
-cmd/server/main.go             Startup, signals and process exit
-internal/config/              Environment parsing and validation tests
-internal/database/            PostgreSQL connection pool and tests
-internal/authentication/      Firebase verification, local accounts and middleware
-internal/server/              HTTP lifecycle and shutdown tests
+cmd/server/                   Startup, signals and process exit
+internal/app/                 Dependency wiring, operational router and shutdown
+internal/config/              Environment parsing and validation
+internal/platform/postgres/   PostgreSQL connection pool
+internal/platform/firebase/   Authentication, provisioning and revocation adapters
+internal/shared/              Middleware, responses and common validation
+internal/modules/identity/    Account domain, DTOs, handlers, services and repositories
+internal/modules/student/     Profile domain, DTOs, handlers, services and repositories
+internal/workers/             Durable user-revocation retry loop
+tests/integration/            Disposable PostgreSQL integration suites
+tests/migration/              SQL constraint verification
+tests/architecture/           Package dependency boundary checks
+docs/architecture.md          Layer responsibilities and extension rules
+migrations/                   Existing versioned SQL migration pairs
+scripts/                      Migration setup and isolated verification
 .env.example                  Supported settings (no secrets)
-migrations/                   Versioned SQL migration pairs
-scripts/                      Migration tool setup and verification
 go.mod                        Go module
 ```
+
+The modular layout follows the HostelHive folder-structure reference. Issue #26 reorganizes existing code; endpoint paths, JSON responses, environment settings and migration versions remain unchanged. Migration commands still use the pinned CLI through `scripts/migrate.ps1`.
 
 ## Start locally
 
@@ -92,7 +102,7 @@ cancellation, health independence and safe configuration errors.
 To run the optional real database integration test:
 
     $env:TEST_DATABASE_URL = $env:DATABASE_URL
-    go test -count=1 -timeout=30s -v ./internal/database
+    go test -count=1 -timeout=30s -v ./tests/integration/postgres
     Remove-Item Env:TEST_DATABASE_URL
 
 This verifies PostgreSQL Ping and pool closure; it is skipped without TEST_DATABASE_URL.
@@ -218,7 +228,7 @@ database containing accounts:
 
     .\scripts\test-migrations.ps1
 
-Tests in tests/sql/user_accounts.sql verify all five roles, inactive defaults,
+Tests in tests/migration/user_accounts.sql verify all five roles, inactive defaults,
 generated UUIDs/timestamps, UID boundaries/case sensitivity, duplicate identities,
 duplicate emails ignoring case, missing required values, malformed email,
 invalid role inserts/updates, activation/deactivation and automatic update timestamps.
@@ -269,7 +279,7 @@ For containers, set `HTTP_ADDR=0.0.0.0:8080` and route through the private deplo
 ## Verification
 
 ```powershell
-gofmt -l ./cmd ./internal
+gofmt -l ./cmd ./internal ./tests
 go vet ./...
 go test -count=1 -timeout=30s -cover ./...
 go build ./...
@@ -281,7 +291,7 @@ go build ./...
 
 The selected baseline uses Firebase Authentication (ADR-002), containerized PostgreSQL (ADR-003), backend-published Firebase RTDB projections (ADR-004) and Nginx HTTPS routing (ADR-005). This scaffold does not issue local user JWTs or store user passwords. ADRs live in the continued documents repository: https://github.com/Hostel-Hive/Design-and-Development-Project.
 
-Account management, endpoint-specific permissions, scanner contracts, business modules, Docker infrastructure and CI are separate tickets. Add packages when their functionality is implemented instead of creating empty domain directories.
+Identity management and student profiles are implemented modules. Attendance, allocation, leave, complaint, notice, report and scanner features will extend this layout in their own tickets. Add adapters and modules when their functionality is implemented. See [architecture.md](docs/architecture.md) for dependency rules.
 
 When using the port override above, check http://127.0.0.1:18080/health and http://127.0.0.1:18080/ready.
 
@@ -363,7 +373,7 @@ must still enforce its role and resource-ownership permissions.
 ### Authentication verification
 
 ```powershell
-go test -count=1 -timeout=30s ./internal/authentication ./internal/server ./internal/config
+go test -count=1 -timeout=30s ./internal/shared/middleware ./internal/platform/firebase ./internal/modules/identity/... ./internal/app ./internal/config
 go vet ./...
 go test -count=1 -timeout=30s ./...
 go build -o ./bin/hostelhive-server.exe ./cmd/server
@@ -426,7 +436,7 @@ Business tickets must declare their role policies when registering endpoints.
 Run the role authorization matrix and authentication integration tests:
 
 ```powershell
-go test -count=1 -timeout=30s -v ./internal/authentication
+go test -count=1 -timeout=30s -v ./internal/shared/middleware
 go vet ./...
 go test -count=1 -timeout=30s ./...
 go build -o ./bin/hostelhive-server.exe ./cmd/server
@@ -598,7 +608,7 @@ against a shared production Firebase project to test recovery.
 ### Provisioning tests
 
 ```powershell
-go test -count=1 -timeout=30s -v ./internal/provisioning ./internal/server
+go test -count=1 -timeout=30s -v ./internal/modules/identity/... ./internal/platform/firebase ./internal/app
 .\scripts\test-migrations.ps1
 go vet ./...
 go test -count=1 -timeout=30s ./...

@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Hostel-Hive/hostelhive-backend/internal/app"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/config"
-	"github.com/Hostel-Hive/hostelhive-backend/internal/server"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 }
 
 func run(ctx context.Context, logger *slog.Logger) int {
-	return runWithServer(ctx, logger, server.Run)
+	return runWithServer(ctx, logger, app.Run)
 }
 
 func runWithServer(ctx context.Context, logger *slog.Logger, start func(context.Context, config.Config, *slog.Logger) error) int {
