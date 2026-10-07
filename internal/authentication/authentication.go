@@ -77,7 +77,7 @@ func Middleware(verifier Verifier, accounts Accounts, timeout time.Duration) fun
 
 func validRole(role string) bool {
 	switch role {
-	case "admin", "warden", "sub_warden", "security_staff", "student":
+	case RoleAdmin, RoleWarden, RoleSubWarden, RoleSecurityStaff, RoleStudent:
 		return true
 	}
 	return false
