@@ -27,7 +27,7 @@ go.mod                        Go module
 
 ## Start locally
 
-Start the local database as described below, apply migrations through version 2, then configure DATABASE_URL and Firebase credentials in the backend terminal. From the repository directory:
+Start the local database as described below, apply all pending migrations, then configure DATABASE_URL and Firebase credentials in the backend terminal. From the repository directory:
 
 ```powershell
 go run ./cmd/server
@@ -132,7 +132,7 @@ Apply all pending migrations, then show the database migration version:
     .\scripts\migrate.ps1 up
     .\scripts\migrate.ps1 version
 
-After the baseline alone, version is 1. With the user-account migration, the current version is 2. Repeating up reports no change.
+After the baseline alone, version is 1. With the user-account and provisioning migrations, the current version is 3. Repeating up reports no change.
 The wrapper pins version tracking to the tool-managed public.schema_migrations table, independently of the effective PostgreSQL search path.
 Before any migration is applied, version reports no migration.
 
@@ -167,8 +167,8 @@ as the test target and restores that environment variable when finished.
 
 Add future migrations as consecutive six-digit version pairs:
 
-    migrations/000003_description.up.sql
-    migrations/000003_description.down.sql
+    migrations/000004_description.up.sql
+    migrations/000004_description.down.sql
 
 Commit both files together. Do not edit an already applied migration; add a new
 version. Keep real credentials and generated migration executables out of Git.
@@ -207,7 +207,7 @@ Apply the migration to your local database with the existing commands:
     .\scripts\migrate.ps1 up
     .\scripts\migrate.ps1 version
 
-Expected current version: 2. In pgAdmin, refresh:
+Expected current version: 3. In pgAdmin, refresh:
 
     hostelhive database -> Schemas -> hostelhive -> Tables -> users
 
@@ -239,6 +239,7 @@ The application reads **process environment variables**, not `.env` files automa
 | DATABASE_URL | Required; no default | PostgreSQL URL with host, user and database |
 | FIREBASE_PROJECT_ID | Required | Firebase project ID, not its display name |
 | AUTH_TIMEOUT | 5s | Positive Go duration for verification and account lookup |
+| PROVISIONING_TIMEOUT | 8s | Positive Go duration for provisioning after authentication |
 | GOOGLE_APPLICATION_CREDENTIALS | ADC | Optional path to an external service-account JSON file; otherwise use platform ADC |
 | DATABASE_CHECK_TIMEOUT | 2s | Positive Go duration; connection and readiness timeout |
 | APP_ENV | development | development, test, production |
@@ -278,7 +279,7 @@ go build ./...
 
 The selected baseline uses Firebase Authentication (ADR-002), containerized PostgreSQL (ADR-003), backend-published Firebase RTDB projections (ADR-004) and Nginx HTTPS routing (ADR-005). This scaffold does not issue local user JWTs or store user passwords. ADRs live in the continued documents repository: https://github.com/Hostel-Hive/Design-and-Development-Project.
 
-Account provisioning, endpoint-specific permissions, scanner contracts, business modules, Docker infrastructure and CI are separate tickets. Add packages when their functionality is implemented instead of creating empty domain directories.
+Account management, endpoint-specific permissions, scanner contracts, business modules, Docker infrastructure and CI are separate tickets. Add packages when their functionality is implemented instead of creating empty domain directories.
 
 When using the port override above, check http://127.0.0.1:18080/health and http://127.0.0.1:18080/ready.
 
@@ -338,8 +339,8 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:18080/api/v1/me' -Headers @{ Authorizat
 ```
 
 The matching row in hostelhive.users must already exist and be active. A Firebase
-identity alone receives HTTP 403; this ticket does not provision or activate
-accounts automatically. Account provisioning is a separate ticket. For live
+identity alone receives HTTP 403; authentication does not provision or activate accounts automatically. Administrators
+provision new accounts with POST /api/v1/users (see issue #20 below). For live
 verification, use a dedicated test identity and its approved local account.
 
 Successful JSON contains user_id, firebase_uid, email, role and is_active. Error
@@ -371,7 +372,7 @@ credentials. They cover denied tokens, mandatory revocation-check adapter usage,
 UID-based account lookup, SQL parameter binding, fresh roles/deactivation, safe
 errors, duplicate headers, deadlines/cancellation and public probe boundaries.
 An optional real PostgreSQL lookup test uses TEST_DATABASE_URL against a database
-migrated to version 2; its fixture is rolled back automatically. Live Firebase
+migrated through the current version; its fixture is rolled back automatically. Live Firebase
 valid/expired/revoked/disabled token checks require the project's credentials and
 test identities and are not claimed by the offline tests.
 
@@ -434,3 +435,183 @@ missing/failed authentication, denied requests never reaching business handlers,
 unsafe or empty policies, caller mutation of a policy, client role spoofing and
 fresh local role/active-state changes. No Firebase credentials are needed for
 these tests. No new environment variables or database migrations are required.
+
+## Administrator user provisioning (issue #20)
+
+POST /api/v1/users requires a verified, active local admin account. Other roles
+receive 403 and missing/invalid authentication receives 401. Apply migration 3
+before using this route. Firebase service credentials need Authentication user
+read/create/update permissions. No credentials are needed for unit tests.
+
+### Request and responses
+
+Provide Content-Type: application/json, Authorization: Bearer <ID token> and
+Idempotency-Key: <request identifier>. Keys must contain 8-128 ASCII letters,
+digits, hyphens or underscores; a UUID generated once per new account is suitable.
+The JSON body is limited to 16 KiB and rejects unknown fields/trailing JSON:
+
+```json
+{
+  "email": "new.student@example.com",
+  "role": "student",
+  "password": "REPLACE_WITH_A_PRIVATE_INITIAL_PASSWORD"
+}
+```
+
+Emails are normalized to lowercase and roles must be admin, warden, sub_warden,
+security_staff or student. Initial passwords must contain 12-128 Unicode
+characters. The password is sent only to Firebase, not persisted in PostgreSQL
+or returned in responses. Coordinate confidential initial-password delivery
+with the recipient. This ticket does not send email or implement password-reset
+flows. Use HTTPS when calling deployed endpoints; the loopback example is local.
+
+| Result | HTTP response |
+| --- | --- |
+| Newly completed provisioning | 201, account plus replayed: false |
+| Completed request replay | 200, current account plus replayed: true |
+| Invalid body, role, email, password or request key | 400 invalid_input |
+| Changed key intent/creator, existing email or unrelated identity | 409 conflict |
+| Another worker holds the reservation | 503 request_in_progress, Retry-After: 1 |
+| Database/Firebase failure or timeout | 503 provisioning_unavailable |
+
+Error responses never expose submitted passwords, tokens, raw Firebase errors
+or database details. Successful responses contain user_id, firebase_uid, email,
+role and is_active under account; they do not return Firebase user-record objects.
+
+### Retry and partial-failure behavior
+
+1. Persist a reservation in hostelhive.user_provisioning before contacting Firebase.
+   It records the request key, verified administrator UID, normalized email,
+   requested role and a random, stable Firebase UID. No credential fields exist.
+2. Lock the reservation and insert an inactive local account inside a transaction.
+3. Create the reserved Firebase identity disabled, or resume that same UID after
+   an earlier partial attempt. An existing identity with the email but a different
+   UID is rejected; it is never adopted or assigned a new role.
+4. Enable the reserved identity and verify Firebase's acknowledgement.
+5. Atomically commit local activation and completion metadata.
+
+On failure the transaction rolls back, leaving the durable reservation for retry.
+An enabled Firebase identity without an active local account still cannot access
+protected application endpoints. If a commit acknowledgement is lost, retrying
+resolves the persisted completion state. A completed replay never changes the
+password, current role or active state; it cannot reactivate a deactivated user.
+
+Retry transient failures with the SAME key and original request from the SAME
+administrator. Email/role changes or another administrator using that key return
+409. Passwords are not fingerprinted or saved: once the reserved Firebase identity
+exists, retries ignore the submitted password instead of resetting it. Keep the
+original password for sign-in. Use a new key for a genuinely different account.
+Pending reservations remain until recovered; persistent conflicts require trusted
+operator investigation, not automatic deletion of unrelated Firebase identities.
+Completed retry metadata should be retained while its replay guarantees are needed.
+
+PROVISIONING_TIMEOUT defaults to 8s. Authentication has its own deadline before
+this workflow; configure HTTP/proxy/client deadlines above their combined budget.
+The row lock is held across the bounded workflow to prevent concurrent mutation.
+There is no background recovery worker in this ticket: the caller resumes pending
+work by repeating the request. Future account deletion must handle the reservation's
+RESTRICT foreign key explicitly. Migration 3 rollback drops retry metadata only;
+it does not delete local/Firebase accounts and loses pending/replay information.
+
+### Initialize the first administrator
+
+There is no public bootstrap endpoint. A trusted project owner with database
+administrative access must initialize the first local admin once. First verify
+in Firebase Authentication > Users that the intended UID/email belongs to the
+owner and the identity is enabled. The account previously used for authentication
+testing can be used if it is the intended project administrator.
+
+Run this SQL in pgAdmin's Query Tool on the intended database, replacing both
+placeholders with the verified Firebase UID and email. It inserts a new local
+account or promotes that exact existing UID/email only while no active admin exists:
+
+```sql
+BEGIN;
+LOCK TABLE hostelhive.users IN SHARE ROW EXCLUSIVE MODE;
+INSERT INTO hostelhive.users (firebase_uid, email, role, is_active)
+SELECT 'YOUR_VERIFIED_FIREBASE_UID', lower('YOUR_VERIFIED_EMAIL'), 'admin', TRUE
+WHERE NOT EXISTS (
+    SELECT 1 FROM hostelhive.users WHERE role = 'admin' AND is_active
+)
+ON CONFLICT (firebase_uid) DO UPDATE
+SET role = 'admin', is_active = TRUE
+WHERE lower(hostelhive.users.email) = lower(EXCLUDED.email)
+RETURNING user_id, firebase_uid, email, role, is_active;
+COMMIT;
+```
+
+If no row is returned, an active administrator already exists or the UID/email
+pair does not match. Investigate; do not remove the guard. Sign in as the owner
+and call /api/v1/me to verify role: admin before provisioning other accounts.
+This SQL changes only local access; it does not create Firebase credentials.
+
+### Local manual verification
+
+Stop the old server with Ctrl+C, apply migrations and rebuild it, then start it
+with your existing database/Firebase environment settings:
+
+```powershell
+.\scripts\migrate.ps1 up
+.\scripts\migrate.ps1 version
+go build -o ./bin/hostelhive-server.exe ./cmd/server
+.\bin\hostelhive-server.exe
+```
+
+Expected migration version: 3. In a second PowerShell terminal, sign in to Firebase
+as the initialized administrator using the existing sign-in procedure and keep
+its ID token in $firebaseIDToken. Create a request key ONCE and enter a new user's
+email and private initial password (do not use the administrator's email):
+
+```powershell
+$provisioningKey = [Guid]::NewGuid().ToString()
+$newUserEmail = Read-Host 'New user email'
+$newUserPassword = Read-Host 'New user initial password (12-128 characters)' -AsSecureString
+$provisioningBody = @{
+    email = $newUserEmail
+    role = 'student'
+    password = ([System.Net.NetworkCredential]::new('', $newUserPassword)).Password
+} | ConvertTo-Json
+$provisioningHeaders = @{
+    Authorization = "Bearer $firebaseIDToken"
+    'Idempotency-Key' = $provisioningKey
+}
+Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:18080/api/v1/users' -ContentType 'application/json' -Headers $provisioningHeaders -Body $provisioningBody
+```
+
+First success returns the active new account. Repeat only the last command with
+unchanged headers/body to verify replayed: true and the same user_id/firebase_uid.
+Check Firebase Users and PostgreSQL for exactly one account. After successful
+verification, clear local credential variables:
+
+```powershell
+Remove-Variable provisioningBody, newUserPassword
+```
+
+Use a non-admin test user's ID token to verify 403; without a token expect 401.
+Malformed input should return 400; changing the email or role with the same key
+should return 409. Keep all passwords, ID tokens and credential JSON out of issues.
+Unit fault-injection tests cover failures and retries; do not simulate outages
+against a shared production Firebase project to test recovery.
+
+### Provisioning tests
+
+```powershell
+go test -count=1 -timeout=30s -v ./internal/provisioning ./internal/server
+.\scripts\test-migrations.ps1
+go vet ./...
+go test -count=1 -timeout=30s ./...
+go build ./...
+```
+
+Unit tests cover input validation, all route roles, JSON/body limits, deadlines,
+creation/replay/conflicts, fresh state, and failures before/after external side
+effects. An in-memory HTTP transport tests the real pinned Firebase SDK's disabled
+creation, activation, email-conflict mapping and UID-race recovery without live
+credentials. The optional TestProvisioningPostgresIntegration test requires
+TEST_DATABASE_URL pointed at a disposable database migrated through version 3;
+it tests persisted retries, role/active-state preservation, partial failures,
+row locks and removal of its own fixtures. Live Firebase creation still requires
+manual verification with the project's credentials.
+
+Firebase Admin user-management reference:
+https://firebase.google.com/docs/auth/admin/manage-users

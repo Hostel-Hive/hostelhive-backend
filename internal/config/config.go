@@ -14,6 +14,7 @@ import (
 type Config struct {
 	FirebaseProjectID     string
 	AuthenticationTimeout time.Duration
+	ProvisioningTimeout   time.Duration
 	DatabaseURL           string
 	DatabaseCheckTimeout  time.Duration
 	Environment           string
@@ -75,6 +76,7 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		{"HTTP_SHUTDOWN_TIMEOUT", "10s", &cfg.ShutdownTimeout},
 		{"DATABASE_CHECK_TIMEOUT", "2s", &cfg.DatabaseCheckTimeout},
 		{"AUTH_TIMEOUT", "5s", &cfg.AuthenticationTimeout},
+		{"PROVISIONING_TIMEOUT", "8s", &cfg.ProvisioningTimeout},
 	} {
 		d, err := time.ParseDuration(value(setting.key, setting.fallback))
 		if err != nil || d <= 0 {

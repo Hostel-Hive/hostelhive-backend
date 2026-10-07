@@ -12,6 +12,7 @@ import (
 	"github.com/Hostel-Hive/hostelhive-backend/internal/authentication"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/config"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/database"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/provisioning"
 )
 
 func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
@@ -25,13 +26,14 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		return fmt.Errorf("listen on HTTP_ADDR: %w", err)
 	}
 	defer listener.Close()
-	verifier, err := authentication.NewFirebaseVerifier(ctx, cfg.FirebaseProjectID)
+	firebaseClient, err := authentication.NewFirebaseClient(ctx, cfg.FirebaseProjectID)
 	if err != nil {
 		return err
 	}
-	protected := authentication.Middleware(verifier, authentication.NewPostgresAccounts(pool), cfg.AuthenticationTimeout)
+	protected := authentication.Middleware(authentication.NewVerifier(firebaseClient), authentication.NewPostgresAccounts(pool), cfg.AuthenticationTimeout)
+	userService := provisioning.NewService(provisioning.NewPostgresRepository(pool), provisioning.NewFirebaseIdentities(firebaseClient))
 	srv := &http.Server{
-		Handler:           newHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected),
+		Handler:           newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, provisioning.Handler(userService, cfg.ProvisioningTimeout)),
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,

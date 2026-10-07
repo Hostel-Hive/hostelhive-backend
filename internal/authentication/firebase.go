@@ -18,6 +18,16 @@ type FirebaseVerifier struct{ client tokenClient }
 // NewFirebaseVerifier uses Application Default Credentials. Emulator mode is
 // rejected because it accepts unsigned tokens and bypasses production checks.
 func NewFirebaseVerifier(ctx context.Context, projectID string) (*FirebaseVerifier, error) {
+	client, err := NewFirebaseClient(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	return NewVerifier(client), nil
+}
+
+func NewVerifier(client tokenClient) *FirebaseVerifier { return &FirebaseVerifier{client: client} }
+
+func NewFirebaseClient(ctx context.Context, projectID string) (*firebaseauth.Client, error) {
 	if projectID == "" {
 		return nil, errors.New("FIREBASE_PROJECT_ID is required")
 	}
@@ -32,7 +42,7 @@ func NewFirebaseVerifier(ctx context.Context, projectID string) (*FirebaseVerifi
 	if err != nil {
 		return nil, errors.New("initialize Firebase Auth: check Application Default Credentials")
 	}
-	return &FirebaseVerifier{client: client}, nil
+	return client, nil
 }
 
 func (v *FirebaseVerifier) Verify(ctx context.Context, raw string) (string, error) {
