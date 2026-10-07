@@ -15,8 +15,8 @@ import (
 func TestAccountManagementRoutesProtected(t *testing.T) {
 	for _, role := range []string{"admin", "warden", "sub_warden", "security_staff", "student"} {
 		authenticate := authentication.Middleware(routeVerifier{}, routeAccounts{role}, time.Second)
-		h := newAPIHandler(func(context.Context) error { return nil }, time.Second, authenticate, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }), identityhandler.NewAPI(nil, time.Second))
-		for _, tc := range []struct{ method, path, body string }{{"GET", "/api/v1/users?limit=0", ""}, {"PATCH", "/api/v1/users/not-uuid/role", `{"role":"admin"}`}, {"POST", "/api/v1/users/not-uuid/deactivate", ""}} {
+		h := newAPIHandler(func(context.Context) error { return nil }, time.Second, authenticate, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }), identityhandler.NewAPI(nil, nil, time.Second))
+		for _, tc := range []struct{ method, path, body string }{{"GET", "/api/v1/users?limit=0", ""}, {"PATCH", "/api/v1/users/not-uuid/role", `{"role":"admin"}`}, {"POST", "/api/v1/users/not-uuid/deactivate", ""}, {"POST", "/api/v1/users/not-uuid/activate", ""}} {
 			r := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
 			r.Header.Set("Authorization", "Bearer test")
 			w := httptest.NewRecorder()

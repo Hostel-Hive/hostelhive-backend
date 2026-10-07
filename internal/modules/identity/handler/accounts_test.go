@@ -77,7 +77,7 @@ func (f *fakeRevoker) DisableAndRevoke(context.Context, string) error {
 }
 
 func router(s *fakeStore, role string, active bool) http.Handler {
-	api := NewAPI(service.NewAccounts(s, &fakeRevoker{}), time.Second)
+	api := NewAPI(service.NewAccounts(s, &fakeRevoker{}), nil, time.Second)
 	m := http.NewServeMux()
 	m.HandleFunc("GET /api/v1/users", api.List)
 	m.HandleFunc("PATCH /api/v1/users/{userID}/role", api.Role)

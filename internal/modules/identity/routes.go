@@ -18,6 +18,7 @@ func Register(mux *http.ServeMux, authenticate func(http.Handler) http.Handler, 
 		mux.Handle("GET /api/v1/users", protect(management.List))
 		mux.Handle("PATCH /api/v1/users/{userID}/role", protect(management.Role))
 		mux.Handle("POST /api/v1/users/{userID}/deactivate", protect(management.Deactivate))
+		mux.Handle("POST /api/v1/users/{userID}/activate", protect(management.Activate))
 	}
 }
 

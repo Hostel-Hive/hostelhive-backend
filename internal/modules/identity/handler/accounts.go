@@ -18,8 +18,9 @@ import (
 )
 
 type API struct {
-	store   AccountService
-	timeout time.Duration
+	store      AccountService
+	activation ActivationService
+	timeout    time.Duration
 }
 
 type AccountService interface {
@@ -28,7 +29,13 @@ type AccountService interface {
 	Deactivate(context.Context, string, string) (domain.AccountChange, error)
 }
 
-func NewAPI(s AccountService, timeout time.Duration) *API { return &API{s, timeout} }
+type ActivationService interface {
+	Activate(context.Context, string, string) (domain.Account, error)
+}
+
+func NewAPI(s AccountService, activation ActivationService, timeout time.Duration) *API {
+	return &API{s, activation, timeout}
+}
 
 func reply(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -63,6 +70,14 @@ func failure(w http.ResponseWriter, err error) {
 		reject(w, 404, "not_found")
 	case errors.Is(err, domain.ErrManagementForbidden):
 		reject(w, 403, "forbidden")
+	case errors.Is(err, domain.ErrRevocationPending):
+		reject(w, 409, "revocation_pending")
+	case errors.Is(err, domain.ErrProvisioningIncomplete):
+		reject(w, 409, "provisioning_incomplete")
+	case errors.Is(err, domain.ErrIdentityMissing):
+		reject(w, 409, "firebase_identity_missing")
+	case errors.Is(err, domain.ErrIdentityMismatch):
+		reject(w, 409, "firebase_identity_mismatch")
 	case errors.Is(err, domain.ErrLastAdmin):
 		reject(w, 409, "last_active_admin")
 	default:
@@ -173,4 +188,33 @@ func (a *API) Deactivate(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusAccepted
 	}
 	reply(w, status, result)
+}
+
+func (a *API) Activate(w http.ResponseWriter, r *http.Request) {
+	actor, ok := admin(w, r)
+	if !ok {
+		return
+	}
+	id := r.PathValue("userID")
+	if !validation.UUID(id) {
+		reject(w, 400, "invalid_input")
+		return
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
+	if err != nil || len(body) != 0 {
+		reject(w, 400, "invalid_input")
+		return
+	}
+	if a.activation == nil {
+		failure(w, domain.ErrManagementUnavailable)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), a.timeout)
+	defer cancel()
+	result, err := a.activation.Activate(ctx, actor.FirebaseUID, id)
+	if err != nil {
+		failure(w, err)
+		return
+	}
+	reply(w, 200, result)
 }
