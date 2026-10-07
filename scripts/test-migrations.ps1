@@ -54,27 +54,40 @@ try {
     & (Join-Path $PSScriptRoot 'migrate.ps1') up
     Assert-SQL $versionSQL $expectedVersion
 
-    # Rollback migration 2 while preserving the previously applied baseline.
-    & (Join-Path $PSScriptRoot 'migrate.ps1') down
-    Assert-SQL $schemaSQL 'true'
-    Assert-SQL $usersSQL 'f'
-    Assert-SQL $functionSQL 'f'
-    Assert-SQL $versionSQL '1: false'
+    $provisioningSQL = "SELECT to_regclass('hostelhive.user_provisioning') IS NOT NULL;"
+    if ($latestVersion -ge 3) { Assert-SQL $provisioningSQL 't' }
 
-    # Upgrade an existing version-1 database and verify constraints again.
+    # Roll back newer migrations to exercise upgrading the existing baseline.
+    for ($version = $latestVersion; $version -gt 1; $version--) {
+        & (Join-Path $PSScriptRoot 'migrate.ps1') down
+        Assert-SQL $versionSQL "$($version - 1): false"
+        if ($version -eq 3) {
+            Assert-SQL $provisioningSQL 'f'
+            Assert-SQL $usersSQL 't'
+        }
+        if ($version -eq 2) {
+            Assert-SQL $usersSQL 'f'
+            Assert-SQL $functionSQL 'f'
+        }
+    }
+    Assert-SQL $schemaSQL 'true'
     & (Join-Path $PSScriptRoot 'migrate.ps1') up
     Assert-SQL $versionSQL $expectedVersion
     $accountTests | & docker exec -i $container psql -U hostelhive -d hostelhive -v ON_ERROR_STOP=1
-    if ($LASTEXITCODE -ne 0) { throw 'User-account constraints failed after reapply.' }
+    if ($LASTEXITCODE -ne 0) { throw 'User-account constraints failed after upgrade.' }
+    if ($latestVersion -ge 3) { Assert-SQL $provisioningSQL 't' }
 
-    & (Join-Path $PSScriptRoot 'migrate.ps1') down
-    & (Join-Path $PSScriptRoot 'migrate.ps1') down
+    # Verify complete rollback and fresh reapply with FK-safe ordering.
+    for ($version = $latestVersion; $version -gt 0; $version--) {
+        & (Join-Path $PSScriptRoot 'migrate.ps1') down
+    }
     Assert-SQL $schemaSQL 'false'
     Assert-SQL 'SELECT count(*)::text FROM public.schema_migrations;' '0'
     & (Join-Path $PSScriptRoot 'migrate.ps1') up
     Assert-SQL $usersSQL 't'
     Assert-SQL $versionSQL $expectedVersion
-    Write-Output 'PASS: user-account constraints, version-1 upgrade, apply, rollback and reapply.'
+    if ($latestVersion -ge 3) { Assert-SQL $provisioningSQL 't' }
+    Write-Output 'PASS: schema constraints, baseline upgrade, apply, rollback and reapply.'
 } finally {
     if ($created) {
         & docker rm -f -v $container | Out-Null
