@@ -10,15 +10,21 @@ import (
 	"net/http"
 
 	"github.com/Hostel-Hive/hostelhive-backend/internal/config"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/database"
 )
 
 func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
+	pool, err := database.Open(ctx, cfg.DatabaseURL, cfg.DatabaseCheckTimeout)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		return fmt.Errorf("listen on HTTP_ADDR: %w", err)
 	}
 	srv := &http.Server{
-		Handler:           newHandler(),
+		Handler:           newHandler(pool.Ping, cfg.DatabaseCheckTimeout),
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
