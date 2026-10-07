@@ -132,7 +132,7 @@ Apply all pending migrations, then show the database migration version:
     .\scripts\migrate.ps1 up
     .\scripts\migrate.ps1 version
 
-After the baseline alone, version is 1. With the user-account and provisioning migrations, the current version is 3. Repeating up reports no change.
+After the baseline alone, version is 1. With account management and revocation tracking, the current version is 4. Repeating up reports no change.
 The wrapper pins version tracking to the tool-managed public.schema_migrations table, independently of the effective PostgreSQL search path.
 Before any migration is applied, version reports no migration.
 
@@ -167,8 +167,8 @@ as the test target and restores that environment variable when finished.
 
 Add future migrations as consecutive six-digit version pairs:
 
-    migrations/000004_description.up.sql
-    migrations/000004_description.down.sql
+    migrations/000005_description.up.sql
+    migrations/000005_description.down.sql
 
 Commit both files together. Do not edit an already applied migration; add a new
 version. Keep real credentials and generated migration executables out of Git.
@@ -207,7 +207,7 @@ Apply the migration to your local database with the existing commands:
     .\scripts\migrate.ps1 up
     .\scripts\migrate.ps1 version
 
-Expected current version: 3. In pgAdmin, refresh:
+Expected current version: 4. In pgAdmin, refresh:
 
     hostelhive database -> Schemas -> hostelhive -> Tables -> users
 
@@ -240,6 +240,7 @@ The application reads **process environment variables**, not `.env` files automa
 | FIREBASE_PROJECT_ID | Required | Firebase project ID, not its display name |
 | AUTH_TIMEOUT | 5s | Positive Go duration for verification and account lookup |
 | PROVISIONING_TIMEOUT | 8s | Positive Go duration for provisioning after authentication |
+| ACCOUNT_MANAGEMENT_TIMEOUT | 8s | Positive Go duration for account management and each revocation retry |
 | GOOGLE_APPLICATION_CREDENTIALS | ADC | Optional path to an external service-account JSON file; otherwise use platform ADC |
 | DATABASE_CHECK_TIMEOUT | 2s | Positive Go duration; connection and readiness timeout |
 | APP_ENV | development | development, test, production |
@@ -557,7 +558,7 @@ go build -o ./bin/hostelhive-server.exe ./cmd/server
 .\bin\hostelhive-server.exe
 ```
 
-Expected migration version: 3. In a second PowerShell terminal, sign in to Firebase
+Expected migration version: 4. In a second PowerShell terminal, sign in to Firebase
 as the initialized administrator using the existing sign-in procedure and keep
 its ID token in $firebaseIDToken. Create a request key ONCE and enter a new user's
 email and private initial password (do not use the administrator's email):
@@ -615,3 +616,95 @@ manual verification with the project's credentials.
 
 Firebase Admin user-management reference:
 https://firebase.google.com/docs/auth/admin/manage-users
+
+
+## Administrator account management (issue #22)
+
+Apply migration 4 before starting this version. All endpoints below require a
+verified Firebase Bearer ID token and a current active local `admin` account.
+Responses use `Cache-Control: no-store` and never include credentials.
+
+| Method and path | Request | Result |
+| --- | --- | --- |
+| GET /api/v1/users?limit=20&offset=0 | No body; limit 1-100, offset 0-1000000 | 200: users, limit, offset, has_more |
+| PATCH /api/v1/users/{user_id}/role | JSON: `{"role":"warden"}` | 200: updated account |
+| POST /api/v1/users/{user_id}/deactivate | Empty body | 200: account, revocation_pending=false; 202: local access blocked, Firebase revocation pending |
+
+Roles: `admin`, `warden`, `sub_warden`, `security_staff`, `student`. IDs are local
+UUID `user_id` values, not Firebase UIDs. Unknown accounts return 404; invalid
+input returns 400; missing/invalid token returns 401; denied roles return 403.
+Removing the last active admin's role or access returns 409 `last_active_admin`.
+Database failures return generic 503 errors. Mutations recheck the actor's current
+local role under a transaction lock, preventing stale administrator privileges.
+Concurrent mutations cannot remove all active administrators. Role updates are
+visible on subsequent protected requests without new tokens or server restarts.
+Pagination orders by created_at/user_id; concurrent inserts or updates can change
+pages, so this is not an export snapshot. Account reactivation and deletion are
+outside this ticket.
+
+Deactivation commits `is_active=false` and a durable revocation job atomically.
+The backend then disables the Firebase identity and revokes refresh tokens. Only
+acknowledged Firebase completion returns revocation_pending=false. On errors or
+timeouts the local block remains; 202 indicates unfinished work, not full workflow
+success. Missing Firebase identities are already unable to authenticate and are
+treated as complete. The worker checks immediately at startup, then every 30s,
+with up to 10 attempts per batch and ACCOUNT_MANAGEMENT_TIMEOUT (default 8s) per
+attempt. Failed jobs become due after 30s and survive restarts. Multiple processes
+use row locks to avoid simultaneous processing. Repeating deactivation is safe
+and requests a fresh revocation. No passwords, tokens or raw provider errors are
+stored in job metadata. Never reactivate blocked accounts manually while a job
+is pending. There are currently no implemented RTDB grants; removal of future
+realtime grants must be integrated before enabling direct realtime access.
+
+ACCOUNT_MANAGEMENT_TIMEOUT also bounds each listing/change request after
+authentication. Keep AUTH_TIMEOUT plus operation timeout below HTTP_WRITE_TIMEOUT
+with adequate margin. Existing defaults are 5s + 8s under a 15s write timeout.
+
+After live verification, use a disposable test account, not your administrator:
+
+```powershell
+$adminHeaders = @{ Authorization = "Bearer $firebaseIDToken" }
+$page = Invoke-RestMethod -Uri 'http://127.0.0.1:18080/api/v1/users?limit=20&offset=0' -Headers $adminHeaders
+$page.users | Format-Table user_id, email, role, is_active
+$managedUserID = Read-Host 'Disposable test account user_id from the listing'
+$roleBody = @{ role = 'warden' } | ConvertTo-Json
+Invoke-RestMethod -Method Patch -Uri "http://127.0.0.1:18080/api/v1/users/$managedUserID/role" -ContentType 'application/json' -Headers $adminHeaders -Body $roleBody
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:18080/api/v1/users/$managedUserID/deactivate" -Headers $adminHeaders
+```
+
+Before deactivating, sign in as the disposable test user and retain its ID token
+privately in another terminal. `/api/v1/me` should show its updated role before
+deactivation. Afterwards its existing token must receive 401 (Firebase disabled/
+revoked) or 403 (local block while Firebase is pending). New Firebase sign-in must
+fail after completion. Test a non-admin token against management routes for 403,
+and try demoting/deactivating the sole admin for 409. Never put tokens in tickets.
+
+To inspect pending work, run SQL in pgAdmin on the intended database:
+
+```sql
+SELECT u.email, j.requested_at, j.attempts, j.next_attempt_at, j.completed_at
+FROM hostelhive.user_revocations j
+JOIN hostelhive.users u ON u.user_id = j.user_id
+ORDER BY j.requested_at DESC;
+```
+
+A null completed_at means pending. Keep the backend running and restore Firebase
+connectivity/permissions; it retries automatically. Do not simulate outages in a
+shared production project. Migration 4 down refuses to discard unfinished jobs;
+once all jobs finish it drops metadata only and leaves accounts disabled.
+
+```powershell
+go test ./...
+go vet ./...
+.\scripts\test-account-management.ps1
+.\scripts\test-migrations.ps1
+go build ./...
+```
+
+The account-management script creates and removes its own disposable PostgreSQL
+container, applies migrations, and runs real transaction/concurrency/recovery
+tests. It never uses the development DATABASE_URL. Unit tests use an in-memory
+transport with the pinned Firebase SDK and no live credentials; live Firebase
+deactivation still needs the manual checks above.
+
+Firebase session reference: https://firebase.google.com/docs/auth/admin/manage-sessions

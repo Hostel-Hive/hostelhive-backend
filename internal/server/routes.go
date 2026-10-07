@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Hostel-Hive/hostelhive-backend/internal/accountmanagement"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/authentication"
 )
 
@@ -34,8 +35,16 @@ func newHandler(ping func(context.Context) error, timeout time.Duration, protect
 	return mux
 }
 
-func newAPIHandler(ping func(context.Context) error, timeout time.Duration, authenticate func(http.Handler) http.Handler, users http.Handler) http.Handler {
+func newAPIHandler(ping func(context.Context) error, timeout time.Duration, authenticate func(http.Handler) http.Handler, users http.Handler, management ...*accountmanagement.API) http.Handler {
 	mux := newHandler(ping, timeout, authenticate)
 	mux.Handle("POST /api/v1/users", authenticate(authentication.RequireRoles(authentication.RoleAdmin)(users)))
+	if len(management) == 1 {
+		protect := func(h http.HandlerFunc) http.Handler {
+			return authenticate(authentication.RequireRoles(authentication.RoleAdmin)(h))
+		}
+		mux.Handle("GET /api/v1/users", protect(management[0].List))
+		mux.Handle("PATCH /api/v1/users/{userID}/role", protect(management[0].Role))
+		mux.Handle("POST /api/v1/users/{userID}/deactivate", protect(management[0].Deactivate))
+	}
 	return mux
 }

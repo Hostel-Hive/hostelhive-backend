@@ -70,6 +70,7 @@ func Middleware(verifier Verifier, accounts Accounts, timeout time.Duration) fun
 				return
 			}
 			// The authentication deadline ends before business-handler work begins.
+			cancel()
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), accountKey{}, account)))
 		})
 	}

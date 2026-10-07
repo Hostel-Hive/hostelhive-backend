@@ -12,18 +12,19 @@ import (
 )
 
 type Config struct {
-	FirebaseProjectID     string
-	AuthenticationTimeout time.Duration
-	ProvisioningTimeout   time.Duration
-	DatabaseURL           string
-	DatabaseCheckTimeout  time.Duration
-	Environment           string
-	HTTPAddr              string
-	ReadHeaderTimeout     time.Duration
-	ReadTimeout           time.Duration
-	WriteTimeout          time.Duration
-	IdleTimeout           time.Duration
-	ShutdownTimeout       time.Duration
+	FirebaseProjectID        string
+	AuthenticationTimeout    time.Duration
+	ProvisioningTimeout      time.Duration
+	AccountManagementTimeout time.Duration
+	DatabaseURL              string
+	DatabaseCheckTimeout     time.Duration
+	Environment              string
+	HTTPAddr                 string
+	ReadHeaderTimeout        time.Duration
+	ReadTimeout              time.Duration
+	WriteTimeout             time.Duration
+	IdleTimeout              time.Duration
+	ShutdownTimeout          time.Duration
 }
 
 // Load applies documented defaults to unset variables. Explicit empty or
@@ -77,6 +78,7 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		{"DATABASE_CHECK_TIMEOUT", "2s", &cfg.DatabaseCheckTimeout},
 		{"AUTH_TIMEOUT", "5s", &cfg.AuthenticationTimeout},
 		{"PROVISIONING_TIMEOUT", "8s", &cfg.ProvisioningTimeout},
+		{"ACCOUNT_MANAGEMENT_TIMEOUT", "8s", &cfg.AccountManagementTimeout},
 	} {
 		d, err := time.ParseDuration(value(setting.key, setting.fallback))
 		if err != nil || d <= 0 {
