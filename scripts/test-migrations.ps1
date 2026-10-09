@@ -56,6 +56,8 @@ try {
 
     $provisioningSQL = "SELECT to_regclass('hostelhive.user_provisioning') IS NOT NULL;"
     if ($latestVersion -ge 3) { Assert-SQL $provisioningSQL 't' }
+    if ($latestVersion -ge 9) { Assert-SQL "SELECT count(*)::text FROM information_schema.columns WHERE table_schema='hostelhive' AND table_name='staff_profiles' AND column_name='designation' AND column_default IS NOT NULL;" '1' }
+    if ($latestVersion -ge 8) { Assert-SQL "SELECT to_regclass('hostelhive.staff_profiles') IS NOT NULL AND to_regclass('hostelhive.account_profiles') IS NOT NULL;" 't' }
     if ($latestVersion -ge 7) { Assert-SQL "SELECT to_regclass('hostelhive.blocks') IS NOT NULL AND to_regclass('hostelhive.rooms') IS NOT NULL AND to_regclass('hostelhive.beds') IS NOT NULL AND to_regclass('hostelhive.bed_allocations') IS NOT NULL;" 't' }
     if ($latestVersion -ge 6) { Assert-SQL "SELECT to_regclass('hostelhive.student_image_objects') IS NOT NULL;" 't' }
     if ($latestVersion -ge 5) { Assert-SQL "SELECT to_regclass('hostelhive.students') IS NOT NULL AND to_regclass('hostelhive.guardians') IS NOT NULL;" 't' }
@@ -65,6 +67,8 @@ try {
     for ($version = $latestVersion; $version -gt 1; $version--) {
         & (Join-Path $PSScriptRoot 'migrate.ps1') down
         Assert-SQL $versionSQL "$($version - 1): false"
+        if ($version -eq 9) { Assert-SQL "SELECT count(*)::text FROM information_schema.columns WHERE table_schema='hostelhive' AND table_name='staff_profiles' AND column_name='designation' AND column_default IS NOT NULL;" '0' }
+        if ($version -eq 8) { Assert-SQL "SELECT to_regclass('hostelhive.staff_profiles') IS NOT NULL OR to_regclass('hostelhive.account_profiles') IS NOT NULL;" 'f' }
         if ($version -eq 7) { Assert-SQL "SELECT to_regclass('hostelhive.blocks') IS NOT NULL OR to_regclass('hostelhive.rooms') IS NOT NULL OR to_regclass('hostelhive.beds') IS NOT NULL OR to_regclass('hostelhive.bed_allocations') IS NOT NULL;" 'f' }
         if ($version -eq 6) { Assert-SQL "SELECT to_regclass('hostelhive.student_image_objects') IS NOT NULL;" 'f' }
         if ($version -eq 5) { Assert-SQL "SELECT to_regclass('hostelhive.students') IS NOT NULL;" 'f'; Assert-SQL "SELECT to_regclass('hostelhive.guardians') IS NOT NULL;" 'f' }
@@ -84,6 +88,8 @@ try {
     $accountTests | & docker exec -i $container psql -U hostelhive -d hostelhive -v ON_ERROR_STOP=1
     if ($LASTEXITCODE -ne 0) { throw 'User-account constraints failed after upgrade.' }
     if ($latestVersion -ge 3) { Assert-SQL $provisioningSQL 't' }
+    if ($latestVersion -ge 9) { Assert-SQL "SELECT count(*)::text FROM information_schema.columns WHERE table_schema='hostelhive' AND table_name='staff_profiles' AND column_name='designation' AND column_default IS NOT NULL;" '1' }
+    if ($latestVersion -ge 8) { Assert-SQL "SELECT to_regclass('hostelhive.staff_profiles') IS NOT NULL AND to_regclass('hostelhive.account_profiles') IS NOT NULL;" 't' }
     if ($latestVersion -ge 7) { Assert-SQL "SELECT to_regclass('hostelhive.blocks') IS NOT NULL AND to_regclass('hostelhive.rooms') IS NOT NULL AND to_regclass('hostelhive.beds') IS NOT NULL AND to_regclass('hostelhive.bed_allocations') IS NOT NULL;" 't' }
     if ($latestVersion -ge 6) { Assert-SQL "SELECT to_regclass('hostelhive.student_image_objects') IS NOT NULL;" 't' }
     if ($latestVersion -ge 5) { Assert-SQL "SELECT to_regclass('hostelhive.students') IS NOT NULL AND to_regclass('hostelhive.guardians') IS NOT NULL;" 't' }
@@ -99,6 +105,8 @@ try {
     Assert-SQL $usersSQL 't'
     Assert-SQL $versionSQL $expectedVersion
     if ($latestVersion -ge 3) { Assert-SQL $provisioningSQL 't' }
+    if ($latestVersion -ge 9) { Assert-SQL "SELECT count(*)::text FROM information_schema.columns WHERE table_schema='hostelhive' AND table_name='staff_profiles' AND column_name='designation' AND column_default IS NOT NULL;" '1' }
+    if ($latestVersion -ge 8) { Assert-SQL "SELECT to_regclass('hostelhive.staff_profiles') IS NOT NULL AND to_regclass('hostelhive.account_profiles') IS NOT NULL;" 't' }
     if ($latestVersion -ge 7) { Assert-SQL "SELECT to_regclass('hostelhive.blocks') IS NOT NULL AND to_regclass('hostelhive.rooms') IS NOT NULL AND to_regclass('hostelhive.beds') IS NOT NULL AND to_regclass('hostelhive.bed_allocations') IS NOT NULL;" 't' }
     if ($latestVersion -ge 6) { Assert-SQL "SELECT to_regclass('hostelhive.student_image_objects') IS NOT NULL;" 't' }
     if ($latestVersion -ge 5) { Assert-SQL "SELECT to_regclass('hostelhive.students') IS NOT NULL AND to_regclass('hostelhive.guardians') IS NOT NULL;" 't' }

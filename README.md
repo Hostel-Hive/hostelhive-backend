@@ -199,14 +199,14 @@ with the Firebase identity amendment in ADR-002.
 | updated_at | Timestamp with time zone, automatically refreshed by a trigger on updates |
 
 Email and role remain on the common account table, as in the SDS. Student and staff
-profiles will reference user_id in later migrations. Role strings above map to the
+profiles reference user_id through migrations 5 and 8. Role strings above map to the
 SDS human actors; scanner credentials are separate from human user accounts.
 The SQL email check is basic integrity protection; full validation belongs in the
 provisioning service/Firebase workflow.
 
 Firebase handles user credentials. This table contains no password hashes or local
-refresh/reset tokens. The future protected API must verify a Firebase ID token,
-then retrieve the matching firebase_uid and check the current role and is_active.
+refresh/reset tokens. The protected API verifies a Firebase ID token,
+then retrieves the matching firebase_uid and checks the current role and is_active.
 An account remains inactive until the provisioning/activation workflow enables it.
 Neither applying this migration nor changing is_active creates or changes a Firebase
 identity; cross-system activation and revocation are separate implementation tasks.
@@ -725,11 +725,13 @@ Firebase session reference: https://firebase.google.com/docs/auth/admin/manage-s
 
 Traceability: FR006, FR007, FR009; SRS UC003 (PDF page 39); SDS Figure 7
 (PDF page 38), and normalized STUDENT/GUARDIAN entities. UC003 and Figure 7
-identify Admin as the actor: all profile routes require an active local `admin`.
-Wardens, sub-wardens, security staff and students cannot use these routes.
+identify Admin as the actor. Tasheen resolved the FR006-FR009/UC003 discrepancy
+by permitting active Admin AND Warden accounts in issue #30. Sub-wardens,
+security staff and students cannot use these management routes.
 Account credentials remain in Firebase; the linked users table supplies email
-and account status. Profile-image upload, QR generation and CSV import are
-separate features.
+and account status. Profile-image uploads are implemented in issue #30;
+see [student image setup and verification](docs/student-images.md). QR generation
+and the SRS UC004 CSV import remain separate, unimplemented features.
 
 Apply migration 5 before starting this version. `students.student_id` is an
 internal UUID; `index_no` is the human student identification/index number.
@@ -945,3 +947,13 @@ Live R2 verification and teammate review are required before closing issue #30.
 Warden-only block, room and bed listings, with derived capacity and availability.
 See [inventory contract, startup and verification](docs/hostel-inventory.md).
 Apply migration 000007 and run `scripts/test-inventory.ps1` before review.
+
+## Staff profiles (issue #36)
+
+Apply migrations 000008 and 000009 before starting this version. Admins manage
+staff names/designations through the staff management routes. Active staff can
+create/edit their own name through PUT `/api/v1/staff/me` and read their current
+profile through `/api/v1/me`. Self edits preserve Admin-assigned designations.
+New self-created profiles leave designation unassigned until an Admin fills it.
+Student names remain in student profiles. Existing accounts remain valid without
+a profile. See [staff contract and complete verification/PR steps](docs/staff-profiles.md).

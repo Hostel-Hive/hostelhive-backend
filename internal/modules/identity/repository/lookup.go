@@ -19,9 +19,9 @@ func NewPostgresAccounts(db Querier) *PostgresAccounts { return &PostgresAccount
 
 func (s *PostgresAccounts) FindByFirebaseUID(ctx context.Context, uid string) (domain.Account, error) {
 	var account domain.Account
-	err := s.db.QueryRow(ctx, `SELECT user_id::text, firebase_uid, email, role, is_active
- FROM hostelhive.users WHERE firebase_uid = $1`, uid).Scan(
-		&account.UserID, &account.FirebaseUID, &account.Email, &account.Role, &account.IsActive)
+	err := s.db.QueryRow(ctx, `SELECT user_id::text, firebase_uid, email, role, is_active, full_name, designation
+ FROM hostelhive.account_profiles WHERE firebase_uid = $1`, uid).Scan(
+		&account.UserID, &account.FirebaseUID, &account.Email, &account.Role, &account.IsActive, &account.FullName, &account.Designation)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Account{}, domain.ErrAccountNotFound
 	}

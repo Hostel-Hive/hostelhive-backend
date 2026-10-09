@@ -25,6 +25,8 @@ func (r fakeRow) Scan(dest ...any) error {
 	*(dest[2].(*string)) = r.account.Email
 	*(dest[3].(*string)) = r.account.Role
 	*(dest[4].(*bool)) = r.account.IsActive
+	*(dest[5].(*string)) = r.account.FullName
+	*(dest[6].(*string)) = r.account.Designation
 	return nil
 }
 
