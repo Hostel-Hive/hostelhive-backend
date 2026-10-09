@@ -123,6 +123,9 @@ func (s *Store) List(ctx context.Context, f sdomain.Filter) (sdomain.Page, error
 }
 
 func (s *Store) begin(ctx context.Context, actor string) (pgx.Tx, error) {
+	return s.beginPolicy(ctx, actor, false)
+}
+func (s *Store) beginPolicy(ctx context.Context, actor string, adminOnly bool) (pgx.Tx, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, sdomain.ErrUnavailable
@@ -132,7 +135,7 @@ func (s *Store) begin(ctx context.Context, actor string) (pgx.Tx, error) {
 		return nil, sdomain.ErrUnavailable
 	}
 	var ok bool
-	err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM hostelhive.users WHERE firebase_uid=$1 AND role IN ('admin','warden') AND is_active)", actor).Scan(&ok)
+	err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM hostelhive.users WHERE firebase_uid=$1 AND role IN ('admin','warden') AND is_active AND (NOT $2::boolean OR role='admin'))", actor, adminOnly).Scan(&ok)
 	if err != nil {
 		rollback(tx)
 		return nil, sdomain.ErrUnavailable
@@ -154,8 +157,16 @@ func guardians(ctx context.Context, tx pgx.Tx, id string, gs []sdomain.GuardianI
 }
 
 func (s *Store) Create(ctx context.Context, actor string, input sdto.CreateInput) (sdomain.Profile, error) {
+	return s.create(ctx, actor, input, false)
+}
+
+// CreateImport rechecks active Admin authority under the users write lock.
+func (s *Store) CreateImport(ctx context.Context, actor string, input sdto.CreateInput) (sdomain.Profile, error) {
+	return s.create(ctx, actor, input, true)
+}
+func (s *Store) create(ctx context.Context, actor string, input sdto.CreateInput, adminOnly bool) (sdomain.Profile, error) {
 	v := input.Details
-	tx, err := s.begin(ctx, actor)
+	tx, err := s.beginPolicy(ctx, actor, adminOnly)
 	if err != nil {
 		return sdomain.Profile{}, err
 	}

@@ -31,7 +31,11 @@ image support and search/filter. The user resolved the SRS requirement-table War
 permission discrepancy on 7 October 2026 by selecting Admin and Warden;
 issue #30 implements and documents that policy. SRS UC004 (PDF page 40,
 printed page 32) explicitly requires Admin CSV student import; that workflow
-remains unimplemented. Self-service editing is not inferred from student CRUD.
+is implemented by issue #38 with the explicit policy decision to link existing
+active student accounts rather than create Firebase credentials during import.
+Valid rows import independently; Admin-only bulk import does not change the
+Admin/Warden CRUD policy. See student-csv-import.md for the UC004 change and checks.
+Self-service editing is not inferred from student CRUD.
 
 Issue #36 adds the SDS STAFF profile (full name and designation), Admin-only
 management, and current-role name/designation projections on /me and account

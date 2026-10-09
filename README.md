@@ -731,7 +731,8 @@ security staff and students cannot use these management routes.
 Account credentials remain in Firebase; the linked users table supplies email
 and account status. Profile-image uploads are implemented in issue #30;
 see [student image setup and verification](docs/student-images.md). QR generation
-and the SRS UC004 CSV import remain separate, unimplemented features.
+remains a separate attendance feature. The SRS UC004 CSV profile import is
+implemented in issue #38 with the approved existing-account linking policy.
 
 Apply migration 5 before starting this version. `students.student_id` is an
 internal UUID; `index_no` is the human student identification/index number.
@@ -957,3 +958,13 @@ profile through `/api/v1/me`. Self edits preserve Admin-assigned designations.
 New self-created profiles leave designation unassigned until an Admin fills it.
 Student names remain in student profiles. Existing accounts remain valid without
 a profile. See [staff contract and complete verification/PR steps](docs/staff-profiles.md).
+
+## Student CSV import (issue #38)
+
+Active Admins can download GET `/api/v1/students/import/template` and submit raw
+UTF-8 CSV to POST `/api/v1/students/import`. Rows link existing active student
+accounts and create profiles/guardians; Firebase account provisioning stays in
+identity. Valid rows import independently, with safe per-row errors and duplicate
+protection. Structural file errors cause no writes. Limits are 2 MiB and 500 rows;
+inspect the report for rejected or unattempted rows. No new migration is needed.
+See [complete format, startup, verification and commit/PR guide](docs/student-csv-import.md).
