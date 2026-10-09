@@ -29,5 +29,13 @@ must be confirmed against ADR-002 and the course requirements.
 Next audit student FR006–FR009 against the existing implementation, including
 image support and search/filter. The user resolved the SRS requirement-table Warden versus UC003 Admin
 permission discrepancy on 7 October 2026 by selecting Admin and Warden;
-issue #30 implements and documents that policy. Bulk import and
-self-service are not assumed requirements without an agreed source.
+issue #30 implements and documents that policy. SRS UC004 (PDF page 40,
+printed page 32) explicitly requires Admin CSV student import; that workflow
+remains unimplemented. Self-service editing is not inferred from student CRUD.
+
+Issue #36 adds the SDS STAFF profile (full name and designation), Admin-only
+management, and current-role name/designation projections on /me and account
+lists. Student names remain in student profiles; staff names remain in staff
+profiles. The 9 October policy extension allows active staff to create/edit only
+their own name, while Admins retain designation, role and status control. Apply
+migrations 000008 and 000009 before running this version.
