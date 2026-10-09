@@ -27,3 +27,12 @@ func RegisterImages(a *handler.ImageAPI, mux *http.ServeMux, authenticate func(h
 	mux.Handle("GET /api/v1/students/{studentID}/image", protect(a.Get))
 	mux.Handle("DELETE /api/v1/students/{studentID}/image", protect(a.Remove))
 }
+
+// Import remains Admin-only even though ordinary student CRUD allows Wardens.
+func RegisterImport(a *handler.ImportAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	protect := func(h http.HandlerFunc) http.Handler {
+		return authenticate(authentication.RequireRoles(domain.RoleAdmin)(h))
+	}
+	mux.Handle("POST /api/v1/students/import", protect(a.Import))
+	mux.Handle("GET /api/v1/students/import/template", protect(a.Template))
+}

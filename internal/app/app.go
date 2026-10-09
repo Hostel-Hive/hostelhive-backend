@@ -62,6 +62,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	staff.Register(staffhandler.New(staffservice.New(staffrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	studentStore := srepo.NewStore(pool)
 	student.Register(shandler.NewAPI(sservice.New(studentStore), cfg.StudentProfileTimeout), handler, protected)
+	student.RegisterImport(shandler.NewImportAPI(sservice.NewImporter(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	var images shandler.ImageService
 	if cfg.R2Enabled {
 		objects := objectstorage.New(cfg.R2AccountID, cfg.R2Bucket, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.StudentProfileTimeout)
