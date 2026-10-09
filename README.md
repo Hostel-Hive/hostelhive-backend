@@ -939,3 +939,9 @@ See [student image setup and verification](docs/student-images.md) for complete
 PowerShell commands, API/error contracts, cleanup/retry behavior and permission
 verification. Automated lifecycle tests run with `scripts/test-student-profiles.ps1`.
 Live R2 verification and teammate review are required before closing issue #30.
+
+## Hostel inventory (issue #33)
+
+Warden-only block, room and bed listings, with derived capacity and availability.
+See [inventory contract, startup and verification](docs/hostel-inventory.md).
+Apply migration 000007 and run `scripts/test-inventory.ps1` before review.
