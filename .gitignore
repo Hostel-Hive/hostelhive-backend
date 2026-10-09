@@ -31,3 +31,14 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Local configuration and generated output
+.env.*
+!.env.example
+/bin/
+
+# Local Firebase credentials (keep actual keys outside the repository).
+/secrets/
+*service-account*.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
