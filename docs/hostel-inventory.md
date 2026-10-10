@@ -23,8 +23,8 @@ FR019 assignment and FR020 transfer/revocation endpoints are separate work.
 - Issue #46 implements assignment eligibility, atomic transfers, explicit
   revocation and actor auditing; see [allocation contract](bed-allocation.md).
   Gender zoning and maintenance-based bed exclusions are not represented by
-  current inventory fields and are not enforced. Inventory creation/editing
-  APIs remain outside scope.
+  current inventory fields and are not enforced. Issue #48 adds Admin-only
+  creation and renaming; see [inventory management](inventory-management.md).
 
 
 ## APIs

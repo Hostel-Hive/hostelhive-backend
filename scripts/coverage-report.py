@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 PREFIX = "github.com/Hostel-Hive/hostelhive-backend/"
-GROUPS = ("internal/modules/allocation/", "internal/modules/identity/", "internal/modules/staff/",
+GROUPS = ("internal/modules/allocation/", "internal/modules/inventory/", "internal/modules/identity/", "internal/modules/staff/",
           "internal/modules/student/", "internal/shared/middleware/",
           "internal/platform/firebase/")
 

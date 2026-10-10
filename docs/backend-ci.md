@@ -98,3 +98,7 @@ after rollback. This rollback runs only on the disposable CI database.
 Issue #46 adds allocation to the module coverage summary and mandatory database
 package passes. Existing recorded #42 percentages are historical; inspect the
 current run artifacts for current coverage.
+
+Issue #48 adds inventory to the module statement-coverage summary and extends
+the existing required inventory database suite with HTTP management, scoped
+uniqueness, concurrent creation, fresh-role checks and allocation-preservation tests.

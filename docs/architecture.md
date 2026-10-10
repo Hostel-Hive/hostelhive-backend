@@ -39,7 +39,7 @@ The worker retries pending jobs and stops before the app closes the database poo
 | `internal/modules/student` | Student and guardian profile management, private images |
 | `internal/modules/staff` | Staff profiles with Admin management and own-name self-service |
 | `internal/modules/allocation` | Transactional bed assignment, transfer, revocation and audited history |
-| `internal/modules/inventory` | Admin/Warden block, room and bed listings |
+| `internal/modules/inventory` | Admin/Warden listings and Admin-only inventory creation/renaming |
 | `internal/platform/objectstorage` | Private Cloudflare R2 image adapter |
 | `internal/workers` | Durable user-revocation and student-image cleanup orchestration |
 
