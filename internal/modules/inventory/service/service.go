@@ -6,11 +6,6 @@ import (
 	"github.com/Hostel-Hive/hostelhive-backend/internal/shared/validation"
 )
 
-type Repository interface {
-	Blocks(context.Context, domain.Filter) (domain.Page[domain.Block], error)
-	Rooms(context.Context, domain.Filter) (domain.Page[domain.Room], error)
-	Beds(context.Context, domain.Filter) (domain.Page[domain.Bed], error)
-}
 type Service struct{ repo Repository }
 
 func New(r Repository) *Service { return &Service{r} }

@@ -8,12 +8,6 @@ import (
 	"strings"
 )
 
-type Repository interface {
-	List(context.Context, int, int) (domain.Page, error)
-	Get(context.Context, string) (domain.Profile, error)
-	Put(context.Context, string, string, dto.Details) (domain.Profile, error)
-	PutSelf(context.Context, string, dto.SelfDetails) (domain.Profile, error)
-}
 type Service struct{ repo Repository }
 
 func New(r Repository) *Service { return &Service{r} }
@@ -36,12 +30,4 @@ func (s *Service) Put(ctx context.Context, actor, id string, d dto.Details) (dom
 		return domain.Profile{}, domain.ErrInvalid
 	}
 	return s.repo.Put(ctx, actor, id, d)
-}
-
-func (s *Service) PutSelf(ctx context.Context, actor string, d dto.SelfDetails) (domain.Profile, error) {
-	d.FullName = strings.TrimSpace(d.FullName)
-	if strings.TrimSpace(actor) == "" || !validation.Text(d.FullName, 200) {
-		return domain.Profile{}, domain.ErrInvalid
-	}
-	return s.repo.PutSelf(ctx, actor, d)
 }

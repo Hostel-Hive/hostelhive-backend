@@ -36,3 +36,8 @@ func RegisterImport(a *handler.ImportAPI, mux *http.ServeMux, authenticate func(
 	mux.Handle("POST /api/v1/students/import", protect(a.Import))
 	mux.Handle("GET /api/v1/students/import/template", protect(a.Template))
 }
+
+func RegisterQR(a *handler.QRAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/v1/me/qr", authenticate(authentication.RequireRoles(domain.RoleStudent)(http.HandlerFunc(a.Own))))
+	mux.Handle("GET /api/v1/students/{studentID}/qr", authenticate(authentication.RequireRoles(domain.RoleAdmin, domain.RoleWarden)(http.HandlerFunc(a.Get))))
+}

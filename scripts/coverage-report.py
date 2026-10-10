@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 PREFIX = "github.com/Hostel-Hive/hostelhive-backend/"
-GROUPS = ("internal/modules/identity/", "internal/modules/staff/",
+GROUPS = ("internal/modules/allocation/", "internal/modules/inventory/", "internal/modules/identity/", "internal/modules/staff/",
           "internal/modules/student/", "internal/shared/middleware/",
           "internal/platform/firebase/")
 
@@ -46,7 +46,7 @@ def verify_integration(events):
             failed.append(event.get("Test", package))
         if event.get("Action") == "pass" and not event.get("Test"):
             passed.add(package.rsplit("/", 1)[-1])
-    required = {"accounts", "identity", "provisioning", "staff", "student", "postgres", "inventory"}
+    required = {"accounts", "identity", "provisioning", "staff", "student", "postgres", "inventory", "allocation"}
     if skipped or failed or required - passed:
         raise ValueError("Integration evidence incomplete: skipped/failed tests or missing package passes")
 

@@ -19,10 +19,14 @@ internal/app/                 Dependency wiring, operational router and shutdown
 internal/config/              Environment parsing and validation
 internal/platform/postgres/   PostgreSQL connection pool
 internal/platform/firebase/   Authentication, provisioning and revocation adapters
+internal/platform/objectstorage/ Private R2 student-image storage
 internal/shared/              Middleware, responses and common validation
 internal/modules/identity/    Account domain, DTOs, handlers, services and repositories
 internal/modules/student/     Profile domain, DTOs, handlers, services and repositories
-internal/workers/             Durable user-revocation retry loop
+internal/modules/staff/       Staff profile management and own-profile self-service
+internal/modules/inventory/   Block, room and bed listings and Admin management
+internal/modules/allocation/  Bed assignment, transfer, revocation and history
+internal/workers/             User-revocation retries and student-image cleanup
 tests/integration/            Disposable PostgreSQL integration suites
 tests/migration/              SQL constraint verification
 tests/architecture/           Package dependency boundary checks
@@ -33,7 +37,7 @@ scripts/                      Migration setup and isolated verification
 go.mod                        Go module
 ```
 
-The modular layout follows the HostelHive folder-structure reference. Issue #26 reorganizes existing code; endpoint paths, JSON responses, environment settings and migration versions remain unchanged. Migration commands still use the pinned CLI through `scripts/migrate.ps1`.
+The modular layout follows the HostelHive folder-structure reference, adapted for implemented features. See the [module layout review](docs/module-layout.md) for the current files and the reasons for their organization. Migration commands still use the pinned CLI through `scripts/migrate.ps1`.
 
 ## Start locally
 
@@ -291,7 +295,7 @@ go build ./...
 
 The selected baseline uses Firebase Authentication (ADR-002), containerized PostgreSQL (ADR-003), backend-published Firebase RTDB projections (ADR-004) and Nginx HTTPS routing (ADR-005). This scaffold does not issue local user JWTs or store user passwords. ADRs live in the continued documents repository: https://github.com/Hostel-Hive/Design-and-Development-Project.
 
-Identity management and student profiles are implemented modules. Attendance, allocation, leave, complaint, notice, report and scanner features will extend this layout in their own tickets. Add adapters and modules when their functionality is implemented. See [architecture.md](docs/architecture.md) for dependency rules.
+Identity, student, staff, inventory and allocation are implemented modules. Attendance, leave, complaint, notice, report and scanner features will extend this layout in their own tickets. Add adapters and modules when their functionality is implemented. See [architecture.md](docs/architecture.md) for dependency rules.
 
 When using the port override above, check http://127.0.0.1:18080/health and http://127.0.0.1:18080/ready.
 
@@ -730,8 +734,9 @@ by permitting active Admin AND Warden accounts in issue #30. Sub-wardens,
 security staff and students cannot use these management routes.
 Account credentials remain in Firebase; the linked users table supplies email
 and account status. Profile-image uploads are implemented in issue #30;
-see [student image setup and verification](docs/student-images.md). QR generation
-remains a separate attendance feature. The SRS UC004 CSV profile import is
+see [student image setup and verification](docs/student-images.md). Student QR
+generation is implemented in issue #50; scan processing remains a later attendance feature.
+The SRS UC004 CSV profile import is
 implemented in issue #38 with the approved existing-account linking policy.
 
 Apply migration 5 before starting this version. `students.student_id` is an
@@ -921,6 +926,16 @@ responses; SDK transport tests exercise the pinned Firebase SDK without network
 credentials. Real Firebase sign-in and teammate review remain manual gates.
 See [identity requirements](docs/identity-requirements.md) for module readiness.
 
+## Student QR codes (issue #50)
+
+Apply migration 000011 before running this version. Active students retrieve
+their own QR at `GET /api/v1/me/qr`; Admin/Warden retrieve an eligible student's
+QR at `GET /api/v1/students/{studentID}/qr`. Both return a 320x320 PNG.
+First retrieval persists a random identifier; later retrievals return the same QR.
+No personal details or Firebase credentials are encoded. Inactive, non-student
+and archived profiles are ineligible. No R2 configuration is needed.
+See [QR contract, startup, live verification and commit/PR steps](docs/student-qr.md).
+
 ## Student profile images (issue #30)
 
 Admin and Warden can manage student profiles and images under the agreed
@@ -945,7 +960,7 @@ Live R2 verification and teammate review are required before closing issue #30.
 
 ## Hostel inventory (issue #33)
 
-Warden-only block, room and bed listings, with derived capacity and availability.
+Admin/Warden block, room and bed listings, with derived capacity and availability.
 See [inventory contract, startup and verification](docs/hostel-inventory.md).
 Apply migration 000007 and run `scripts/test-inventory.ps1` before review.
 
@@ -987,3 +1002,22 @@ See [CI, isolated database coverage and PR steps](docs/backend-ci.md).
 Go/static/build checks, database race tests and Windows PowerShell helper tests
 run on PRs. Coverage artifacts identify untested statements; they do not replace
 live provider or staging checks in hostelhive-infra issue #1.
+
+## Bed allocation (issue #46)
+
+Apply migration 000010 before starting this version. Active Admins and Wardens
+can assign, transfer and revoke student bed allocations. Partial unique indexes
+and transactional writes protect occupancy; history and actor audit fields are
+retained. Inventory listings now also allow Admins for bed selection.
+See [API contract and complete verification/commit/PR guide](docs/bed-allocation.md).
+Run `scripts/test-backend-coverage.ps1` for all database suites, including allocation.
+
+## Inventory management (issue #48)
+
+Active Admins can create blocks, rooms and beds and update their names/numbers.
+Admin/Warden listing and allocation access remains unchanged. Updates preserve
+resource IDs and parent relationships; occupied-bed renaming preserves allocation
+records and does not release the bed. Case-insensitive uniqueness is enforced by
+the database. There are no deletion, archiving or relocation endpoints.
+No new migration is required beyond the existing version 10 baseline.
+See [API contract, local verification and all commit/PR steps](docs/inventory-management.md).

@@ -71,7 +71,7 @@ func list[T any](a *API, w http.ResponseWriter, r *http.Request, query func(cont
 		response.Error(w, 401, "unauthorized")
 		return
 	}
-	if !account.IsActive || account.Role != identity.RoleWarden {
+	if !account.IsActive || (account.Role != identity.RoleWarden && account.Role != identity.RoleAdmin) {
 		response.Error(w, 403, "forbidden")
 		return
 	}

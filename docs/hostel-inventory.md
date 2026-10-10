@@ -17,13 +17,15 @@ FR019 assignment and FR020 transfer/revocation endpoints are separate work.
 - Occupancy includes every active allocation, even if its student account later
   becomes inactive. Deactivation must not silently make an occupied bed available.
 - Lists contain counts and identifiers, never student details or credentials.
-- Warden is the only permitted role for FR018. Admin permission for student
-  profiles does not imply inventory permission. Missing token: 401; other roles
+- Issue #46 explicitly extends inventory selection to Admin and Warden.
+  Student-profile permissions alone do not imply inventory access. Missing token: 401; other roles
   or inactive accounts: 403; invalid filters: 400; database failure: 503.
-- Assignment eligibility, gender compatibility, maintenance status, transfer
-  confirmation and audit actor handling remain part of the D09 contract for the
-  later allocation-write ticket. This ticket does not claim that contract is
-  fully approved and exposes no allocation-write or inventory-write APIs.
+- Issue #46 implements assignment eligibility, atomic transfers, explicit
+  revocation and actor auditing; see [allocation contract](bed-allocation.md).
+  Gender zoning and maintenance-based bed exclusions are not represented by
+  current inventory fields and are not enforced. Issue #48 adds Admin-only
+  creation and renaming; see [inventory management](inventory-management.md).
+
 
 ## APIs
 
@@ -78,7 +80,7 @@ go build -o .\bin\hostelhive-server.exe .\cmd\server
 .\bin\hostelhive-server.exe
 ```
 
-Expect migration version 7, not dirty, and `HTTP server listening`. R2 is
+Expect the latest migration version (10 after issue #46), not dirty, and `HTTP server listening`. R2 is
 disabled only for this inventory check; configure it normally when testing images.
 
 Terminal 2, in the backend folder, sign in as an **active Warden**:
@@ -97,8 +99,8 @@ curl.exe -i -H "Authorization: Bearer $wardenIDToken" 'http://127.0.0.1:18080/ap
 
 Confirm `/me` reports `warden`. Empty lists are correct on a new database:
 migrations do not invent production rooms or beds. The last two requests should
-return 401 and 400 respectively. Sign in as an Admin or Student and repeat a list
-request to verify 403. Never post tokens or passwords in the ticket.
+return 401 and 400 respectively. Sign in as a Student and repeat a list
+request to verify 403; Admin listing now returns 200 under issue #46. Never post tokens or passwords in the ticket.
 
 If there is no Warden account, provision a separate local test Warden. First
 sign in as your existing Admin in Terminal 2; do not change the sole Admin's role.
@@ -157,7 +159,7 @@ verified in the isolated automated tests; do not assign real students via SQL.
 ## Completion evidence
 
 Keep the issue description short. Add a comment after verification with the PR
-URL, automated checks, live Warden results, rejected Admin/Student requests,
+URL, automated checks, live Warden/Admin results, rejected Student requests,
 and reviewer confirmation. Record actual results only. Merge the feature PR
 into `develop`, close #33 when all required verification/review is complete,
 then remove the merged feature branch. Keep `develop` and `main`.
@@ -187,7 +189,7 @@ Title: `feat(inventory): add hostel inventory listings`
 Suggested short description:
 
 ```markdown
-Add Warden-only block, room and bed listings with capacity and availability,
+Add block, room and bed listings (Warden initially; Admin added in #46) with capacity and availability,
 allocation constraints and retained history.
 
 Validation: Go tests, vet, build, disposable PostgreSQL inventory tests and
@@ -206,7 +208,7 @@ Add a comment on issue #33 using actual results:
 Implemented hostel inventory listings.
 - PR: [paste individual PR URL]
 - Automated: tests, vet, build, inventory integration and migration rollback/reapply passed.
-- Live: Warden lists [result]; capacity/availability [result]; missing token [result]; invalid filter [result]; Admin/Student access [result].
+- Live: Warden lists [result]; capacity/availability [result]; missing token [result]; invalid filter [result]; Admin access 200 [result]; Student access 403 [result].
 - Review: [reviewer and result]
 - Merged into develop: [yes/no]
 ```

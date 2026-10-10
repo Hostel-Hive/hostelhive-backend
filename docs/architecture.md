@@ -1,7 +1,8 @@
 # Backend architecture
 
 HostelHive is a Go modular monolith. This layout implements the supplied
-HostelHive backend folder-structure reference for the features currently built.
+HostelHive backend folder-structure reference for the features currently built,
+with staff and inventory as explicit modules added by later features.
 It preserves ADR-002: Firebase owns credentials and token verification;
 PostgreSQL owns current application roles and account state.
 
@@ -35,9 +36,10 @@ The worker retries pending jobs and stops before the app closes the database poo
 | `internal/shared/response` | Common safe authentication/error responses |
 | `internal/shared/validation` | Common UUID, text and phone validation |
 | `internal/modules/identity` | Account provisioning, lookup and management |
-| `internal/modules/student` | Student and guardian profile management, private images |
+| `internal/modules/student` | Student and guardian profiles, private images, stable student QR identifiers |
 | `internal/modules/staff` | Staff profiles with Admin management and own-name self-service |
-| `internal/modules/inventory` | Warden-only block, room and bed listings |
+| `internal/modules/allocation` | Transactional bed assignment, transfer, revocation and audited history |
+| `internal/modules/inventory` | Admin/Warden listings and Admin-only inventory creation/renaming |
 | `internal/platform/objectstorage` | Private Cloudflare R2 image adapter |
 | `internal/workers` | Durable user-revocation and student-image cleanup orchestration |
 
@@ -47,6 +49,14 @@ DTOs describe request payloads; domain response records retain their existing
 JSON contract. Persistence and provider ports live in the module service package.
 Implementations satisfy these interfaces without services importing adapters.
 Handlers depend on service contracts, never concrete repositories or SDK clients.
+
+See [the current module layout and review](module-layout.md) for individual files.
+File boundaries follow responsibilities, not a minimum file count per folder.
+Inventory resource queries have separate files but share one pagination helper;
+staff self-service is separated from Admin management. Student guardians remain
+in the student module and the profile transaction. Identity role definitions and
+each module's errors are separate from its records. Service ports are grouped in
+`ports.go` while workflow implementations stay in their own files.
 
 The migration-backed account_profiles view derives current-role names from
 student/staff profiles. It contains no duplicate editable names. Authentication
@@ -59,7 +69,7 @@ own their different business fields.
 
 ## Extending the backend
 
-Add attendance, allocation, leave, complaint, notice and report modules when
+Add attendance, leave, complaint, notice and report modules when
 implementing those features. Cross-module workflows should call service
 interfaces; never import another module's repository. Existing student writes
 use account rows in the same PostgreSQL transaction to enforce authorization

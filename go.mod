@@ -8,6 +8,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.1
 	github.com/jackc/pgx/v5 v5.11.0
+	github.com/makiuchi-d/gozxing v0.1.1
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/oauth2 v0.36.0
 	google.golang.org/api v0.279.0
 )
@@ -70,6 +72,7 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine/v2 v2.0.6 // indirect
 	google.golang.org/genproto v0.0.0-20260511170946-3700d4141b60 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
