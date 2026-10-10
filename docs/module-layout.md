@@ -11,7 +11,7 @@ the reference was written. Allocation is also checked as part of issue #46.
 | Layer | Contents |
 | --- | --- |
 | `domain` | Business records, role definitions and module error values |
-| `dto` | HTTP write payloads; omitted for read-only inventory |
+| `dto` | HTTP write payloads, including inventory creation and renaming |
 | `handler` | HTTP parsing, response status mapping and calls to service contracts |
 | `service` | Use cases, input normalization and dependency interfaces in `ports.go` |
 | `repository` | SQL, transactions, locks and database error mapping |
@@ -104,12 +104,17 @@ inventory/
     bed.go
     query.go             Shared filters and paginated results
     errors.go
-  handler/handler.go      Block, room and bed listing HTTP handlers
+  dto/request.go         Create and rename payloads; parents excluded from updates
+  handler/
+    handler.go           Block, room and bed listing HTTP handlers
+    management.go        Admin-only create and rename handlers
   service/
     ports.go
     service.go           Listing validation and delegation
+    management.go        Create/rename validation and normalization
   repository/
     postgres.go          Store, optional filters and snapshot pagination helper
+    management.go        Fresh Admin checks, write transaction and error mapping
     blocks.go            Block queries
     rooms.go             Room queries and capacity/occupancy aggregation
     beds.go              Bed queries and availability

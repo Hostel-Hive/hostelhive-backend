@@ -24,7 +24,7 @@ internal/shared/              Middleware, responses and common validation
 internal/modules/identity/    Account domain, DTOs, handlers, services and repositories
 internal/modules/student/     Profile domain, DTOs, handlers, services and repositories
 internal/modules/staff/       Staff profile management and own-profile self-service
-internal/modules/inventory/   Block, room and bed listing APIs
+internal/modules/inventory/   Block, room and bed listings and Admin management
 internal/modules/allocation/  Bed assignment, transfer, revocation and history
 internal/workers/             User-revocation retries and student-image cleanup
 tests/integration/            Disposable PostgreSQL integration suites
@@ -1000,3 +1000,13 @@ and transactional writes protect occupancy; history and actor audit fields are
 retained. Inventory listings now also allow Admins for bed selection.
 See [API contract and complete verification/commit/PR guide](docs/bed-allocation.md).
 Run `scripts/test-backend-coverage.ps1` for all database suites, including allocation.
+
+## Inventory management (issue #48)
+
+Active Admins can create blocks, rooms and beds and update their names/numbers.
+Admin/Warden listing and allocation access remains unchanged. Updates preserve
+resource IDs and parent relationships; occupied-bed renaming preserves allocation
+records and does not release the bed. Case-insensitive uniqueness is enforced by
+the database. There are no deletion, archiving or relocation endpoints.
+No new migration is required beyond the existing version 10 baseline.
+See [API contract, local verification and all commit/PR steps](docs/inventory-management.md).

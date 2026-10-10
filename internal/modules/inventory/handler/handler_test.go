@@ -6,6 +6,7 @@ import (
 	identity "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory/domain"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory/dto"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory/handler"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory/service"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/shared/middleware"
@@ -29,9 +30,40 @@ func (a accounts) FindByFirebaseUID(context.Context, string) (identity.Account, 
 }
 
 type store struct {
-	err      error
-	calls    int
-	deadline bool
+	err              error
+	calls            int
+	deadline         bool
+	actor, id, label string
+}
+
+func (s *store) capture(ctx context.Context, actor, id, label string) {
+	s.calls++
+	_, s.deadline = ctx.Deadline()
+	s.actor, s.id, s.label = actor, id, label
+}
+func (s *store) CreateBlock(ctx context.Context, actor string, in dto.BlockDetails) (domain.Block, error) {
+	s.capture(ctx, actor, "", in.Name)
+	return domain.Block{Name: in.Name}, s.err
+}
+func (s *store) UpdateBlock(ctx context.Context, actor, id string, in dto.BlockDetails) (domain.Block, error) {
+	s.capture(ctx, actor, id, in.Name)
+	return domain.Block{BlockID: id, Name: in.Name}, s.err
+}
+func (s *store) CreateRoom(ctx context.Context, actor string, in dto.CreateRoom) (domain.Room, error) {
+	s.capture(ctx, actor, in.BlockID, in.RoomNo)
+	return domain.Room{BlockID: in.BlockID, RoomNo: in.RoomNo}, s.err
+}
+func (s *store) UpdateRoom(ctx context.Context, actor, id string, in dto.RoomDetails) (domain.Room, error) {
+	s.capture(ctx, actor, id, in.RoomNo)
+	return domain.Room{RoomID: id, RoomNo: in.RoomNo}, s.err
+}
+func (s *store) CreateBed(ctx context.Context, actor string, in dto.CreateBed) (domain.Bed, error) {
+	s.capture(ctx, actor, in.RoomID, in.BedNo)
+	return domain.Bed{RoomID: in.RoomID, BedNo: in.BedNo}, s.err
+}
+func (s *store) UpdateBed(ctx context.Context, actor, id string, in dto.BedDetails) (domain.Bed, error) {
+	s.capture(ctx, actor, id, in.BedNo)
+	return domain.Bed{BedID: id, BedNo: in.BedNo}, s.err
 }
 
 func (s *store) Blocks(ctx context.Context, f domain.Filter) (domain.Page[domain.Block], error) {

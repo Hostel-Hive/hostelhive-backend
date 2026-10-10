@@ -4,8 +4,28 @@ import (
 	"context"
 
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory/domain"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory/dto"
 	"github.com/jackc/pgx/v5"
 )
+
+func (s *Store) CreateRoom(ctx context.Context, actor string, in dto.CreateRoom) (domain.Room, error) {
+	return write(ctx, s.pool, actor, func(tx pgx.Tx) (domain.Room, error) {
+		var r domain.Room
+		err := tx.QueryRow(ctx, `INSERT INTO hostelhive.rooms(block_id,room_no) VALUES($1,$2) RETURNING room_id::text,block_id::text,room_no`, in.BlockID, in.RoomNo).Scan(&r.RoomID, &r.BlockID, &r.RoomNo)
+		return r, err
+	})
+}
+
+func (s *Store) UpdateRoom(ctx context.Context, actor, id string, in dto.RoomDetails) (domain.Room, error) {
+	return write(ctx, s.pool, actor, func(tx pgx.Tx) (domain.Room, error) {
+		var r domain.Room
+		if err := tx.QueryRow(ctx, `UPDATE hostelhive.rooms SET room_no=$2 WHERE room_id=$1 RETURNING room_id::text,block_id::text,room_no`, id, in.RoomNo).Scan(&r.RoomID, &r.BlockID, &r.RoomNo); err != nil {
+			return r, err
+		}
+		err := tx.QueryRow(ctx, `SELECT capacity,occupied_beds,available_beds FROM (`+roomSummary+`) summaries WHERE room_id=$1`, id).Scan(&r.Capacity, &r.OccupiedBeds, &r.AvailableBeds)
+		return r, err
+	})
+}
 
 // No student identity or allocation details leave the inventory API.
 const roomSummary = `SELECT r.room_id,r.block_id,r.room_no,
