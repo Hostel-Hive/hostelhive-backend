@@ -18,9 +18,9 @@ concurrent idempotence and preserving current role. Account integration tests
 run against disposable PostgreSQL. Firebase SDK tests use an offline transport.
 
 Before declaring the identity backend done, record live verification, peer
-review and applicable CI/coverage/staging evidence. The repository currently has
-no GitHub Actions workflow; CI and measured coverage need a separate foundation
-task. Do not mark unverified checks complete in a ticket.
+review and applicable CI/coverage/staging evidence. Issue #42 adds the GitHub Actions workflow and measured local coverage;
+retain its actual hosted CI run and review evidence. Staging/HTTPS verification
+is tracked separately in Hostel-Hive/hostelhive-infra#1. Do not mark unverified checks complete in a ticket.
 
 RTDB grant cleanup must be integrated when that subsystem is implemented.
 Firebase authentication security equivalence and project password/abuse settings
