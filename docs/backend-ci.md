@@ -102,3 +102,10 @@ current run artifacts for current coverage.
 Issue #48 adds inventory to the module statement-coverage summary and extends
 the existing required inventory database suite with HTTP management, scoped
 uniqueness, concurrent creation, fresh-role checks and allocation-preservation tests.
+
+Issue #50 extends the required student integration package with QR ownership,
+eligibility, concurrent lazy issuance, persisted uniqueness and retrieval checks.
+Unit tests decode the generated PNG using an independent QR decoder. CI's existing
+rollback/reapply sequence includes migration 000011. Live Firebase and hardware
+scanner verification are separate evidence; backend PNG decoding does not prove
+ESP32 firmware integration or gate operation.

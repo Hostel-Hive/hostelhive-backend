@@ -734,8 +734,9 @@ by permitting active Admin AND Warden accounts in issue #30. Sub-wardens,
 security staff and students cannot use these management routes.
 Account credentials remain in Firebase; the linked users table supplies email
 and account status. Profile-image uploads are implemented in issue #30;
-see [student image setup and verification](docs/student-images.md). QR generation
-remains a separate attendance feature. The SRS UC004 CSV profile import is
+see [student image setup and verification](docs/student-images.md). Student QR
+generation is implemented in issue #50; scan processing remains a later attendance feature.
+The SRS UC004 CSV profile import is
 implemented in issue #38 with the approved existing-account linking policy.
 
 Apply migration 5 before starting this version. `students.student_id` is an
@@ -924,6 +925,16 @@ The account integration script uses disposable PostgreSQL and mocked Firebase
 responses; SDK transport tests exercise the pinned Firebase SDK without network
 credentials. Real Firebase sign-in and teammate review remain manual gates.
 See [identity requirements](docs/identity-requirements.md) for module readiness.
+
+## Student QR codes (issue #50)
+
+Apply migration 000011 before running this version. Active students retrieve
+their own QR at `GET /api/v1/me/qr`; Admin/Warden retrieve an eligible student's
+QR at `GET /api/v1/students/{studentID}/qr`. Both return a 320x320 PNG.
+First retrieval persists a random identifier; later retrievals return the same QR.
+No personal details or Firebase credentials are encoded. Inactive, non-student
+and archived profiles are ineligible. No R2 configuration is needed.
+See [QR contract, startup, live verification and commit/PR steps](docs/student-qr.md).
 
 ## Student profile images (issue #30)
 

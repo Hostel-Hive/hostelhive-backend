@@ -26,6 +26,12 @@ type Objects interface {
 	Delete(context.Context, string) error
 }
 
+// QRRepository checks current actor authority and target eligibility in the
+// issuance transaction. Empty studentID means the actor's own student profile.
+type QRRepository interface {
+	QR(context.Context, string, string, string) (string, error)
+}
+
 type ImageWork interface {
 	Attach(context.Context) (sdomain.Profile, error)
 	Close()

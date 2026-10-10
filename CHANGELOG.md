@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add stable student QR PNG retrieval for students themselves and Admin/Warden
+  (issue #50; FR010). Migration 000011 stores one unique random identifier per
+  profile. Recheck current roles, ownership and eligibility during lazy issuance.
+  Test independent PNG decoding, concurrent issuance, persistence and permissions.
+
 - Add Admin-only block, room and bed creation and renaming (issue #48).
   Preserve parent IDs, occupancy and allocation history; enforce scoped uniqueness
   and recheck current Admin authority inside each write transaction.
