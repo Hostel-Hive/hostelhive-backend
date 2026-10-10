@@ -32,15 +32,16 @@ func scan(row pgx.Row) (domain.Account, error) {
 
 func (s *Store) List(ctx context.Context, limit, offset int) (domain.AccountPage, error) {
 	page := domain.AccountPage{Users: []domain.Account{}, Limit: limit, Offset: offset}
-	rows, err := s.pool.Query(ctx, "SELECT "+columns+" FROM hostelhive.users ORDER BY created_at,user_id LIMIT $1 OFFSET $2", limit+1, offset)
+	rows, err := s.pool.Query(ctx, "SELECT user_id::text,firebase_uid,email,role,is_active,full_name,designation FROM hostelhive.account_profiles JOIN hostelhive.users USING(user_id,firebase_uid,email,role,is_active) ORDER BY created_at,user_id LIMIT $1 OFFSET $2", limit+1, offset)
 	if err != nil {
 		return page, domain.ErrManagementUnavailable
 	}
 	defer rows.Close()
 	for rows.Next() {
-		a, err := scan(rows)
+		var a domain.Account
+		err := rows.Scan(&a.UserID, &a.FirebaseUID, &a.Email, &a.Role, &a.IsActive, &a.FullName, &a.Designation)
 		if err != nil {
-			return page, err
+			return page, domain.ErrManagementUnavailable
 		}
 		page.Users = append(page.Users, a)
 	}

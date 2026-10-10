@@ -42,3 +42,7 @@ go.work.sum
 *service-account*.json
 *serviceAccount*.json
 *firebase-adminsdk*.json
+
+# CI/local verification artifacts
+/artifacts/
+__pycache__/

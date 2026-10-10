@@ -22,6 +22,7 @@ type Config struct {
 	ProvisioningTimeout      time.Duration
 	AccountManagementTimeout time.Duration
 	StudentProfileTimeout    time.Duration
+	InventoryTimeout         time.Duration
 	DatabaseURL              string
 	DatabaseCheckTimeout     time.Duration
 	Environment              string
@@ -86,6 +87,7 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		{"PROVISIONING_TIMEOUT", "8s", &cfg.ProvisioningTimeout},
 		{"ACCOUNT_MANAGEMENT_TIMEOUT", "8s", &cfg.AccountManagementTimeout},
 		{"STUDENT_PROFILE_TIMEOUT", "8s", &cfg.StudentProfileTimeout},
+		{"INVENTORY_TIMEOUT", "8s", &cfg.InventoryTimeout},
 	} {
 		d, err := time.ParseDuration(value(setting.key, setting.fallback))
 		if err != nil || d <= 0 {

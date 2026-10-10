@@ -7,6 +7,8 @@ import (
 var ErrAccountNotFound = errors.New("account not found")
 
 type Account struct {
+	FullName    string `json:"full_name,omitempty"`
+	Designation string `json:"designation,omitempty"`
 	UserID      string `json:"user_id"`
 	FirebaseUID string `json:"firebase_uid"`
 	Email       string `json:"email"`

@@ -1,0 +1,94 @@
+name: Backend CI
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  go:
+    name: Go checks and database coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hostelhive
+          POSTGRES_PASSWORD: disposable-ci-only
+          POSTGRES_DB: hostelhive_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U hostelhive -d hostelhive_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      TEST_DATABASE_URL: postgres://hostelhive:disposable-ci-only@127.0.0.1:5432/hostelhive_ci?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Formatting, dependency verification, static checks and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check-go-format.py
+          python3 scripts/test_coverage_report.py
+          go mod verify
+          go vet ./...
+          go build -o bin/hostelhive-server ./cmd/server
+      - name: Install pinned migration CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(tr -d '\r\n' < .migrate-version)
+          go install -tags postgres -ldflags "-X main.Version=$version" "github.com/golang-migrate/migrate/v4/cmd/migrate@$version"
+          test "$(migrate -version 2>&1)" = "$version"
+      - name: Fresh schema, complete rollback and reapply on disposable database
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep metadata in public when schema name matches the DB username.
+          migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+          migrate -path migrations -database "$migration_url" up
+          migrate -path migrations -database "$migration_url" down -all
+          rollback_state=$(docker exec '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -At -v ON_ERROR_STOP=1 -c "SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='hostelhive')::text || ':' || (SELECT count(*) FROM public.schema_migrations)::text;")
+          test "$rollback_state" = "false:0" || { echo 'Rollback left application schema or migration metadata behind'; exit 1; }
+          migrate -path migrations -database "$migration_url" up
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/user_accounts.sql
+      - name: Race tests with application-wide coverage (database packages serial)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          go test -p 1 -count=1 -race -timeout=120s -json -covermode=atomic -coverpkg=./cmd/...,./internal/... -coverprofile=artifacts/coverage.out ./... | tee artifacts/tests.jsonl
+          python3 scripts/coverage-report.py --profile artifacts/coverage.out --events artifacts/tests.jsonl --output artifacts/coverage.md --require-integration
+          go tool cover -html=artifacts/coverage.out -o artifacts/coverage.html
+          cat artifacts/coverage.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain test and coverage evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: backend-coverage-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+  powershell:
+    name: Windows PowerShell helper contracts
+    runs-on: windows-2025
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Offline Firebase password helpers on Windows PowerShell 5.1
+        shell: powershell
+        run: ./scripts/test-firebase-password-tools.ps1
