@@ -1,30 +1,6 @@
 package domain
 
-import (
-	"errors"
-
-	"time"
-)
-
-var (
-	ErrInvalid     = errors.New("invalid input")
-	ErrNotFound    = errors.New("student not found")
-	ErrConflict    = errors.New("duplicate student")
-	ErrAccount     = errors.New("active student account required")
-	ErrForbidden   = errors.New("forbidden")
-	ErrUnavailable = errors.New("student profiles unavailable")
-)
-
-type GuardianInput struct {
-	Name         string `json:"name"`
-	Relationship string `json:"relationship"`
-	ContactPhone string `json:"contact_phone"`
-}
-
-type Guardian struct {
-	GuardianID string `json:"guardian_id"`
-	GuardianInput
-}
+import "time"
 
 type Profile struct {
 	ProfileImageURL string     `json:"profile_image_url,omitempty"`

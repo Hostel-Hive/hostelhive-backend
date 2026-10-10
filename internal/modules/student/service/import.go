@@ -20,10 +20,6 @@ const MaxImportBytes = 2 * 1024 * 1024
 const MaxImportRecords = 500
 const CSVHeader = "user_id,index_no,full_name,faculty,year,contact_phone,guardians"
 
-// The repository must recheck active Admin authority inside each transaction.
-type ImportRepository interface {
-	CreateImport(context.Context, string, dto.CreateInput) (domain.Profile, error)
-}
 type Importer struct{ repository ImportRepository }
 
 func NewImporter(r ImportRepository) *Importer { return &Importer{repository: r} }

@@ -94,3 +94,7 @@ Otherwise a later CLI call can create an empty metadata table in hostelhive,
 report no change on rollback and attempt to recreate the existing schema.
 CI now pins metadata and asserts the schema is absent and public metadata empty
 after rollback. This rollback runs only on the disposable CI database.
+
+Issue #46 adds allocation to the module coverage summary and mandatory database
+package passes. Existing recorded #42 percentages are historical; inspect the
+current run artifacts for current coverage.

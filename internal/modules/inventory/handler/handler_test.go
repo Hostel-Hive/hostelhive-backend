@@ -39,12 +39,14 @@ func (s *store) Blocks(ctx context.Context, f domain.Filter) (domain.Page[domain
 	_, s.deadline = ctx.Deadline()
 	return domain.Page[domain.Block]{Items: []domain.Block{}, Limit: f.Limit, Offset: f.Offset}, s.err
 }
-func (s *store) Rooms(context.Context, domain.Filter) (domain.Page[domain.Room], error) {
+func (s *store) Rooms(ctx context.Context, _ domain.Filter) (domain.Page[domain.Room], error) {
 	s.calls++
+	_, s.deadline = ctx.Deadline()
 	return domain.Page[domain.Room]{Items: []domain.Room{}}, s.err
 }
-func (s *store) Beds(context.Context, domain.Filter) (domain.Page[domain.Bed], error) {
+func (s *store) Beds(ctx context.Context, _ domain.Filter) (domain.Page[domain.Bed], error) {
 	s.calls++
+	_, s.deadline = ctx.Deadline()
 	return domain.Page[domain.Bed]{Items: []domain.Bed{}}, s.err
 }
 func TestInventoryHTTP(t *testing.T) {
@@ -57,7 +59,7 @@ func TestInventoryHTTP(t *testing.T) {
 	}{
 		{"warden", "/api/v1/blocks", "token", identity.RoleWarden, true, nil, 200},
 		{"anonymous", "/api/v1/beds", "", identity.RoleWarden, true, nil, 401},
-		{"admin", "/api/v1/rooms", "token", identity.RoleAdmin, true, nil, 403},
+		{"admin", "/api/v1/rooms", "token", identity.RoleAdmin, true, nil, 200},
 		{"student", "/api/v1/beds", "token", identity.RoleStudent, true, nil, 403},
 		{"subwarden", "/api/v1/blocks", "token", identity.RoleSubWarden, true, nil, 403},
 		{"security", "/api/v1/blocks", "token", identity.RoleSecurityStaff, true, nil, 403},

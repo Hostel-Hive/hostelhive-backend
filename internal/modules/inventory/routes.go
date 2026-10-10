@@ -9,7 +9,7 @@ import (
 
 func Register(a *handler.API, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
 	protect := func(h http.HandlerFunc) http.Handler {
-		return authenticate(middleware.RequireRoles(domain.RoleWarden)(h))
+		return authenticate(middleware.RequireRoles(domain.RoleAdmin, domain.RoleWarden)(h))
 	}
 	mux.Handle("GET /api/v1/blocks", protect(a.Blocks))
 	mux.Handle("GET /api/v1/rooms", protect(a.Rooms))

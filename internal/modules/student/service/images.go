@@ -14,22 +14,6 @@ import (
 	d "github.com/Hostel-Hive/hostelhive-backend/internal/modules/student/domain"
 )
 
-type Objects interface {
-	Put(context.Context, string, string, []byte) error
-	Get(context.Context, string) ([]byte, error)
-	Delete(context.Context, string) error
-}
-type ImageWork interface {
-	Attach(context.Context) (d.Profile, error)
-	Close()
-}
-type ImageRepository interface {
-	ReserveImage(context.Context, string, string, d.Image) error
-	BeginImage(context.Context, string, string, string) (ImageWork, error)
-	GetImage(context.Context, string) (d.Image, error)
-	RemoveImage(context.Context, string, string) error
-	CleanupOne(context.Context, Objects) (bool, error)
-}
 type Images struct {
 	repo    ImageRepository
 	objects Objects
