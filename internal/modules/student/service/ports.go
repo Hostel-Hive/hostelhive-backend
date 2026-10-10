@@ -14,3 +14,27 @@ type Repository interface {
 	Update(context.Context, string, string, sdto.Details) (sdomain.Profile, error)
 	Delete(context.Context, string, string) error
 }
+
+// The repository must recheck active Admin authority inside each transaction.
+type ImportRepository interface {
+	CreateImport(context.Context, string, sdto.CreateInput) (sdomain.Profile, error)
+}
+
+type Objects interface {
+	Put(context.Context, string, string, []byte) error
+	Get(context.Context, string) ([]byte, error)
+	Delete(context.Context, string) error
+}
+
+type ImageWork interface {
+	Attach(context.Context) (sdomain.Profile, error)
+	Close()
+}
+
+type ImageRepository interface {
+	ReserveImage(context.Context, string, string, sdomain.Image) error
+	BeginImage(context.Context, string, string, string) (ImageWork, error)
+	GetImage(context.Context, string) (sdomain.Image, error)
+	RemoveImage(context.Context, string, string) error
+	CleanupOne(context.Context, Objects) (bool, error)
+}

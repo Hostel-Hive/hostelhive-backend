@@ -19,10 +19,14 @@ internal/app/                 Dependency wiring, operational router and shutdown
 internal/config/              Environment parsing and validation
 internal/platform/postgres/   PostgreSQL connection pool
 internal/platform/firebase/   Authentication, provisioning and revocation adapters
+internal/platform/objectstorage/ Private R2 student-image storage
 internal/shared/              Middleware, responses and common validation
 internal/modules/identity/    Account domain, DTOs, handlers, services and repositories
 internal/modules/student/     Profile domain, DTOs, handlers, services and repositories
-internal/workers/             Durable user-revocation retry loop
+internal/modules/staff/       Staff profile management and own-profile self-service
+internal/modules/inventory/   Block, room and bed listing APIs
+internal/modules/allocation/  Bed assignment, transfer, revocation and history
+internal/workers/             User-revocation retries and student-image cleanup
 tests/integration/            Disposable PostgreSQL integration suites
 tests/migration/              SQL constraint verification
 tests/architecture/           Package dependency boundary checks
@@ -33,7 +37,7 @@ scripts/                      Migration setup and isolated verification
 go.mod                        Go module
 ```
 
-The modular layout follows the HostelHive folder-structure reference. Issue #26 reorganizes existing code; endpoint paths, JSON responses, environment settings and migration versions remain unchanged. Migration commands still use the pinned CLI through `scripts/migrate.ps1`.
+The modular layout follows the HostelHive folder-structure reference, adapted for implemented features. See the [module layout review](docs/module-layout.md) for the current files and the reasons for their organization. Migration commands still use the pinned CLI through `scripts/migrate.ps1`.
 
 ## Start locally
 
@@ -291,7 +295,7 @@ go build ./...
 
 The selected baseline uses Firebase Authentication (ADR-002), containerized PostgreSQL (ADR-003), backend-published Firebase RTDB projections (ADR-004) and Nginx HTTPS routing (ADR-005). This scaffold does not issue local user JWTs or store user passwords. ADRs live in the continued documents repository: https://github.com/Hostel-Hive/Design-and-Development-Project.
 
-Identity management and student profiles are implemented modules. Attendance, allocation, leave, complaint, notice, report and scanner features will extend this layout in their own tickets. Add adapters and modules when their functionality is implemented. See [architecture.md](docs/architecture.md) for dependency rules.
+Identity, student, staff, inventory and allocation are implemented modules. Attendance, leave, complaint, notice, report and scanner features will extend this layout in their own tickets. Add adapters and modules when their functionality is implemented. See [architecture.md](docs/architecture.md) for dependency rules.
 
 When using the port override above, check http://127.0.0.1:18080/health and http://127.0.0.1:18080/ready.
 
@@ -945,7 +949,7 @@ Live R2 verification and teammate review are required before closing issue #30.
 
 ## Hostel inventory (issue #33)
 
-Warden-only block, room and bed listings, with derived capacity and availability.
+Admin/Warden block, room and bed listings, with derived capacity and availability.
 See [inventory contract, startup and verification](docs/hostel-inventory.md).
 Apply migration 000007 and run `scripts/test-inventory.ps1` before review.
 
@@ -987,3 +991,12 @@ See [CI, isolated database coverage and PR steps](docs/backend-ci.md).
 Go/static/build checks, database race tests and Windows PowerShell helper tests
 run on PRs. Coverage artifacts identify untested statements; they do not replace
 live provider or staging checks in hostelhive-infra issue #1.
+
+## Bed allocation (issue #46)
+
+Apply migration 000010 before starting this version. Active Admins and Wardens
+can assign, transfer and revoke student bed allocations. Partial unique indexes
+and transactional writes protect occupancy; history and actor audit fields are
+retained. Inventory listings now also allow Admins for bed selection.
+See [API contract and complete verification/commit/PR guide](docs/bed-allocation.md).
+Run `scripts/test-backend-coverage.ps1` for all database suites, including allocation.

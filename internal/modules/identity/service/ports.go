@@ -6,6 +6,20 @@ import (
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/domain"
 )
 
+type ActivationRepository interface {
+	BeginActivation(context.Context, string, string) (ActivationWork, error)
+}
+
+type ActivationWork interface {
+	Account() domain.Account
+	Complete(context.Context) (domain.Account, error)
+	Close()
+}
+
+type Reactivator interface {
+	Reactivate(context.Context, string, string) error
+}
+
 type Identities interface {
 	EnsureDisabled(context.Context, string, string, string) error
 	Enable(context.Context, string, string) error

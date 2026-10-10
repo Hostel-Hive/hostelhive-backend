@@ -16,7 +16,7 @@ class CoverageEvidenceTests(unittest.TestCase):
         self.assertEqual(totals["All application code"], [2, 2])
 
     def test_skip_and_missing_package_cannot_be_called_pass(self):
-        names = ["accounts", "identity", "provisioning", "staff", "student", "postgres", "inventory"]
+        names = ["accounts", "identity", "provisioning", "staff", "student", "postgres", "inventory", "allocation"]
         events = [dict(Action="pass", Package=report.PREFIX + "tests/integration/" + n) for n in names]
         encode = lambda es: "\n".join(json.dumps(e) for e in es)
         report.verify_integration(encode(events))
