@@ -69,15 +69,18 @@ student/
     handler.go           Profile CRUD and listing
     images.go            Image upload, retrieval and removal
     import.go            CSV import
+    qr.go                Authenticated QR PNG retrieval
   service/
     ports.go             Profile, image, object-storage and import interfaces
     service.go           Profile use cases
     validation.go        Profile and guardian validation
     images.go            Image normalization and storage coordination
     import.go            CSV parsing and per-row import
+    qr.go                Random identifier generation and QR rendering
   repository/
     postgres.go          Profile/guardian transactions and import persistence
     images.go            Image attachment and cleanup persistence
+    qr.go                Eligibility, ownership and stable issuance transaction
   routes.go
 
 staff/

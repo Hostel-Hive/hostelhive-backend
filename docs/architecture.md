@@ -36,7 +36,7 @@ The worker retries pending jobs and stops before the app closes the database poo
 | `internal/shared/response` | Common safe authentication/error responses |
 | `internal/shared/validation` | Common UUID, text and phone validation |
 | `internal/modules/identity` | Account provisioning, lookup and management |
-| `internal/modules/student` | Student and guardian profile management, private images |
+| `internal/modules/student` | Student and guardian profiles, private images, stable student QR identifiers |
 | `internal/modules/staff` | Staff profiles with Admin management and own-name self-service |
 | `internal/modules/allocation` | Transactional bed assignment, transfer, revocation and audited history |
 | `internal/modules/inventory` | Admin/Warden listings and Admin-only inventory creation/renaming |
