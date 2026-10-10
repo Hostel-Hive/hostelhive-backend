@@ -968,3 +968,15 @@ identity. Valid rows import independently, with safe per-row errors and duplicat
 protection. Structural file errors cause no writes. Limits are 2 MiB and 500 rows;
 inspect the report for rejected or unattempted rows. No new migration is needed.
 See [complete format, startup, verification and commit/PR guide](docs/student-csv-import.md).
+
+## Firebase password lifecycle verification (issue #40)
+
+Firebase owns FR004 password change/reset and session refresh under ADR-002.
+The backend verifies revoked/disabled tokens and reloads local permissions.
+See [complete password-flow verification and commit/PR guide](docs/firebase-password-flows.md).
+Dot-source scripts/firebase-password-tools.ps1 for explicitly invoked interactive
+test operations; scripts/test-firebase-password-tools.ps1 tests them offline.
+The change helper rejects identical current/new passwords and reauthenticates
+the token owner before updating Firebase; frontend forms need the same rule.
+There is no new Go password API, credential store or migration. Live project
+policy, reset delivery and token/session evidence remain required before closure.

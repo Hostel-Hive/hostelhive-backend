@@ -9,7 +9,7 @@ application or all course Definition of Done gates have passed.
 | FR001 registration | Administrator provisioning, validated roles, durable idempotency and recovery | Live Firebase provisioning and teammate review |
 | FR002 secure login | Firebase revoked-token verification and current PostgreSQL active-account lookup | Frontend sign-in/refresh flows and live expired/revoked token checks |
 | FR003 role access | Explicit role guards, current database role, admin-only account management and last-admin protection | Verify the complete endpoint permission matrix as new modules are added |
-| FR004 reset/change password | Firebase owns credentials, reset and change workflows; no local password/reset-token store | Implement Firebase client flows in frontend; verify password policy, reset/change and session behavior with the configured project |
+| FR004 reset/change password | Firebase owns credentials, reset and change workflows; no local password/reset-token store | Issue #40 provides interactive backend verification tools and docs/firebase-password-flows.md; record live project policy/reset/change/session results. Frontend client flows remain separate |
 | FR005 activation/deactivation | Immediate local deactivation, durable Firebase disable/revoke retry; administrator reactivation after completed revocation, retaining role | Live deactivate/reactivate/fresh-sign-in checks and review |
 
 Automated activation checks cover authorization, malformed inputs, provider
@@ -43,3 +43,8 @@ lists. Student names remain in student profiles; staff names remain in staff
 profiles. The 9 October policy extension allows active staff to create/edit only
 their own name, while Admins retain designation, role and status control. Apply
 migrations 000008 and 000009 before running this version.
+
+Issue #40 adds offline-tested interactive password/session verification helpers,
+not local credential management. Existing revoked-token and inactive-account
+checks remain. Automated tests do not prove real email delivery, provider policy,
+or live revocation; record those results before closing the verification ticket.
