@@ -83,3 +83,14 @@ References:
 Coverage review found the student image-cleanup worker untested. Added regression
 checks for retry after failure/empty queue, bounded batches and cancelling in-flight
 storage work. No production behavior or profile permissions were changed.
+
+## CI migration metadata regression
+
+The database user and application schema are both named hostelhive. PostgreSQL's
+default search_path prefers a schema matching the username once it exists.
+Every migrate CLI call must explicitly use the quoted
+public.schema_migrations metadata table, as scripts/migrate.ps1 already does.
+Otherwise a later CLI call can create an empty metadata table in hostelhive,
+report no change on rollback and attempt to recreate the existing schema.
+CI now pins metadata and asserts the schema is absent and public metadata empty
+after rollback. This rollback runs only on the disposable CI database.
