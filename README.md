@@ -980,3 +980,10 @@ The change helper rejects identical current/new passwords and reauthenticates
 the token owner before updating Firebase; frontend forms need the same rule.
 There is no new Go password API, credential store or migration. Live project
 policy, reset delivery and token/session evidence remain required before closure.
+
+## Automated backend verification (issue #42)
+
+See [CI, isolated database coverage and PR steps](docs/backend-ci.md).
+Go/static/build checks, database race tests and Windows PowerShell helper tests
+run on PRs. Coverage artifacts identify untested statements; they do not replace
+live provider or staging checks in hostelhive-infra issue #1.
