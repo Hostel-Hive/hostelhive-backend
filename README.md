@@ -26,6 +26,7 @@ internal/modules/student/     Profile domain, DTOs, handlers, services and repos
 internal/modules/staff/       Staff profile management and own-profile self-service
 internal/modules/inventory/   Block, room and bed listings and Admin management
 internal/modules/allocation/  Bed assignment, transfer, revocation and history
+internal/modules/attendance/  Scanner-device management and authentication
 internal/workers/             User-revocation retries and student-image cleanup
 tests/integration/            Disposable PostgreSQL integration suites
 tests/migration/              SQL constraint verification
@@ -295,7 +296,7 @@ go build ./...
 
 The selected baseline uses Firebase Authentication (ADR-002), containerized PostgreSQL (ADR-003), backend-published Firebase RTDB projections (ADR-004) and Nginx HTTPS routing (ADR-005). This scaffold does not issue local user JWTs or store user passwords. ADRs live in the continued documents repository: https://github.com/Hostel-Hive/Design-and-Development-Project.
 
-Identity, student, staff, inventory and allocation are implemented modules. Attendance, leave, complaint, notice, report and scanner features will extend this layout in their own tickets. Add adapters and modules when their functionality is implemented. See [architecture.md](docs/architecture.md) for dependency rules.
+Identity, student, staff, inventory and allocation are implemented modules. Attendance now contains scanner-device authentication; scan ingestion and presence tracking remain future tickets, alongside leave, complaint, notice and reporting. Add adapters and modules when their functionality is implemented. See [architecture.md](docs/architecture.md) for dependency rules.
 
 When using the port override above, check http://127.0.0.1:18080/health and http://127.0.0.1:18080/ready.
 
@@ -925,6 +926,19 @@ The account integration script uses disposable PostgreSQL and mocked Firebase
 responses; SDK transport tests exercise the pinned Firebase SDK without network
 credentials. Real Firebase sign-in and teammate review remain manual gates.
 See [identity requirements](docs/identity-requirements.md) for module readiness.
+
+## Scanner device authentication (issue #53)
+
+Apply migration 000012. Active Admins register/list scanners, rotate their
+individual credentials and deactivate them. Scanner requests use their own
+credentials at `GET /api/v1/device/check`, separately from Firebase user tokens.
+Database storage contains only a verifier of the random secret; registration
+and rotation return the credential once. Rotation invalidates older credentials,
+and inactive scanners are rejected on subsequent authentication checks.
+Admin changes and credential versions are audited transactionally.
+See [API contract, startup, verification and commit/PR guide](docs/scanner-devices.md).
+Attendance scan ingestion, ESP32 firmware integration and hosted HTTPS verification
+remain separate work. The new attendance module is not feature-complete.
 
 ## Student QR codes (issue #50)
 

@@ -109,3 +109,9 @@ Unit tests decode the generated PNG using an independent QR decoder. CI's existi
 rollback/reapply sequence includes migration 000011. Live Firebase and hardware
 scanner verification are separate evidence; backend PNG decoding does not prove
 ESP32 firmware integration or gate operation.
+
+Issue #53 requires the ninth integration package, attendance, and includes it in
+the module coverage summary. It verifies scanner hash-only persistence, Admin
+authorization, device/user credential separation, rotation, deactivation, audit
+events and concurrent credential updates. Migration 000012 is included in CI's
+existing full rollback/reapply check. No firmware or hosted HTTPS test is implied.
