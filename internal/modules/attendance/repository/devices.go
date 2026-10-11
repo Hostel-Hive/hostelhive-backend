@@ -15,7 +15,7 @@ type Devices struct{ pool *pgxpool.Pool }
 
 func NewDevices(pool *pgxpool.Pool) *Devices { return &Devices{pool: pool} }
 
-const columns = "device_id::text,name,is_active,credential_version,created_at,updated_at,created_by::text,updated_by::text"
+const columns = "device_id::text,name,is_active,credential_version,created_at,updated_at,created_by::text,updated_by::text,direction"
 
 func dbError(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -35,7 +35,7 @@ func dbError(err error) error {
 
 func scan(row pgx.Row) (domain.Device, error) {
 	var d domain.Device
-	err := row.Scan(&d.DeviceID, &d.Name, &d.IsActive, &d.CredentialVersion, &d.CreatedAt, &d.UpdatedAt, &d.CreatedBy, &d.UpdatedBy)
+	err := row.Scan(&d.DeviceID, &d.Name, &d.IsActive, &d.CredentialVersion, &d.CreatedAt, &d.UpdatedAt, &d.CreatedBy, &d.UpdatedBy, &d.Direction)
 	if err != nil {
 		return domain.Device{}, dbError(err)
 	}
@@ -173,7 +173,7 @@ func (s *Devices) Deactivate(ctx context.Context, actor, id string) (domain.Devi
 // No credential cache: every authentication observes current committed state.
 func (s *Devices) Authentication(ctx context.Context, id string) (domain.AuthenticationMaterial, error) {
 	var a domain.AuthenticationMaterial
-	err := s.pool.QueryRow(ctx, "SELECT "+columns+",credential_hash FROM hostelhive.scanner_devices WHERE device_id=$1", id).Scan(&a.Device.DeviceID, &a.Device.Name, &a.Device.IsActive, &a.Device.CredentialVersion, &a.Device.CreatedAt, &a.Device.UpdatedAt, &a.Device.CreatedBy, &a.Device.UpdatedBy, &a.Hash)
+	err := s.pool.QueryRow(ctx, "SELECT "+columns+",credential_hash FROM hostelhive.scanner_devices WHERE device_id=$1", id).Scan(&a.Device.DeviceID, &a.Device.Name, &a.Device.IsActive, &a.Device.CredentialVersion, &a.Device.CreatedAt, &a.Device.UpdatedAt, &a.Device.CreatedBy, &a.Device.UpdatedBy, &a.Device.Direction, &a.Hash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.AuthenticationMaterial{}, domain.ErrUnauthorized
 	}

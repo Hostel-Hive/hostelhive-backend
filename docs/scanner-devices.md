@@ -1,6 +1,8 @@
 # Scanner device authentication — issue #53
 
 This ticket starts the attendance module with device identity and Admin management.
+Issue #55 adds scans and presence; current checkouts require all migrations through
+000013. See [attendance verification](attendance-scans.md) for that workflow.
 It does not ingest QR scans, toggle presence or implement offline event retries.
 
 ## API and credential contract
@@ -99,7 +101,7 @@ go build -o .\bin\hostelhive-server.exe .\cmd\server
 .\bin\hostelhive-server.exe
 ```
 
-Expected migration version 12, clean; leave this terminal running.
+Expected migration version 13, clean on current #55 checkouts; leave this terminal running.
 
 ## 3. Terminal 2: Admin login and registration
 

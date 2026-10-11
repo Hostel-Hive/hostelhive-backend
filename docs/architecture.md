@@ -40,7 +40,7 @@ The worker retries pending jobs and stops before the app closes the database poo
 | `internal/modules/staff` | Staff profiles with Admin management and own-name self-service |
 | `internal/modules/allocation` | Transactional bed assignment, transfer, revocation and audited history |
 | `internal/modules/inventory` | Admin/Warden listings and Admin-only inventory creation/renaming |
-| `internal/modules/attendance` | Scanner registration, credential lifecycle and device authentication; scan ingestion pending |
+| `internal/modules/attendance` | Scanner identity, explicit entry/exit events, retry protection and student presence |
 | `internal/platform/objectstorage` | Private Cloudflare R2 image adapter |
 | `internal/workers` | Durable user-revocation and student-image cleanup orchestration |
 
@@ -105,3 +105,8 @@ Go integration tests skip when `TEST_DATABASE_URL` is unset. The PowerShell
 verification scripts create, migrate and remove their own temporary containers;
 they do not modify the developer database. Live Firebase verification uses the
 existing README steps and is separate from offline adapter tests.
+
+Attendance #55 records explicit scanner direction, server-timed events and
+presence atomically in PostgreSQL. Device/event IDs protect retries; student locks
+serialize movements and device locks fence authority through commit. No device
+clock or offline batch input is accepted. See [attendance contract](attendance-scans.md).

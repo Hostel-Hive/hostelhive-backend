@@ -5,6 +5,7 @@ import "time"
 type Device struct {
 	DeviceID          string    `json:"device_id"`
 	Name              string    `json:"name"`
+	Direction         *string   `json:"direction"`
 	IsActive          bool      `json:"is_active"`
 	CredentialVersion int       `json:"credential_version"`
 	CreatedAt         time.Time `json:"created_at"`
