@@ -121,3 +121,8 @@ cross-device cooldown, first IN/OUT, non-toggling duplicates, event retries,
 concurrent deduplication, eligibility, read permissions and stale-authentication
 checks. Migration 000013 is included in rollback/reapply. Hardware, live Firebase
 and staging HTTPS remain separate verification.
+
+Issue #57 extends the required attendance suite with eligible IN/OUT/UNKNOWN lists
+and counts, literal search, deterministic pagination, role restrictions, fresh
+transaction authority, preserved history and a presence change between the count
+and page queries to verify snapshot consistency. There is no new migration.

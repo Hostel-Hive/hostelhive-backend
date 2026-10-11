@@ -71,6 +71,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	deviceAPI := attendancehandler.New(attendanceservice.NewDevices(attendanceStore), cfg.AccountManagementTimeout, cfg.AuthenticationTimeout)
 	attendance.Register(deviceAPI, handler, protected)
 	attendance.RegisterScans(attendancehandler.NewScanAPI(attendanceservice.NewScans(attendanceStore, cfg.AttendanceCooldown), cfg.AccountManagementTimeout), deviceAPI, handler, protected)
+	attendance.RegisterDashboard(attendancehandler.NewDashboardAPI(attendanceservice.NewDashboard(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
 	inventory.Register(ihandler.New(iservice.New(irepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	staff.Register(staffhandler.New(staffservice.New(staffrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	studentStore := srepo.NewStore(pool)
