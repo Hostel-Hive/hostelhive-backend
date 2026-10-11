@@ -24,6 +24,12 @@ still form one Go package; this review does not add subpackages for every entity
 
 ## Current production files
 
+Issue #53 adds `attendance` with `domain/device.go` and `errors.go`,
+`dto/device.go`, `service/devices.go` and `ports.go`, `repository/devices.go`,
+`handler/devices.go` and `authentication.go`, and `routes.go`. Device middleware
+stays with the attendance transport: scanner credentials never become Firebase
+user accounts. Event ingestion and presence tracking are not implemented yet.
+
 Names below are relative to `internal/modules`. Unit test files are omitted for
 readability; they remain beside the implementation. Database integration tests
 remain under `tests/integration`, and dependency checks under `tests/architecture`.
