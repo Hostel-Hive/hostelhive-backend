@@ -115,3 +115,9 @@ the module coverage summary. It verifies scanner hash-only persistence, Admin
 authorization, device/user credential separation, rotation, deactivation, audit
 events and concurrent credential updates. Migration 000012 is included in CI's
 existing full rollback/reapply check. No firmware or hosted HTTPS test is implied.
+
+Issue #55 extends attendance integration with direction audit, online server times,
+cross-device cooldown, first IN/OUT, non-toggling duplicates, event retries,
+concurrent deduplication, eligibility, read permissions and stale-authentication
+checks. Migration 000013 is included in rollback/reapply. Hardware, live Firebase
+and staging HTTPS remain separate verification.
