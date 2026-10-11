@@ -24,6 +24,12 @@ still form one Go package; this review does not add subpackages for every entity
 
 ## Current production files
 
+Issue #53 adds `attendance` with `domain/device.go` and `errors.go`,
+`dto/device.go`, `service/devices.go` and `ports.go`, `repository/devices.go`,
+`handler/devices.go` and `authentication.go`, and `routes.go`. Device middleware
+stays with the attendance transport: scanner credentials never become Firebase
+user accounts. Issue #55 adds domain/scan.go, dto/scan.go and scans.go in handler, service and repository for explicit movement, presence and direction configuration.
+
 Names below are relative to `internal/modules`. Unit test files are omitted for
 readability; they remain beside the implementation. Database integration tests
 remain under `tests/integration`, and dependency checks under `tests/architecture`.
@@ -177,3 +183,8 @@ passed all eight required PostgreSQL integration packages with no skipped tests.
 Overall statement coverage remained 1751/2011 (87.1%): identity 89.4%, staff 83.9%,
 student 86.5%, allocation 93.1%. This was a local non-race run; live provider,
 PR CI and staging verification are separate.
+
+Issue #57 adds attendance domain/dashboard.go, dto/dashboard.go, handler/dashboard.go,
+service/dashboard.go and repository/dashboard.go. The new service contracts remain
+in ports.go. Dashboard reads are separated from device management and scan ingestion
+while sharing the attendance module's routing and authority conventions.

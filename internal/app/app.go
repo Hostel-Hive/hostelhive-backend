@@ -13,6 +13,10 @@ import (
 	allocationhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/allocation/handler"
 	allocationrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/allocation/repository"
 	allocationservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/allocation/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance"
+	attendancehandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/handler"
+	attendancerepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/repository"
+	attendanceservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/service"
 	identityhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/handler"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/repository"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/service"
@@ -63,6 +67,11 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	defer func() { stopWorker(); <-workerDone }()
 	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
 	allocation.Register(allocationhandler.New(allocationservice.New(allocationrepo.New(pool)), cfg.InventoryTimeout), handler, protected)
+	attendanceStore := attendancerepo.NewDevices(pool)
+	deviceAPI := attendancehandler.New(attendanceservice.NewDevices(attendanceStore), cfg.AccountManagementTimeout, cfg.AuthenticationTimeout)
+	attendance.Register(deviceAPI, handler, protected)
+	attendance.RegisterScans(attendancehandler.NewScanAPI(attendanceservice.NewScans(attendanceStore, cfg.AttendanceCooldown), cfg.AccountManagementTimeout), deviceAPI, handler, protected)
+	attendance.RegisterDashboard(attendancehandler.NewDashboardAPI(attendanceservice.NewDashboard(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
 	inventory.Register(ihandler.New(iservice.New(irepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	staff.Register(staffhandler.New(staffservice.New(staffrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	studentStore := srepo.NewStore(pool)

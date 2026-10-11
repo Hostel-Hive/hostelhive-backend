@@ -23,6 +23,7 @@ type Config struct {
 	AccountManagementTimeout time.Duration
 	StudentProfileTimeout    time.Duration
 	InventoryTimeout         time.Duration
+	AttendanceCooldown       time.Duration
 	DatabaseURL              string
 	DatabaseCheckTimeout     time.Duration
 	Environment              string
@@ -88,12 +89,16 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		{"ACCOUNT_MANAGEMENT_TIMEOUT", "8s", &cfg.AccountManagementTimeout},
 		{"STUDENT_PROFILE_TIMEOUT", "8s", &cfg.StudentProfileTimeout},
 		{"INVENTORY_TIMEOUT", "8s", &cfg.InventoryTimeout},
+		{"ATTENDANCE_COOLDOWN", "10s", &cfg.AttendanceCooldown},
 	} {
 		d, err := time.ParseDuration(value(setting.key, setting.fallback))
 		if err != nil || d <= 0 {
 			return Config{}, fmt.Errorf("%s must be a positive duration, such as 5s", setting.key)
 		}
 		*setting.target = d
+	}
+	if cfg.AttendanceCooldown > 5*time.Minute {
+		return Config{}, fmt.Errorf("ATTENDANCE_COOLDOWN must not exceed 5m")
 	}
 	u, err := url.Parse(cfg.DatabaseURL)
 	if err != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") ||

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Add Admin/Warden attendance dashboard lists and IN/OUT/UNKNOWN counts (issue #57).
+  Support literal name/index search and pagination over active, unarchived Student
+  profiles. Page totals and rows use one snapshot; historical attendance is kept.
+  No new migration is required; realtime publication remains separate.
+
+- Add Admin scanner direction, online QR attendance events and student presence
+  (issue #55; migration 000013). Device-scoped event IDs protect retries;
+  transactional authority/eligibility checks and cross-device cooldown prevent
+  duplicate movements. Admin/Warden can read presence and paginated history.
+  Offline capture, realtime projections and hardware verification remain separate.
+
+- Add Admin scanner registration, listing, credential rotation and deactivation
+  plus an independently authenticated device-check endpoint (issue #53).
+  Migration 000012 stores SHA-256 verifiers for random 256-bit device secrets and
+  atomic Admin audit events. No Firebase credentials or plaintext device secrets
+  are stored in the scanner tables. Attendance scan ingestion remains separate.
+
 - Add stable student QR PNG retrieval for students themselves and Admin/Warden
   (issue #50; FR010). Migration 000011 stores one unique random identifier per
   profile. Recheck current roles, ownership and eligibility during lazy issuance.

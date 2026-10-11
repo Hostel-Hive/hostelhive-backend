@@ -15,11 +15,31 @@ func TestDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if cfg.AttendanceCooldown != 10*time.Second {
+		t.Fatal("unexpected attendance cooldown")
+	}
 	if cfg.Environment != "development" || cfg.HTTPAddr != "127.0.0.1:8080" ||
 		cfg.ReadHeaderTimeout != 5*time.Second || cfg.ReadTimeout != 15*time.Second ||
 		cfg.WriteTimeout != 15*time.Second || cfg.IdleTimeout != time.Minute ||
 		cfg.ShutdownTimeout != 10*time.Second || cfg.DatabaseCheckTimeout != 2*time.Second || cfg.InventoryTimeout != 8*time.Second || cfg.StudentProfileTimeout != 8*time.Second || cfg.AccountManagementTimeout != 8*time.Second || cfg.ProvisioningTimeout != 8*time.Second || cfg.AuthenticationTimeout != 5*time.Second || cfg.FirebaseProjectID != "hostelhive-test" {
 		t.Fatalf("unexpected defaults: %+v", cfg)
+	}
+}
+
+func TestAttendanceCooldownConfiguration(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		valid bool
+	}{{"1s", true}, {"5m", true}, {"0s", false}, {"-1s", false}, {"6m", false}, {"", false}, {"bad", false}} {
+		cfg, err := load(fromMap(map[string]string{"FIREBASE_PROJECT_ID": "hostelhive-test", "DATABASE_URL": "postgres://test:example@localhost:5432/hostelhive?sslmode=disable", "ATTENDANCE_COOLDOWN": tc.value}))
+		if tc.valid {
+			want, _ := time.ParseDuration(tc.value)
+			if err != nil || cfg.AttendanceCooldown != want {
+				t.Fatalf("override %s failed", tc.value)
+			}
+		} else if err == nil || !strings.Contains(err.Error(), "ATTENDANCE_COOLDOWN") {
+			t.Fatalf("invalid cooldown accepted: %s", tc.value)
+		}
 	}
 }
 

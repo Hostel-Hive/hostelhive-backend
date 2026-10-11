@@ -26,6 +26,7 @@ internal/modules/student/     Profile domain, DTOs, handlers, services and repos
 internal/modules/staff/       Staff profile management and own-profile self-service
 internal/modules/inventory/   Block, room and bed listings and Admin management
 internal/modules/allocation/  Bed assignment, transfer, revocation and history
+internal/modules/attendance/  Scanner identity, explicit entry/exit and presence
 internal/workers/             User-revocation retries and student-image cleanup
 tests/integration/            Disposable PostgreSQL integration suites
 tests/migration/              SQL constraint verification
@@ -295,7 +296,7 @@ go build ./...
 
 The selected baseline uses Firebase Authentication (ADR-002), containerized PostgreSQL (ADR-003), backend-published Firebase RTDB projections (ADR-004) and Nginx HTTPS routing (ADR-005). This scaffold does not issue local user JWTs or store user passwords. ADRs live in the continued documents repository: https://github.com/Hostel-Hive/Design-and-Development-Project.
 
-Identity, student, staff, inventory and allocation are implemented modules. Attendance, leave, complaint, notice, report and scanner features will extend this layout in their own tickets. Add adapters and modules when their functionality is implemented. See [architecture.md](docs/architecture.md) for dependency rules.
+Identity, student, staff, inventory and allocation are implemented modules. Attendance contains scanner-device authentication, explicit movement events and presence tracking. Realtime publication, aggregates, leave, complaint, notice and reporting remain future work. Add adapters and modules when their functionality is implemented. See [architecture.md](docs/architecture.md) for dependency rules.
 
 When using the port override above, check http://127.0.0.1:18080/health and http://127.0.0.1:18080/ready.
 
@@ -735,7 +736,7 @@ security staff and students cannot use these management routes.
 Account credentials remain in Firebase; the linked users table supplies email
 and account status. Profile-image uploads are implemented in issue #30;
 see [student image setup and verification](docs/student-images.md). Student QR
-generation is implemented in issue #50; scan processing remains a later attendance feature.
+generation is implemented in issue #50; online scan processing is implemented in issue #55.
 The SRS UC004 CSV profile import is
 implemented in issue #38 with the approved existing-account linking policy.
 
@@ -926,6 +927,19 @@ responses; SDK transport tests exercise the pinned Firebase SDK without network
 credentials. Real Firebase sign-in and teammate review remain manual gates.
 See [identity requirements](docs/identity-requirements.md) for module readiness.
 
+## Scanner device authentication (issue #53)
+
+Apply migration 000012. Active Admins register/list scanners, rotate their
+individual credentials and deactivate them. Scanner requests use their own
+credentials at `GET /api/v1/device/check`, separately from Firebase user tokens.
+Database storage contains only a verifier of the random secret; registration
+and rotation return the credential once. Rotation invalidates older credentials,
+and inactive scanners are rejected on subsequent authentication checks.
+Admin changes and credential versions are audited transactionally.
+See [API contract, startup, verification and commit/PR guide](docs/scanner-devices.md).
+Attendance scan ingestion is implemented in #55. ESP32 firmware integration,
+realtime projections and hosted HTTPS verification remain separate work.
+
 ## Student QR codes (issue #50)
 
 Apply migration 000011 before running this version. Active students retrieve
@@ -1021,3 +1035,19 @@ records and does not release the bed. Case-insensitive uniqueness is enforced by
 the database. There are no deletion, archiving or relocation endpoints.
 No new migration is required beyond the existing version 10 baseline.
 See [API contract, local verification and all commit/PR steps](docs/inventory-management.md).
+
+## Attendance scans (issue #55)
+
+Apply migration 000013. Admin configures scanner direction; authenticated devices
+record online entry/exit events with idempotent retries and configurable cooldown.
+Admin/Warden can read per-student presence and event history. Follow the
+[complete verification and PR guide](docs/attendance-scans.md).
+
+## Attendance dashboard reads (issue #57)
+
+Active Admins and Wardens can list eligible students by IN/OUT/UNKNOWN presence,
+search names/index numbers, and read status counts. Inactive, archived and
+non-student profiles are excluded; historical attendance remains stored. Counts
+represent recorded presence, not proof of physical occupancy. No new migration
+beyond version 13 is required. Follow the
+[complete dashboard startup, verification and PR guide](docs/attendance-dashboard.md).
