@@ -1,0 +1,11 @@
+{
+ "rules": {
+  ".read": false,
+  ".write": false,
+  "hostelhive": {
+   "attendance": {
+    ".read": "auth != null && root.child('hostelhive/staffAccess').child(auth.uid).child('expires_at').isNumber() && root.child('hostelhive/staffAccess').child(auth.uid).child('expires_at').val() > now"
+   }
+  }
+ }
+}

@@ -11,6 +11,28 @@ concurrency:
   group: backend-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  realtime-rules:
+    name: Firebase RTDB rules and listener revocation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: firebase/package-lock.json
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Test default-deny rules, grant expiry and established listeners
+        working-directory: firebase
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
   go:
     name: Go checks and database coverage
     runs-on: ubuntu-24.04

@@ -183,3 +183,14 @@ passed all eight required PostgreSQL integration packages with no skipped tests.
 Overall statement coverage remained 1751/2011 (87.1%): identity 89.4%, staff 83.9%,
 student 86.5%, allocation 93.1%. This was a local non-race run; live provider,
 PR CI and staging verification are separate.
+
+Issue #57 adds attendance domain/dashboard.go, dto/dashboard.go, handler/dashboard.go,
+service/dashboard.go and repository/dashboard.go. The new service contracts remain
+in ports.go. Dashboard reads are separated from device management and scan ingestion
+while sharing the attendance module's routing and authority conventions.
+
+Issue #60 keeps realtime projection domain values, ports, API and PostgreSQL
+queue processing in attendance. Firebase conditional writes remain in
+internal/platform/firebase; worker scheduling stays in internal/workers.
+Cross-module eligibility changes queue publication using database triggers,
+without importing identity/student repositories into attendance services.

@@ -1,0 +1,10 @@
+BEGIN;
+DROP TRIGGER account_realtime_grant ON hostelhive.users;
+DROP FUNCTION hostelhive.invalidate_realtime_grant();
+DROP TRIGGER account_publication ON hostelhive.users;
+DROP TRIGGER student_publication ON hostelhive.students;
+DROP TRIGGER presence_publication ON hostelhive.student_presence;
+DROP FUNCTION hostelhive.queue_attendance_publication();
+DROP TABLE hostelhive.realtime_staff_grants;
+DROP TABLE hostelhive.attendance_publication;
+COMMIT;

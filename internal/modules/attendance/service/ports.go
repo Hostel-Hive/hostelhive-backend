@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/domain"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/dto"
 	"time"
 )
 
@@ -19,4 +20,9 @@ type ScanRepository interface {
 	Record(context.Context, domain.Device, string, string, []byte, time.Duration) (domain.Event, error)
 	Presence(context.Context, string, string) (domain.Presence, error)
 	Events(context.Context, string, string, int, int) (domain.EventPage, error)
+}
+
+type DashboardRepository interface {
+	PresenceStudents(context.Context, string, dto.PresenceFilter) (domain.PresencePage, error)
+	PresenceSummary(context.Context, string, string) (domain.PresenceSummary, error)
 }

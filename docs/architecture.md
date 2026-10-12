@@ -110,3 +110,16 @@ Attendance #55 records explicit scanner direction, server-timed events and
 presence atomically in PostgreSQL. Device/event IDs protect retries; student locks
 serialize movements and device locks fence authority through commit. No device
 clock or offline batch input is accepted. See [attendance contract](attendance-scans.md).
+
+Attendance #57 adds dashboard lists and summaries from the authoritative presence
+records. A shared eligibility/search scope excludes inactive/archived/non-student
+profiles. Repeatable-read pages keep filtered totals and rows consistent across
+concurrent scans; fresh Admin/Warden authority is rechecked under the account lock.
+Firebase realtime publication remains a separate feature.
+
+Issue #60 implements ADR-004's minimal RTDB projection with a transactional,
+coalescing outbox and versioned conditional writes. PostgreSQL stays authoritative.
+The worker releases publication locks before network writes, retries durable
+intents and reconciles periodically. Backend-owned, expiring staff grants and
+default-deny rules protect direct client reads; explicit expiry/revocation writes
+cancel subscriptions. Cross-service revocation remains eventually consistent.

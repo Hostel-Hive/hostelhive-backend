@@ -1042,3 +1042,20 @@ Apply migration 000013. Admin configures scanner direction; authenticated device
 record online entry/exit events with idempotent retries and configurable cooldown.
 Admin/Warden can read per-student presence and event history. Follow the
 [complete verification and PR guide](docs/attendance-scans.md).
+
+## Attendance dashboard reads (issue #57)
+
+Active Admins and Wardens can list eligible students by IN/OUT/UNKNOWN presence,
+search names/index numbers, and read status counts. Inactive, archived and
+non-student profiles are excluded; historical attendance remains stored. Counts
+represent recorded presence, not proof of physical occupancy. No new migration
+beyond version 13 is required. Follow the
+[complete dashboard startup, verification and PR guide](docs/attendance-dashboard.md).
+
+## Realtime attendance (issue #60)
+
+Apply migration 000014. RTDB_ENABLED defaults to false. When enabled, the backend
+publishes counts and a change version to Firebase RTDB using a durable queue,
+retry and reconciliation. Admin/Warden clients request renewable read grants;
+all client writes and broader reads are denied. Detailed student records stay
+behind the API. Follow the [configuration, verification and PR guide](docs/attendance-realtime.md).

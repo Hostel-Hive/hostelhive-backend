@@ -46,3 +46,5 @@ go.work.sum
 # CI/local verification artifacts
 /artifacts/
 __pycache__/
+node_modules/
+*-debug.log

@@ -12,6 +12,8 @@ import (
 )
 
 type Config struct {
+	RTDBEnabled              bool
+	FirebaseDatabaseURL      string
 	R2Enabled                bool
 	R2AccountID              string
 	R2Bucket                 string
@@ -106,6 +108,9 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, fmt.Errorf("DATABASE_URL must be a PostgreSQL URL with host, user and database")
 	}
 	if err := cfg.loadR2(value); err != nil {
+		return Config{}, err
+	}
+	if err := cfg.loadRealtime(value); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
