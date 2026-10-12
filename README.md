@@ -1051,3 +1051,11 @@ non-student profiles are excluded; historical attendance remains stored. Counts
 represent recorded presence, not proof of physical occupancy. No new migration
 beyond version 13 is required. Follow the
 [complete dashboard startup, verification and PR guide](docs/attendance-dashboard.md).
+
+## Realtime attendance (issue #60)
+
+Apply migration 000014. RTDB_ENABLED defaults to false. When enabled, the backend
+publishes counts and a change version to Firebase RTDB using a durable queue,
+retry and reconciliation. Admin/Warden clients request renewable read grants;
+all client writes and broader reads are denied. Detailed student records stay
+behind the API. Follow the [configuration, verification and PR guide](docs/attendance-realtime.md).

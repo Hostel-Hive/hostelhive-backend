@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add versioned Firebase RTDB attendance counts/change notifications (issue #60).
+  Migration 000014 adds a transactional publication queue and expiring staff
+  grants. Retry/reconciliation preserve PostgreSQL authority; default-deny rules
+  and a new emulator CI job verify access and established-listener revocation.
+  Realtime is opt-in; live Firebase acceptance requires a configured database.
+
 - Add Admin/Warden attendance dashboard lists and IN/OUT/UNKNOWN counts (issue #57).
   Support literal name/index search and pagination over active, unarchived Student
   profiles. Page totals and rows use one snapshot; historical attendance is kept.

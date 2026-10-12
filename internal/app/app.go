@@ -68,6 +68,21 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
 	allocation.Register(allocationhandler.New(allocationservice.New(allocationrepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	attendanceStore := attendancerepo.NewDevices(pool)
+	var realtimePublisher attendanceservice.RealtimePublisher
+	if cfg.RTDBEnabled {
+		realtimePublisher, err = platformfirebase.NewRealtimeDatabase(ctx, cfg.FirebaseProjectID, cfg.FirebaseDatabaseURL)
+		if err != nil {
+			return err
+		}
+		realtimeCtx, stopRealtime := context.WithCancel(ctx)
+		realtimeDone := make(chan struct{})
+		go func() {
+			defer close(realtimeDone)
+			workers.RunAttendanceRealtime(realtimeCtx, attendanceStore, realtimePublisher, logger)
+		}()
+		defer func() { stopRealtime(); <-realtimeDone }()
+	}
+	attendance.RegisterRealtime(attendancehandler.NewRealtimeAPI(attendanceservice.NewRealtime(attendanceStore, realtimePublisher, cfg.FirebaseDatabaseURL), cfg.AccountManagementTimeout), handler, protected)
 	deviceAPI := attendancehandler.New(attendanceservice.NewDevices(attendanceStore), cfg.AccountManagementTimeout, cfg.AuthenticationTimeout)
 	attendance.Register(deviceAPI, handler, protected)
 	attendance.RegisterScans(attendancehandler.NewScanAPI(attendanceservice.NewScans(attendanceStore, cfg.AttendanceCooldown), cfg.AccountManagementTimeout), deviceAPI, handler, protected)

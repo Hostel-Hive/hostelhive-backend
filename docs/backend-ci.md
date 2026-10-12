@@ -126,3 +126,9 @@ Issue #57 extends the required attendance suite with eligible IN/OUT/UNKNOWN lis
 and counts, literal search, deterministic pagination, role restrictions, fresh
 transaction authority, preserved history and a presence change between the count
 and page queries to verify snapshot consistency. There is no new migration.
+
+Issue #60 adds migration 000014, durable publication/grant integration tests and
+real SDK conditional-write tests. Its Firebase RTDB emulator CI job uses Node 22,
+Java 21 and pinned npm dependencies. Rules tests check default denial, authorized
+staff reads, denied client writes, expiry and established listener cancellation.
+Wall-clock expiry alone is not assumed to cancel an existing subscription.
