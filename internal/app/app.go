@@ -24,6 +24,10 @@ import (
 	ihandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory/handler"
 	irepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory/repository"
 	iservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/inventory/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave"
+	leavehandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/handler"
+	leaverepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/repository"
+	leaveservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/service"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff"
 	staffhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff/handler"
 	staffrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff/repository"
@@ -66,6 +70,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	}()
 	defer func() { stopWorker(); <-workerDone }()
 	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
+	leave.Register(leavehandler.New(leaveservice.New(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	allocation.Register(allocationhandler.New(allocationservice.New(allocationrepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	attendanceStore := attendancerepo.NewDevices(pool)
 	var realtimePublisher attendanceservice.RealtimePublisher

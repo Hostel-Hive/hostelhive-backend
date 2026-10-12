@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add Student leave requests and Admin/Warden decisions with permanent history,
+  ownership checks, safe retries and overlap protection (issue #62; migration 15).
+  Leave approval preserves scan-based presence. Add leave integration CI evidence.
+
 - Add versioned Firebase RTDB attendance counts/change notifications (issue #60).
   Migration 000014 adds a transactional publication queue and expiring staff
   grants. Retry/reconciliation preserve PostgreSQL authority; default-deny rules

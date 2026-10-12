@@ -194,3 +194,5 @@ queue processing in attendance. Firebase conditional writes remain in
 internal/platform/firebase; worker scheduling stays in internal/workers.
 Cross-module eligibility changes queue publication using database triggers,
 without importing identity/student repositories into attendance services.
+
+Issue #62 adds internal/modules/leave with domain, dto, service, repository, handler and routes. App wiring remains in internal/app.

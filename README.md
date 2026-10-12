@@ -1059,3 +1059,5 @@ publishes counts and a change version to Firebase RTDB using a durable queue,
 retry and reconciliation. Admin/Warden clients request renewable read grants;
 all client writes and broader reads are denied. Detailed student records stay
 behind the API. Follow the [configuration, verification and PR guide](docs/attendance-realtime.md).
+
+Leave request/approval APIs (issue #62): see [verification guide](docs/leave-management.md). Approval preserves scan-based attendance.
