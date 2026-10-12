@@ -132,3 +132,5 @@ real SDK conditional-write tests. Its Firebase RTDB emulator CI job uses Node 22
 Java 21 and pinned npm dependencies. Rules tests check default denial, authorized
 staff reads, denied client writes, expiry and established listener cancellation.
 Wall-clock expiry alone is not assumed to cancel an existing subscription.
+
+Issue #62 adds leave service/HTTP/PostgreSQL workflow tests. Coverage reporting includes the leave module and requires tests/integration/leave to pass without skips; CI migration rollback/reapply includes version 15.
