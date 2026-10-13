@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Rename module Go files and matching unit tests to identify their feature and
+  layer. Update documentation paths and the coverage fixture; preserve Go contents.
+
+- Add complaint submission, progress notes, staff resolution/reopening and audit
+  history with ownership, category scope, safe retries and revision protection
+  (issue #64; migration 16). Photos and notifications remain follow-up work.
+
 - Add Student leave requests and Admin/Warden decisions with permanent history,
   ownership checks, safe retries and overlap protection (issue #62; migration 15).
   Leave approval preserves scan-based presence. Add leave integration CI evidence.
