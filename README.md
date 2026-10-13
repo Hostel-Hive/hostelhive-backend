@@ -1061,3 +1061,7 @@ all client writes and broader reads are denied. Detailed student records stay
 behind the API. Follow the [configuration, verification and PR guide](docs/attendance-realtime.md).
 
 Leave request/approval APIs (issue #62): see [verification guide](docs/leave-management.md). Approval preserves scan-based attendance.
+
+Complaint tracking and resolution (issue #64): see [API and verification guide](docs/complaint-management.md). Sub-Warden access is maintenance-only. Photos and notifications are follow-up tickets.
+
+Descriptive module filenames: [naming convention](docs/file-naming.md) and [current layout](docs/module-layout.md).

@@ -17,6 +17,10 @@ import (
 	attendancehandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/handler"
 	attendancerepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/repository"
 	attendanceservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint"
+	complainthandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/handler"
+	complaintrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/repository"
+	complaintservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/service"
 	identityhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/handler"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/repository"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/service"
@@ -70,6 +74,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	}()
 	defer func() { stopWorker(); <-workerDone }()
 	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
+	complaint.Register(complainthandler.New(complaintservice.New(complaintrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	leave.Register(leavehandler.New(leaveservice.New(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	allocation.Register(allocationhandler.New(allocationservice.New(allocationrepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	attendanceStore := attendancerepo.NewDevices(pool)

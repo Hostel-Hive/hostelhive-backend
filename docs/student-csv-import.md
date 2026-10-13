@@ -214,7 +214,7 @@ Automated checks: [actual test/vet/build and PostgreSQL results].
 git branch --show-current
 git status --short
 git diff --check
-git add README.md docs/identity-requirements.md docs/student-csv-import.md docs/templates/student-import.csv internal/app/app.go internal/modules/student/domain/import.go internal/modules/student/service/import.go internal/modules/student/service/import_test.go internal/modules/student/handler/import.go internal/modules/student/handler/import_test.go internal/modules/student/repository/postgres.go internal/modules/student/routes.go tests/integration/student/import_test.go
+git add README.md docs/identity-requirements.md docs/student-csv-import.md docs/templates/student-import.csv internal/app/app.go internal/modules/student/domain/student_import.go internal/modules/student/service/student_csv_import_service.go internal/modules/student/service/student_csv_import_service_test.go internal/modules/student/handler/student_csv_import_handler.go internal/modules/student/handler/student_csv_import_handler_test.go internal/modules/student/repository/student_profile_repository.go internal/modules/student/student_routes.go tests/integration/student/import_test.go
 git diff --cached --stat
 git diff --cached --check
 git commit -m "feat(student): add Admin CSV profile import" -m "Refs #38"

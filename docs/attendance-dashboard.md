@@ -207,7 +207,7 @@ verification and staging HTTPS verification remain separate evidence.
 git status
 git diff --check
 git diff
-git add internal/app/app.go internal/modules/attendance/domain/dashboard.go internal/modules/attendance/dto/dashboard.go internal/modules/attendance/handler/dashboard.go internal/modules/attendance/handler/dashboard_test.go internal/modules/attendance/service/dashboard.go internal/modules/attendance/service/dashboard_test.go internal/modules/attendance/service/ports.go internal/modules/attendance/repository/dashboard.go internal/modules/attendance/routes.go tests/integration/attendance/dashboard_test.go docs/attendance-dashboard.md docs/architecture.md docs/module-layout.md docs/backend-ci.md README.md CHANGELOG.md
+git add internal/app/app.go internal/modules/attendance/domain/attendance_dashboard.go internal/modules/attendance/dto/attendance_dashboard_requests.go internal/modules/attendance/handler/attendance_dashboard_handler.go internal/modules/attendance/handler/attendance_dashboard_handler_test.go internal/modules/attendance/service/attendance_dashboard_service.go internal/modules/attendance/service/attendance_dashboard_service_test.go internal/modules/attendance/service/attendance_dependencies.go internal/modules/attendance/repository/attendance_dashboard_repository.go internal/modules/attendance/attendance_routes.go tests/integration/attendance/dashboard_test.go docs/attendance-dashboard.md docs/architecture.md docs/module-layout.md docs/backend-ci.md README.md CHANGELOG.md
 git diff --cached --check
 git diff --cached --stat
 git commit -m "feat(attendance): add presence lists and occupancy counts" -m "Refs #57"
