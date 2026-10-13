@@ -136,3 +136,5 @@ Wall-clock expiry alone is not assumed to cancel an existing subscription.
 Issue #62 adds leave service/HTTP/PostgreSQL workflow tests. Coverage reporting includes the leave module and requires tests/integration/leave to pass without skips; CI migration rollback/reapply includes version 15.
 
 Issue #64 adds complaint validation and API/PostgreSQL lifecycle, scope and concurrency tests. Coverage reporting requires tests/integration/complaint to pass without skips; migration rollback/reapply includes version 16.
+
+Issue #66 adds complaint_images_integration_test.go to the required complaint package. CI applies/rolls back/reapplies migration 17 and verifies permission scope, failed uploads, cleanup, frozen evidence and concurrent three-image caps using storage fakes.

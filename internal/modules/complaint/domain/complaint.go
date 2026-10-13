@@ -27,6 +27,7 @@ type Complaint struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 type Update struct {
+	ImageID         *string   `json:"image_id,omitempty"`
 	UpdateID        string    `json:"update_id"`
 	ComplaintID     string    `json:"complaint_id"`
 	RequestID       string    `json:"request_id"`
