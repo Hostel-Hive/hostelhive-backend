@@ -19,3 +19,14 @@ func Register(a *handler.API, mux *http.ServeMux, authenticate func(http.Handler
 	mux.Handle("POST /api/v1/complaints/{complaintID}/notes", protect(a.Note, all...))
 	mux.Handle("POST /api/v1/complaints/{complaintID}/status", protect(a.Status, identity.RoleAdmin, identity.RoleWarden, identity.RoleSubWarden))
 }
+
+func RegisterImages(a *handler.ImageAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	protect := func(h http.HandlerFunc, roles ...string) http.Handler {
+		return authenticate(middleware.RequireRoles(roles...)(h))
+	}
+	all := []string{identity.RoleStudent, identity.RoleAdmin, identity.RoleWarden, identity.RoleSubWarden}
+	mux.Handle("PUT /api/v1/complaints/{complaintID}/images/{imageID}", protect(a.Upload, identity.RoleStudent))
+	mux.Handle("DELETE /api/v1/complaints/{complaintID}/images/{imageID}", protect(a.Remove, identity.RoleStudent))
+	mux.Handle("GET /api/v1/complaints/{complaintID}/images", protect(a.List, all...))
+	mux.Handle("GET /api/v1/complaints/{complaintID}/images/{imageID}", protect(a.Get, all...))
+}

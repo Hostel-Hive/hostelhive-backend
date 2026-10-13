@@ -1065,3 +1065,5 @@ Leave request/approval APIs (issue #62): see [verification guide](docs/leave-man
 Complaint tracking and resolution (issue #64): see [API and verification guide](docs/complaint-management.md). Sub-Warden access is maintenance-only. Photos and notifications are follow-up tickets.
 
 Descriptive module filenames: [naming convention](docs/file-naming.md) and [current layout](docs/module-layout.md).
+
+Complaint photos (issue #66): [private image API and verification](docs/complaint-images.md). Student changes are Pending-only; shared JPEG/PNG validation preserves profile image behavior.

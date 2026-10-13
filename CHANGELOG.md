@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add private complaint photos, Pending-only Student changes, scoped reads, safe
+  retries, three-image caps and durable cleanup (issue #66; migration 17).
+  Share JPEG/PNG normalization with Student profile images; audit photo changes.
+
 - Rename module Go files and matching unit tests to identify their feature and
   layer. Update documentation paths and the coverage fixture; preserve Go contents.
 

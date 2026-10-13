@@ -74,7 +74,8 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	}()
 	defer func() { stopWorker(); <-workerDone }()
 	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
-	complaint.Register(complainthandler.New(complaintservice.New(complaintrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
+	complaintStore := complaintrepo.New(pool)
+	complaint.Register(complainthandler.New(complaintservice.New(complaintStore), cfg.AccountManagementTimeout), handler, protected)
 	leave.Register(leavehandler.New(leaveservice.New(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	allocation.Register(allocationhandler.New(allocationservice.New(allocationrepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	attendanceStore := attendancerepo.NewDevices(pool)
@@ -104,18 +105,26 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	student.RegisterImport(shandler.NewImportAPI(sservice.NewImporter(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	student.RegisterQR(shandler.NewQRAPI(sservice.NewQRs(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	var images shandler.ImageService
+	var complaintObjects complaintservice.ImageObjects
 	if cfg.R2Enabled {
 		objects := objectstorage.New(cfg.R2AccountID, cfg.R2Bucket, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.StudentProfileTimeout)
 		images = sservice.NewImages(studentStore, objects)
+		complaintObjects = objects
 		cleanupCtx, stopCleanup := context.WithCancel(ctx)
 		cleanupDone := make(chan struct{})
 		go func() {
 			defer close(cleanupDone)
 			workers.RunStudentImageCleanup(cleanupCtx, studentStore, objects, cfg.StudentProfileTimeout, 30*time.Second)
 		}()
-		defer func() { stopCleanup(); <-cleanupDone }()
+		complaintCleanupDone := make(chan struct{})
+		go func() {
+			defer close(complaintCleanupDone)
+			workers.RunComplaintImageCleanup(cleanupCtx, complaintStore, objects, cfg.StudentProfileTimeout, 30*time.Second)
+		}()
+		defer func() { stopCleanup(); <-cleanupDone; <-complaintCleanupDone }()
 	}
 	student.RegisterImages(shandler.NewImageAPI(images, cfg.StudentProfileTimeout), handler, protected)
+	complaint.RegisterImages(complainthandler.NewImageAPI(complaintservice.NewImages(complaintStore, complaintObjects), cfg.StudentProfileTimeout), handler, protected)
 	srv := &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,

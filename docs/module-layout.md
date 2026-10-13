@@ -67,16 +67,22 @@ attendance/
   attendance_routes.go
 complaint/
   domain/
+    complaint_image.go
     complaint.go
   dto/
     complaint_requests.go
   handler/
     complaint_handler.go
+    complaint_image_handler.go
   repository/
+    complaint_image_cleanup_repository.go
+    complaint_image_repository.go
     complaint_query_repository.go
     complaint_store_repository.go
     complaint_workflow_repository.go
   service/
+    complaint_image_dependencies.go
+    complaint_image_service.go
     complaint_service.go
   complaint_routes.go
 identity/
@@ -207,3 +213,5 @@ Run .\scripts\test-backend-coverage.ps1 for existing formatting, static, build,
 unit/integration and coverage checks in a disposable PostgreSQL database. CI also
 checks migration rollback/reapply and race detection. Live provider/staging tests
 remain separate. SHA-256 checks confirm each moved Go file retained its contents.
+
+Issue #66 adds complaint_image_handler/service/repository files and cleanup worker. Shared image_normalization.go validates both Student profile and complaint photos; no cross-module repository imports.
