@@ -243,3 +243,5 @@ attendance. Local runs did not enable race detection. Live Firebase-authenticate
 API checks and the GitHub CI run remain pending. No commit or push performed.
 
 Live verification: the user reported that all manual #70 commands passed, including recipient alerts, retries, read state, permissions and attendance checks. GitHub CI remains a post-push check.
+
+Issue #72 adds announcement entries to this same mixed inbox while preserving complaint/leave IDs, read state and permissions. See [announcement contract](hostel-announcements.md).

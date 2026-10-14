@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- #72: publish global hostel announcements, Student feed/details, durable inbox
+  alerts and staff delivery/read summaries; migration 20 preserves the mixed inbox.
+
 - #70: add leave submission/decision alerts to the shared inbox, preserve complaint
   read/delivery state during migration 19, and verify upgrade compatibility in CI.
 

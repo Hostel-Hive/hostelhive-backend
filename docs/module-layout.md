@@ -36,6 +36,19 @@ allocation/
     allocation_dependencies.go
     bed_allocation_service.go
   allocation_routes.go
+announcement/
+  domain/
+    announcement.go
+  dto/
+    announcement_requests.go
+  handler/
+    announcement_handler.go
+  repository/
+    announcement_publication_repository.go
+  service/
+    announcement_dependencies.go
+    announcement_publication_service.go
+  announcement_routes.go
 attendance/
   domain/
     attendance_dashboard.go
@@ -233,3 +246,5 @@ Issue #66 adds complaint_image_handler/service/repository files and cleanup work
 Issue #68 adds notification/domain/notification.go, dto/notification_queries.go, service/notification_inbox_service.go and notification_dependencies.go, handler/notification_inbox_handler.go, repository/notification_inbox_repository.go and notification_delivery_repository.go, and notification_routes.go. It uses PostgreSQL event triggers and a worker, without importing another module's concrete repository.
 
 Issue #70 extends the existing notification module through shared notification events and migration 19; leave service/routes and attendance remain unchanged. No new notification module or cross-module repository imports.
+
+Issue #72 adds the announcement module with global publication/read/aggregate receipt APIs. Notification event references and inbox eligibility are extended; app wires modules without cross-module repository imports.

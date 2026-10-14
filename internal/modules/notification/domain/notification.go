@@ -13,6 +13,7 @@ var (
 )
 
 type Notification struct {
+	AnnouncementID string     `json:"announcement_id,omitempty"`
 	SourceType     string     `json:"source_type"`
 	LeaveID        string     `json:"leave_id,omitempty"`
 	NotificationID string     `json:"notification_id"`
