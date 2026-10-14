@@ -13,10 +13,12 @@ var (
 )
 
 type Notification struct {
+	SourceType     string     `json:"source_type"`
+	LeaveID        string     `json:"leave_id,omitempty"`
 	NotificationID string     `json:"notification_id"`
-	ComplaintID    string     `json:"complaint_id"`
+	ComplaintID    string     `json:"complaint_id,omitempty"`
 	Kind           string     `json:"kind"`
-	Category       string     `json:"category"`
+	Category       string     `json:"category,omitempty"`
 	Status         string     `json:"status"`
 	Title          string     `json:"title"`
 	OccurredAt     time.Time  `json:"occurred_at"`

@@ -233,3 +233,5 @@ passed in a disposable database. Focused notification/architecture checks passed
 The integration suite uses local test identities with real PostgreSQL, not live
 Firebase credentials. Local runs did not enable race detection; GitHub CI race
 checks and live authenticated API verification are still pending. No commit/push.
+
+Issue #70 (migration 19) extends this inbox with leave alerts. See [mixed-inbox policy and verification](leave-notifications.md). Existing complaint IDs, fields and read state are preserved; responses add source_type and leave items use leave_id.

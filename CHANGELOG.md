@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- #70: add leave submission/decision alerts to the shared inbox, preserve complaint
+  read/delivery state during migration 19, and verify upgrade compatibility in CI.
+
 - #68: add durable complaint alerts, private inbox, unread counts and idempotent
   mark-read with recipient scope checks and migration 18.
 

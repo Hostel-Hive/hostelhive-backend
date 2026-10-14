@@ -40,17 +40,28 @@ func (s *Store) begin(ctx context.Context, uid string) (pgx.Tx, string, string, 
 	return tx, id, role, nil
 }
 
-// Ownership and CURRENT scope apply equally to list/count/read. Role changes
-// cannot reveal old disciplinary alerts or another student's complaint.
+// Ownership and CURRENT scope apply equally to list/count/read. Event content is
+// a snapshot; opening the underlying complaint/leave uses its own authorised API.
 const visible = ` FROM hostelhive.notifications n
- JOIN hostelhive.complaint_updates e ON e.update_id=n.event_id
- JOIN hostelhive.complaints c ON c.complaint_id=e.complaint_id
- JOIN hostelhive.students st ON st.student_id=c.student_id
+ JOIN hostelhive.notification_events e ON e.event_id=n.event_id
+ LEFT JOIN hostelhive.complaint_updates ce ON ce.update_id=e.complaint_update_id
+ LEFT JOIN hostelhive.complaints c ON c.complaint_id=ce.complaint_id
+ LEFT JOIN hostelhive.leave_requests l ON l.leave_id=e.leave_id
+ JOIN hostelhive.students st ON st.student_id=COALESCE(c.student_id,l.student_id)
  WHERE n.recipient_id=$1 AND (
- (e.action='created' AND $2::text IN ('admin','warden','sub_warden') AND ($2::text!='sub_warden' OR c.category='maintenance'))
- OR (e.action='status' AND $2::text='student' AND st.user_id=$1))`
-const projection = `n.notification_id::text,c.complaint_id::text,e.action AS kind,c.category,e.new_status AS status,
- CASE WHEN e.action='created' THEN 'New '||c.category||' complaint' ELSE 'Your complaint is '||replace(e.new_status,'_',' ') END AS title,
+ (e.source_type='complaint' AND (
+  (e.kind='created' AND $2::text IN ('admin','warden','sub_warden') AND ($2::text!='sub_warden' OR c.category='maintenance'))
+  OR (e.kind='status' AND $2::text='student' AND st.user_id=$1)))
+ OR (e.source_type='leave' AND (
+  (e.kind='leave_submitted' AND $2::text IN ('admin','warden'))
+  OR (e.kind='leave_decided' AND $2::text='student' AND st.user_id=$1))))`
+const projection = `n.notification_id::text,e.source_type,COALESCE(c.complaint_id::text,'') AS complaint_id,
+ COALESCE(l.leave_id::text,'') AS leave_id,e.kind,COALESCE(c.category,'') AS category,e.status,
+ CASE e.kind
+ WHEN 'created' THEN 'New '||c.category||' complaint'
+ WHEN 'status' THEN 'Your complaint is '||replace(e.status,'_',' ')
+ WHEN 'leave_submitted' THEN 'New leave request'
+ WHEN 'leave_decided' THEN 'Your leave request is '||e.status END AS title,
  e.occurred_at,n.created_at,n.read_at`
 
 func (s *Store) List(ctx context.Context, uid string, f dto.Filter) (domain.Page, error) {
