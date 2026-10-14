@@ -1071,3 +1071,5 @@ Complaint photos (issue #66): [private image API and verification](docs/complain
 Complaint notifications and private inbox: [setup and verification](docs/complaint-notifications.md).
 
 Leave request/decision alerts: [policy and verification](docs/leave-notifications.md).
+
+Hostel announcements: [policy, setup and verification](docs/hostel-announcements.md).

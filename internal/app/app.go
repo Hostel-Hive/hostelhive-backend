@@ -13,6 +13,10 @@ import (
 	allocationhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/allocation/handler"
 	allocationrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/allocation/repository"
 	allocationservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/allocation/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/announcement"
+	announcementhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/announcement/handler"
+	announcementrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/announcement/repository"
+	announcementservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/announcement/service"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance"
 	attendancehandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/handler"
 	attendancerepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/repository"
@@ -78,6 +82,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	}()
 	defer func() { stopWorker(); <-workerDone }()
 	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
+	announcement.Register(announcementhandler.New(announcementservice.New(announcementrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	notificationStore := notificationrepo.New(pool)
 	notification.Register(notificationhandler.New(notificationservice.New(notificationStore), cfg.AccountManagementTimeout), handler, protected)
 	notificationCtx, stopNotifications := context.WithCancel(ctx)

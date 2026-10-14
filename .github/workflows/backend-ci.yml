@@ -95,6 +95,15 @@ jobs:
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/notification_upgrade_before.sql
           migrate -path migrations -database "$migration_url" up
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/notification_upgrade_after.sql
+      - name: Mixed inbox survives announcement upgrade
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+          migrate -path migrations -database "$migration_url" goto 19
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/announcement_upgrade_before.sql
+          migrate -path migrations -database "$migration_url" up
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/announcement_upgrade_after.sql
       - name: Race tests with application-wide coverage (database packages serial)
         shell: bash
         run: |
