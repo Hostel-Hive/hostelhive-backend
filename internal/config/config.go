@@ -12,29 +12,31 @@ import (
 )
 
 type Config struct {
-	RTDBEnabled              bool
-	FirebaseDatabaseURL      string
-	R2Enabled                bool
-	R2AccountID              string
-	R2Bucket                 string
-	R2AccessKeyID            string
-	R2SecretAccessKey        string
-	FirebaseProjectID        string
-	AuthenticationTimeout    time.Duration
-	ProvisioningTimeout      time.Duration
-	AccountManagementTimeout time.Duration
-	StudentProfileTimeout    time.Duration
-	InventoryTimeout         time.Duration
-	AttendanceCooldown       time.Duration
-	DatabaseURL              string
-	DatabaseCheckTimeout     time.Duration
-	Environment              string
-	HTTPAddr                 string
-	ReadHeaderTimeout        time.Duration
-	ReadTimeout              time.Duration
-	WriteTimeout             time.Duration
-	IdleTimeout              time.Duration
-	ShutdownTimeout          time.Duration
+	HostelLocation                         *time.Location
+	HostelExitOpening, HostelEntryDeadline int
+	RTDBEnabled                            bool
+	FirebaseDatabaseURL                    string
+	R2Enabled                              bool
+	R2AccountID                            string
+	R2Bucket                               string
+	R2AccessKeyID                          string
+	R2SecretAccessKey                      string
+	FirebaseProjectID                      string
+	AuthenticationTimeout                  time.Duration
+	ProvisioningTimeout                    time.Duration
+	AccountManagementTimeout               time.Duration
+	StudentProfileTimeout                  time.Duration
+	InventoryTimeout                       time.Duration
+	AttendanceCooldown                     time.Duration
+	DatabaseURL                            string
+	DatabaseCheckTimeout                   time.Duration
+	Environment                            string
+	HTTPAddr                               string
+	ReadHeaderTimeout                      time.Duration
+	ReadTimeout                            time.Duration
+	WriteTimeout                           time.Duration
+	IdleTimeout                            time.Duration
+	ShutdownTimeout                        time.Duration
 }
 
 // Load applies documented defaults to unset variables. Explicit empty or
@@ -106,6 +108,9 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 	if err != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") ||
 		u.Hostname() == "" || u.User == nil || u.User.Username() == "" || strings.Trim(u.Path, "/") == "" {
 		return Config{}, fmt.Errorf("DATABASE_URL must be a PostgreSQL URL with host, user and database")
+	}
+	if err := cfg.loadLateAccess(value); err != nil {
+		return Config{}, err
 	}
 	if err := cfg.loadR2(value); err != nil {
 		return Config{}, err

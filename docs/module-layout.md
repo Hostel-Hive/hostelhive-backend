@@ -147,6 +147,20 @@ inventory/
     inventory_listing_service.go
     inventory_management_service.go
   inventory_routes.go
+lateaccess/
+  domain/
+    late_access_request.go
+  dto/
+    late_access_requests.go
+  handler/
+    late_access_handler.go
+  repository/
+    late_access_request_repository.go
+    late_access_store_repository.go
+  service/
+    late_access_dependencies.go
+    late_access_service.go
+  late_access_routes.go
 leave/
   domain/
     leave_request.go
@@ -248,3 +262,5 @@ Issue #68 adds notification/domain/notification.go, dto/notification_queries.go,
 Issue #70 extends the existing notification module through shared notification events and migration 19; leave service/routes and attendance remain unchanged. No new notification module or cross-module repository imports.
 
 Issue #72 adds the announcement module with global publication/read/aggregate receipt APIs. Notification event references and inbox eligibility are extended; app wires modules without cross-module repository imports.
+
+Issue #74 adds the lateaccess module for early-exit/late-entry permission requests. Its repository keeps request/decision and notification intent atomic; attendance remains a separate scan-driven module.

@@ -1073,3 +1073,5 @@ Complaint notifications and private inbox: [setup and verification](docs/complai
 Leave request/decision alerts: [policy and verification](docs/leave-notifications.md).
 
 Hostel announcements: [policy, setup and verification](docs/hostel-announcements.md).
+
+Late access: [early-exit and late-entry requests](docs/late-access-requests.md) (#74).
