@@ -10,13 +10,13 @@ spec.loader.exec_module(report)
 
 class CoverageEvidenceTests(unittest.TestCase):
     def test_repeated_instrumented_blocks_are_not_double_counted(self):
-        path = report.PREFIX + "internal/modules/staff/service/service.go:1.1,2.2"
+        path = report.PREFIX + "internal/modules/staff/service/staff_profile_service.go:1.1,2.2"
         totals = report.summarize("mode: atomic\n" + path + " 2 0\n" + path + " 2 3\n")
         self.assertEqual(totals["internal/modules/staff"], [2, 2])
         self.assertEqual(totals["All application code"], [2, 2])
 
     def test_skip_and_missing_package_cannot_be_called_pass(self):
-        names = ["accounts", "identity", "provisioning", "staff", "student", "postgres", "inventory", "allocation", "attendance"]
+        names = ["accounts", "identity", "provisioning", "staff", "student", "postgres", "inventory", "allocation", "attendance", "leave", "complaint", "notification", "announcement", "lateaccess"]
         events = [dict(Action="pass", Package=report.PREFIX + "tests/integration/" + n) for n in names]
         encode = lambda es: "\n".join(json.dumps(e) for e in es)
         report.verify_integration(encode(events))

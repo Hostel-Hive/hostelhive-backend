@@ -1051,3 +1051,29 @@ non-student profiles are excluded; historical attendance remains stored. Counts
 represent recorded presence, not proof of physical occupancy. No new migration
 beyond version 13 is required. Follow the
 [complete dashboard startup, verification and PR guide](docs/attendance-dashboard.md).
+
+## Realtime attendance (issue #60)
+
+Apply migration 000014. RTDB_ENABLED defaults to false. When enabled, the backend
+publishes counts and a change version to Firebase RTDB using a durable queue,
+retry and reconciliation. Admin/Warden clients request renewable read grants;
+all client writes and broader reads are denied. Detailed student records stay
+behind the API. Follow the [configuration, verification and PR guide](docs/attendance-realtime.md).
+
+Leave request/approval APIs (issue #62): see [verification guide](docs/leave-management.md). Approval preserves scan-based attendance.
+
+Complaint tracking and resolution (issue #64): see [API and verification guide](docs/complaint-management.md). Sub-Warden access is maintenance-only. Photos and notifications are follow-up tickets.
+
+Descriptive module filenames: [naming convention](docs/file-naming.md) and [current layout](docs/module-layout.md).
+
+Complaint photos (issue #66): [private image API and verification](docs/complaint-images.md). Student changes are Pending-only; shared JPEG/PNG validation preserves profile image behavior.
+
+Complaint notifications and private inbox: [setup and verification](docs/complaint-notifications.md).
+
+Leave request/decision alerts: [policy and verification](docs/leave-notifications.md).
+
+Hostel announcements: [policy, setup and verification](docs/hostel-announcements.md).
+
+Late access: [early-exit and late-entry requests](docs/late-access-requests.md) (#74).
+
+Attendance permission checks: [single-use grants and incidents](docs/attendance-permission-checks.md) (#76).

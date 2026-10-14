@@ -1,17 +1,13 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"image"
-	"image/jpeg"
-	"image/png"
+	d "github.com/Hostel-Hive/hostelhive-backend/internal/modules/student/domain"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/shared/imagevalidation"
 	"io"
 	"strings"
-
-	d "github.com/Hostel-Hive/hostelhive-backend/internal/modules/student/domain"
 )
 
 type Images struct {
@@ -20,44 +16,12 @@ type Images struct {
 }
 
 func NewImages(r ImageRepository, o Objects) *Images { return &Images{r, o} }
-
-type cappedBuffer struct{ bytes.Buffer }
-
-func (b *cappedBuffer) Write(v []byte) (int, error) {
-	if b.Len()+len(v) > d.MaxImageBytes {
-		return 0, d.ErrInvalid
-	}
-	return b.Buffer.Write(v)
-}
-
-// Decode and re-encode approved formats; filenames and embedded metadata are not stored.
-func normalizeImage(raw []byte, contentType string) ([]byte, d.Image, error) {
-	var meta d.Image
-	if len(raw) == 0 || len(raw) > d.MaxImageBytes {
-		return nil, meta, d.ErrInvalid
-	}
-	cfg, format, err := image.DecodeConfig(bytes.NewReader(raw))
-	if err != nil || cfg.Width < 1 || cfg.Height < 1 || cfg.Width > 4096 || cfg.Height > 4096 || int64(cfg.Width)*int64(cfg.Height) > 12000000 {
-		return nil, meta, d.ErrInvalid
-	}
-	if (format != "jpeg" && format != "png") || contentType != "image/"+map[string]string{"jpeg": "jpeg", "png": "png"}[format] {
-		return nil, meta, d.ErrInvalid
-	}
-	img, _, err := image.Decode(bytes.NewReader(raw))
+func normalizeImage(raw []byte, mime string) ([]byte, d.Image, error) {
+	data, meta, err := imagevalidation.Normalize(raw, mime)
 	if err != nil {
-		return nil, meta, d.ErrInvalid
+		return nil, d.Image{}, d.ErrInvalid
 	}
-	var out cappedBuffer
-	if format == "jpeg" {
-		err = jpeg.Encode(&out, img, &jpeg.Options{Quality: 85})
-	} else {
-		err = (&png.Encoder{CompressionLevel: png.BestSpeed}).Encode(&out, img)
-	}
-	if err != nil {
-		return nil, meta, d.ErrInvalid
-	}
-	meta = d.Image{ContentType: contentType, Size: out.Len(), Width: cfg.Width, Height: cfg.Height}
-	return out.Bytes(), meta, nil
+	return data, d.Image{ContentType: meta.ContentType, Size: meta.Size, Width: meta.Width, Height: meta.Height}, nil
 }
 func (s *Images) Upload(ctx context.Context, actor, id, mime string, raw []byte) (d.Profile, error) {
 	data, meta, err := normalizeImage(raw, mime)

@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+- #76: atomically match and consume approved late-access permissions within30 minutes of a recorded scan; record unapproved incidents, preserve IN/OUT movement and notify Admin/Warden.
+
+- #74: Student early-exit/late-entry requests, Admin/Warden decisions, durable inbox alerts and configurable hostel time rules; attendance stays scan-based.
+
+- #72: publish global hostel announcements, Student feed/details, durable inbox
+  alerts and staff delivery/read summaries; migration 20 preserves the mixed inbox.
+
+- #70: add leave submission/decision alerts to the shared inbox, preserve complaint
+  read/delivery state during migration 19, and verify upgrade compatibility in CI.
+
+- #68: add durable complaint alerts, private inbox, unread counts and idempotent
+  mark-read with recipient scope checks and migration 18.
+
+- Add private complaint photos, Pending-only Student changes, scoped reads, safe
+  retries, three-image caps and durable cleanup (issue #66; migration 17).
+  Share JPEG/PNG normalization with Student profile images; audit photo changes.
+
+- Rename module Go files and matching unit tests to identify their feature and
+  layer. Update documentation paths and the coverage fixture; preserve Go contents.
+
+- Add complaint submission, progress notes, staff resolution/reopening and audit
+  history with ownership, category scope, safe retries and revision protection
+  (issue #64; migration 16). Photos and notifications remain follow-up work.
+
+- Add Student leave requests and Admin/Warden decisions with permanent history,
+  ownership checks, safe retries and overlap protection (issue #62; migration 15).
+  Leave approval preserves scan-based presence. Add leave integration CI evidence.
+
+- Add versioned Firebase RTDB attendance counts/change notifications (issue #60).
+  Migration 000014 adds a transactional publication queue and expiring staff
+  grants. Retry/reconciliation preserve PostgreSQL authority; default-deny rules
+  and a new emulator CI job verify access and established-listener revocation.
+  Realtime is opt-in; live Firebase acceptance requires a configured database.
+
 - Add Admin/Warden attendance dashboard lists and IN/OUT/UNKNOWN counts (issue #57).
   Support literal name/index search and pagination over active, unarchived Student
   profiles. Page totals and rows use one snapshot; historical attendance is kept.

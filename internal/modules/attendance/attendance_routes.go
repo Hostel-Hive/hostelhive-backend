@@ -18,6 +18,14 @@ func Register(a *handler.API, mux *http.ServeMux, authenticate func(http.Handler
 	mux.Handle("GET /api/v1/device/check", a.DeviceMiddleware(http.HandlerFunc(a.Check)))
 }
 
+func RegisterRealtime(a *handler.RealtimeAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	protect := func(h http.HandlerFunc) http.Handler {
+		return authenticate(middleware.RequireRoles(domain.RoleAdmin, domain.RoleWarden)(h))
+	}
+	mux.Handle("POST /api/v1/attendance/realtime/session", protect(a.Session))
+	mux.Handle("GET /api/v1/attendance/realtime/status", protect(a.Status))
+}
+
 func RegisterScans(a *handler.ScanAPI, devices *handler.API, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
 	mux.Handle("PUT /api/v1/scanner-devices/{deviceID}/direction", authenticate(middleware.RequireRoles(domain.RoleAdmin)(http.HandlerFunc(a.SetDirection))))
 	mux.Handle("POST /api/v1/device/scans", devices.DeviceMiddleware(http.HandlerFunc(a.Record)))
@@ -34,4 +42,12 @@ func RegisterDashboard(a *handler.DashboardAPI, mux *http.ServeMux, authenticate
 	}
 	mux.Handle("GET /api/v1/attendance/students", readers(a.Students))
 	mux.Handle("GET /api/v1/attendance/summary", readers(a.Summary))
+}
+
+func RegisterIncidents(a *handler.IncidentAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	readers := func(h http.HandlerFunc) http.Handler {
+		return authenticate(middleware.RequireRoles(domain.RoleAdmin, domain.RoleWarden)(h))
+	}
+	mux.Handle("GET /api/v1/attendance/incidents", readers(a.List))
+	mux.Handle("GET /api/v1/attendance/incidents/{incidentID}", readers(a.Get))
 }

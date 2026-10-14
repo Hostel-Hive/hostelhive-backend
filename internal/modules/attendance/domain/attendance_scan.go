@@ -12,12 +12,15 @@ var (
 )
 
 type Event struct {
-	EventID    string    `json:"event_id"`
-	DeviceID   string    `json:"device_id"`
-	StudentID  string    `json:"student_id"`
-	Direction  string    `json:"direction"`
-	Outcome    string    `json:"outcome"`
-	OccurredAt time.Time `json:"occurred_at"`
+	AccessResult string    `json:"access_result,omitempty"`
+	LateAccessID *string   `json:"late_access_id,omitempty"`
+	IncidentID   *string   `json:"incident_id,omitempty"`
+	EventID      string    `json:"event_id"`
+	DeviceID     string    `json:"device_id"`
+	StudentID    string    `json:"student_id"`
+	Direction    string    `json:"direction"`
+	Outcome      string    `json:"outcome"`
+	OccurredAt   time.Time `json:"occurred_at"`
 }
 
 type Presence struct {

@@ -9,7 +9,7 @@ PostgreSQL owns current application roles and account state.
 ## Request path
 
 `cmd/server` starts `internal/app`, which constructs repositories, platform
-adapters, services, HTTP handlers and the revocation worker. Module `routes.go`
+adapters, services, HTTP handlers and the revocation worker. Module `<module>_routes.go`
 files register protected feature routes. The app router owns `/health` and `/ready`.
 
 Authentication middleware verifies the Firebase token and reloads the local
@@ -44,7 +44,7 @@ The worker retries pending jobs and stops before the app closes the database poo
 | `internal/platform/objectstorage` | Private Cloudflare R2 image adapter |
 | `internal/workers` | Durable user-revocation and student-image cleanup orchestration |
 
-Feature modules use `domain`, `service`, `repository`, `handler` and `routes.go`;
+Feature modules use `domain`, `service`, `repository`, `handler` and `<module>_routes.go`;
 write modules also use `dto` for request payloads. Domain records and errors have no infrastructure dependencies.
 DTOs describe request payloads; domain response records retain their existing
 JSON contract. Persistence and provider ports live in the module service package.
@@ -57,7 +57,7 @@ Inventory resource queries have separate files but share one pagination helper;
 staff self-service is separated from Admin management. Student guardians remain
 in the student module and the profile transaction. Identity role definitions and
 each module's errors are separate from its records. Service ports are grouped in
-`ports.go` while workflow implementations stay in their own files.
+`<module>_dependencies.go` while workflow implementations stay in their own files.
 
 The migration-backed account_profiles view derives current-role names from
 student/staff profiles. It contains no duplicate editable names. Authentication
@@ -116,3 +116,10 @@ records. A shared eligibility/search scope excludes inactive/archived/non-studen
 profiles. Repeatable-read pages keep filtered totals and rows consistent across
 concurrent scans; fresh Admin/Warden authority is rechecked under the account lock.
 Firebase realtime publication remains a separate feature.
+
+Issue #60 implements ADR-004's minimal RTDB projection with a transactional,
+coalescing outbox and versioned conditional writes. PostgreSQL stays authoritative.
+The worker releases publication locks before network writes, retries durable
+intents and reconciles periodically. Backend-owned, expiring staff grants and
+default-deny rules protect direct client reads; explicit expiry/revocation writes
+cancel subscriptions. Cross-service revocation remains eventually consistent.

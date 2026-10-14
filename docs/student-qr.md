@@ -174,7 +174,7 @@ Expected one row after first retrieval; repeated retrieval does not add rows.
 git status
 git diff --check
 git diff
-git add go.mod go.sum migrations/000011_student_qr.up.sql migrations/000011_student_qr.down.sql internal/modules/student/service/ports.go internal/modules/student/service/qr.go internal/modules/student/service/qr_test.go internal/modules/student/repository/qr.go internal/modules/student/handler/qr.go internal/modules/student/handler/qr_test.go internal/modules/student/routes.go internal/app/app.go tests/integration/student/qr_test.go README.md CHANGELOG.md docs/student-qr.md docs/module-layout.md docs/architecture.md docs/backend-ci.md
+git add go.mod go.sum migrations/000011_student_qr.up.sql migrations/000011_student_qr.down.sql internal/modules/student/service/student_dependencies.go internal/modules/student/service/student_qr_service.go internal/modules/student/service/student_qr_service_test.go internal/modules/student/repository/student_qr_repository.go internal/modules/student/handler/student_qr_handler.go internal/modules/student/handler/student_qr_handler_test.go internal/modules/student/student_routes.go internal/app/app.go tests/integration/student/qr_test.go README.md CHANGELOG.md docs/student-qr.md docs/module-layout.md docs/architecture.md docs/backend-ci.md
 git diff --cached --check
 git diff --cached --stat
 git commit -m "feat(student): add unique student QR codes" -m "Refs #50"

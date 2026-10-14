@@ -210,7 +210,7 @@ fresh ownership/status checks, and concurrent self/Admin upserts.
 git branch --show-current
 git status --short
 git diff --check
-git add README.md docs/architecture.md docs/identity-requirements.md docs/staff-profiles.md internal/app/app.go internal/modules/staff internal/modules/identity/domain/user.go internal/modules/identity/repository/accounts.go internal/modules/identity/repository/lookup.go internal/modules/identity/repository/lookup_test.go migrations/000008_staff_profiles.up.sql migrations/000008_staff_profiles.down.sql migrations/000009_staff_self_service.up.sql migrations/000009_staff_self_service.down.sql scripts/test-staff-profiles.ps1 scripts/test-migrations.ps1 tests/integration/staff
+git add README.md docs/architecture.md docs/identity-requirements.md docs/staff-profiles.md internal/app/app.go internal/modules/staff internal/modules/identity/domain/user_account.go internal/modules/identity/repository/account_management_repository.go internal/modules/identity/repository/account_lookup_repository.go internal/modules/identity/repository/account_lookup_repository_test.go migrations/000008_staff_profiles.up.sql migrations/000008_staff_profiles.down.sql migrations/000009_staff_self_service.up.sql migrations/000009_staff_self_service.down.sql scripts/test-staff-profiles.ps1 scripts/test-migrations.ps1 tests/integration/staff
 git diff --cached --stat
 git diff --cached --check
 git commit -m "feat(staff): add staff profile management"
