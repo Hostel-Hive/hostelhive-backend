@@ -57,8 +57,9 @@ const visible = ` FROM hostelhive.notifications n
  LEFT JOIN hostelhive.complaint_updates ce ON ce.update_id=e.complaint_update_id
  LEFT JOIN hostelhive.complaints c ON c.complaint_id=ce.complaint_id
  LEFT JOIN hostelhive.leave_requests l ON l.leave_id=e.leave_id
+ LEFT JOIN hostelhive.late_access_requests la ON la.late_access_id=e.late_access_id
  LEFT JOIN hostelhive.announcements a ON a.announcement_id=e.announcement_id
- LEFT JOIN hostelhive.students st ON st.student_id=COALESCE(c.student_id,l.student_id)
+ LEFT JOIN hostelhive.students st ON st.student_id=COALESCE(c.student_id,l.student_id,la.student_id)
  WHERE n.recipient_id=$1 AND (
  (e.source_type='complaint' AND (
   (e.kind='created' AND $2::text IN ('admin','warden','sub_warden') AND ($2::text!='sub_warden' OR c.category='maintenance'))
@@ -66,15 +67,18 @@ const visible = ` FROM hostelhive.notifications n
  OR (e.source_type='leave' AND (
   (e.kind='leave_submitted' AND $2::text IN ('admin','warden'))
   OR (e.kind='leave_decided' AND $2::text='student' AND st.user_id=$1)))
+ OR (e.source_type='late_access' AND ((e.kind='late_access_submitted' AND $2::text IN ('admin','warden')) OR (e.kind='late_access_decided' AND $2::text='student' AND st.user_id=$1)))
  OR (e.source_type='announcement' AND $2::text='student' AND a.audience='all_students'
  AND EXISTS(SELECT 1 FROM hostelhive.students member WHERE member.user_id=$1 AND member.deleted_at IS NULL)))`
 const projection = `n.notification_id::text,e.source_type,COALESCE(c.complaint_id::text,'') AS complaint_id,
- COALESCE(l.leave_id::text,'') AS leave_id,COALESCE(a.announcement_id::text,'') AS announcement_id,e.kind,COALESCE(c.category,'') AS category,e.status,
+ COALESCE(la.late_access_id::text,'') AS late_access_id,COALESCE(l.leave_id::text,'') AS leave_id,COALESCE(a.announcement_id::text,'') AS announcement_id,e.kind,COALESCE(c.category,'') AS category,e.status,
  CASE e.kind
  WHEN 'created' THEN 'New '||c.category||' complaint'
  WHEN 'status' THEN 'Your complaint is '||replace(e.status,'_',' ')
  WHEN 'leave_submitted' THEN 'New leave request'
  WHEN 'leave_decided' THEN 'Your leave request is '||e.status
+ WHEN 'late_access_submitted' THEN 'New late-access request'
+ WHEN 'late_access_decided' THEN 'Your late-access request is '||e.status
  WHEN 'announcement_published' THEN a.title END AS title,
  e.occurred_at,n.created_at,n.read_at`
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- #74: Student early-exit/late-entry requests, Admin/Warden decisions, durable inbox alerts and configurable hostel time rules; attendance stays scan-based.
+
 - #72: publish global hostel announcements, Student feed/details, durable inbox
   alerts and staff delivery/read summaries; migration 20 preserves the mixed inbox.
 
