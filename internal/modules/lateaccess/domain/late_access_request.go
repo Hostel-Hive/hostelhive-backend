@@ -15,18 +15,21 @@ var (
 )
 
 type Request struct {
-	LateAccessID string     `json:"late_access_id"`
-	RequestID    string     `json:"request_id"`
-	StudentID    string     `json:"student_id"`
-	SubmittedBy  string     `json:"submitted_by"`
-	Direction    string     `json:"direction"`
-	ExpectedAt   time.Time  `json:"expected_at"`
-	Reason       string     `json:"reason"`
-	Status       string     `json:"status"`
-	CreatedAt    time.Time  `json:"created_at"`
-	DecidedAt    *time.Time `json:"decided_at"`
-	DecidedBy    *string    `json:"decided_by"`
-	DecisionNote string     `json:"decision_note"`
+	ConsumedAt       *time.Time `json:"consumed_at,omitempty"`
+	ConsumedDeviceID *string    `json:"consumed_device_id,omitempty"`
+	ConsumedEventID  *string    `json:"consumed_event_id,omitempty"`
+	LateAccessID     string     `json:"late_access_id"`
+	RequestID        string     `json:"request_id"`
+	StudentID        string     `json:"student_id"`
+	SubmittedBy      string     `json:"submitted_by"`
+	Direction        string     `json:"direction"`
+	ExpectedAt       time.Time  `json:"expected_at"`
+	Reason           string     `json:"reason"`
+	Status           string     `json:"status"`
+	CreatedAt        time.Time  `json:"created_at"`
+	DecidedAt        *time.Time `json:"decided_at"`
+	DecidedBy        *string    `json:"decided_by"`
+	DecisionNote     string     `json:"decision_note"`
 }
 type Filter struct {
 	StudentID, Status string

@@ -102,7 +102,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	lateaccess.Register(lateaccesshandler.New(lateaccessservice.New(lateaccessrepo.New(pool, lateaccessdomain.Policy{Location: cfg.HostelLocation, ExitOpening: cfg.HostelExitOpening, EntryDeadline: cfg.HostelEntryDeadline})), cfg.AccountManagementTimeout), handler, protected)
 	leave.Register(leavehandler.New(leaveservice.New(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	allocation.Register(allocationhandler.New(allocationservice.New(allocationrepo.New(pool)), cfg.InventoryTimeout), handler, protected)
-	attendanceStore := attendancerepo.NewDevices(pool)
+	attendanceStore := attendancerepo.NewDevicesWithPolicy(pool, lateaccessdomain.Policy{Location: cfg.HostelLocation, ExitOpening: cfg.HostelExitOpening, EntryDeadline: cfg.HostelEntryDeadline})
 	var realtimePublisher attendanceservice.RealtimePublisher
 	if cfg.RTDBEnabled {
 		realtimePublisher, err = platformfirebase.NewRealtimeDatabase(ctx, cfg.FirebaseProjectID, cfg.FirebaseDatabaseURL)
@@ -121,6 +121,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	deviceAPI := attendancehandler.New(attendanceservice.NewDevices(attendanceStore), cfg.AccountManagementTimeout, cfg.AuthenticationTimeout)
 	attendance.Register(deviceAPI, handler, protected)
 	attendance.RegisterScans(attendancehandler.NewScanAPI(attendanceservice.NewScans(attendanceStore, cfg.AttendanceCooldown), cfg.AccountManagementTimeout), deviceAPI, handler, protected)
+	attendance.RegisterIncidents(attendancehandler.NewIncidentAPI(attendanceservice.NewIncidents(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
 	attendance.RegisterDashboard(attendancehandler.NewDashboardAPI(attendanceservice.NewDashboard(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
 	inventory.Register(ihandler.New(iservice.New(irepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	staff.Register(staffhandler.New(staffservice.New(staffrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)

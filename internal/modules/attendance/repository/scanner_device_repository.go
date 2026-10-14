@@ -6,14 +6,23 @@ import (
 	"time"
 
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/domain"
+	accessdomain "github.com/Hostel-Hive/hostelhive-backend/internal/modules/lateaccess/domain"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Devices struct{ pool *pgxpool.Pool }
+type Devices struct {
+	pool         *pgxpool.Pool
+	accessPolicy accessdomain.Policy
+}
 
-func NewDevices(pool *pgxpool.Pool) *Devices { return &Devices{pool: pool} }
+func NewDevices(pool *pgxpool.Pool) *Devices {
+	return NewDevicesWithPolicy(pool, accessdomain.Policy{Location: time.FixedZone("Asia/Colombo", 19800), ExitOpening: 360, EntryDeadline: 1200})
+}
+func NewDevicesWithPolicy(pool *pgxpool.Pool, policy accessdomain.Policy) *Devices {
+	return &Devices{pool: pool, accessPolicy: policy}
+}
 
 const columns = "device_id::text,name,is_active,credential_version,created_at,updated_at,created_by::text,updated_by::text,direction"
 

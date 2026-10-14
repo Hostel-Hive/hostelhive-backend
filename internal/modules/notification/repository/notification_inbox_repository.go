@@ -58,6 +58,7 @@ const visible = ` FROM hostelhive.notifications n
  LEFT JOIN hostelhive.complaints c ON c.complaint_id=ce.complaint_id
  LEFT JOIN hostelhive.leave_requests l ON l.leave_id=e.leave_id
  LEFT JOIN hostelhive.late_access_requests la ON la.late_access_id=e.late_access_id
+ LEFT JOIN hostelhive.attendance_incidents ai ON ai.incident_id=e.attendance_incident_id
  LEFT JOIN hostelhive.announcements a ON a.announcement_id=e.announcement_id
  LEFT JOIN hostelhive.students st ON st.student_id=COALESCE(c.student_id,l.student_id,la.student_id)
  WHERE n.recipient_id=$1 AND (
@@ -68,10 +69,11 @@ const visible = ` FROM hostelhive.notifications n
   (e.kind='leave_submitted' AND $2::text IN ('admin','warden'))
   OR (e.kind='leave_decided' AND $2::text='student' AND st.user_id=$1)))
  OR (e.source_type='late_access' AND ((e.kind='late_access_submitted' AND $2::text IN ('admin','warden')) OR (e.kind='late_access_decided' AND $2::text='student' AND st.user_id=$1)))
+ OR (e.source_type='attendance' AND $2::text IN ('admin','warden'))
  OR (e.source_type='announcement' AND $2::text='student' AND a.audience='all_students'
  AND EXISTS(SELECT 1 FROM hostelhive.students member WHERE member.user_id=$1 AND member.deleted_at IS NULL)))`
 const projection = `n.notification_id::text,e.source_type,COALESCE(c.complaint_id::text,'') AS complaint_id,
- COALESCE(la.late_access_id::text,'') AS late_access_id,COALESCE(l.leave_id::text,'') AS leave_id,COALESCE(a.announcement_id::text,'') AS announcement_id,e.kind,COALESCE(c.category,'') AS category,e.status,
+ COALESCE(ai.incident_id::text,'') AS attendance_incident_id,COALESCE(la.late_access_id::text,'') AS late_access_id,COALESCE(l.leave_id::text,'') AS leave_id,COALESCE(a.announcement_id::text,'') AS announcement_id,e.kind,COALESCE(c.category,'') AS category,e.status,
  CASE e.kind
  WHEN 'created' THEN 'New '||c.category||' complaint'
  WHEN 'status' THEN 'Your complaint is '||replace(e.status,'_',' ')
@@ -79,6 +81,7 @@ const projection = `n.notification_id::text,e.source_type,COALESCE(c.complaint_i
  WHEN 'leave_decided' THEN 'Your leave request is '||e.status
  WHEN 'late_access_submitted' THEN 'New late-access request'
  WHEN 'late_access_decided' THEN 'Your late-access request is '||e.status
+ WHEN 'attendance_incident' THEN CASE ai.incident_type WHEN 'early_exit' THEN 'Early exit without permission' ELSE 'Late entry without permission' END
  WHEN 'announcement_published' THEN a.title END AS title,
  e.occurred_at,n.created_at,n.read_at`
 

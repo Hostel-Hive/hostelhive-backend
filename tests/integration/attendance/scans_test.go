@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -167,7 +168,7 @@ func TestAttendanceScansPostgres(t *testing.T) {
 	}
 	presence("IN")
 	repeated := scan(entry, eventID, tokens[0])
-	if repeated != first {
+	if !reflect.DeepEqual(repeated, first) {
 		t.Fatal("retry changed result")
 	}
 	do("POST", "/api/v1/device/scans", body(eventID, tokens[1]), entry.Credential, 409)
@@ -235,7 +236,7 @@ func TestAttendanceScansPostgres(t *testing.T) {
 		if saved.EventID == "" {
 			saved = e
 		}
-		if e != saved {
+		if !reflect.DeepEqual(e, saved) {
 			t.Fatal("concurrent retry differs")
 		}
 	}

@@ -223,3 +223,5 @@ account in finally, then obtain a fresh Student login. Clear request variables
 and verify a new Pending request ID before deactivating or deciding. The corrected
 interactive commands refresh normal rejected logins once, preserve identity and
 stop each numbered block on failure; they are not a single-run live test script.
+## Extension in #76
+[Attendance permission checks](attendance-permission-checks.md) now consume an approved request once for a recorded matching direction within30 minutes either side of expected_at. Existing detail/list exposes consumed_at,consumed_device_id,consumed_event_id; the original approved decision remains history. Unapproved incidents never prevent actual attendance recording.

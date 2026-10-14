@@ -43,3 +43,11 @@ func RegisterDashboard(a *handler.DashboardAPI, mux *http.ServeMux, authenticate
 	mux.Handle("GET /api/v1/attendance/students", readers(a.Students))
 	mux.Handle("GET /api/v1/attendance/summary", readers(a.Summary))
 }
+
+func RegisterIncidents(a *handler.IncidentAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	readers := func(h http.HandlerFunc) http.Handler {
+		return authenticate(middleware.RequireRoles(domain.RoleAdmin, domain.RoleWarden)(h))
+	}
+	mux.Handle("GET /api/v1/attendance/incidents", readers(a.List))
+	mux.Handle("GET /api/v1/attendance/incidents/{incidentID}", readers(a.Get))
+}
