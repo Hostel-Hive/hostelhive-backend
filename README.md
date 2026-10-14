@@ -1067,3 +1067,5 @@ Complaint tracking and resolution (issue #64): see [API and verification guide](
 Descriptive module filenames: [naming convention](docs/file-naming.md) and [current layout](docs/module-layout.md).
 
 Complaint photos (issue #66): [private image API and verification](docs/complaint-images.md). Student changes are Pending-only; shared JPEG/PNG validation preserves profile image behavior.
+
+Complaint notifications and private inbox: [setup and verification](docs/complaint-notifications.md).

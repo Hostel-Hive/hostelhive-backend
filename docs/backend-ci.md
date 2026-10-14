@@ -138,3 +138,5 @@ Issue #62 adds leave service/HTTP/PostgreSQL workflow tests. Coverage reporting 
 Issue #64 adds complaint validation and API/PostgreSQL lifecycle, scope and concurrency tests. Coverage reporting requires tests/integration/complaint to pass without skips; migration rollback/reapply includes version 16.
 
 Issue #66 adds complaint_images_integration_test.go to the required complaint package. CI applies/rolls back/reapplies migration 17 and verifies permission scope, failed uploads, cleanup, frozen evidence and concurrent three-image caps using storage fakes.
+
+Issue #68 adds the required notification PostgreSQL integration package and its module coverage. All twelve integration packages must pass without skips; the existing workflow includes migration 18 rollback/reapply and all notification tests.

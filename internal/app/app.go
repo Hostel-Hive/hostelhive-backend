@@ -32,6 +32,10 @@ import (
 	leavehandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/handler"
 	leaverepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/repository"
 	leaveservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification"
+	notificationhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification/handler"
+	notificationrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification/repository"
+	notificationservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification/service"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff"
 	staffhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff/handler"
 	staffrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff/repository"
@@ -74,6 +78,15 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	}()
 	defer func() { stopWorker(); <-workerDone }()
 	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
+	notificationStore := notificationrepo.New(pool)
+	notification.Register(notificationhandler.New(notificationservice.New(notificationStore), cfg.AccountManagementTimeout), handler, protected)
+	notificationCtx, stopNotifications := context.WithCancel(ctx)
+	notificationDone := make(chan struct{})
+	go func() {
+		defer close(notificationDone)
+		workers.RunNotificationDelivery(notificationCtx, notificationStore, logger)
+	}()
+	defer func() { stopNotifications(); <-notificationDone }()
 	complaintStore := complaintrepo.New(pool)
 	complaint.Register(complainthandler.New(complaintservice.New(complaintStore), cfg.AccountManagementTimeout), handler, protected)
 	leave.Register(leavehandler.New(leaveservice.New(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
