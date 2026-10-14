@@ -1,6 +1,6 @@
 # Module layout and file naming
 
-Reviewed 2026-10-13. Modules follow the existing modular monolith. One cohesive
+Reviewed 2026-10-14. Modules follow the existing modular monolith. One cohesive
 file per folder is valid; file counts and size alone do not determine quality.
 
 | Layer | Responsibility |
@@ -13,7 +13,7 @@ file per folder is valid; file counts and size alone do not determine quality.
 | `<module>_routes.go` | Route registration and explicit role policies |
 
 Filenames identify the feature and its layer. Domain records use business names;
-DTOs use *_requests.go. Unit tests use the same stem with _test.go.
+DTOs use *_requests.go or *_queries.go. Unit tests use the same stem with _test.go.
 See [all renamed paths](file-naming.md).
 
 ## Current production files
@@ -148,6 +148,20 @@ leave/
     leave_dependencies.go
     leave_service.go
   leave_routes.go
+notification/
+  domain/
+    notification.go
+  dto/
+    notification_queries.go
+  handler/
+    notification_inbox_handler.go
+  repository/
+    notification_delivery_repository.go
+    notification_inbox_repository.go
+  service/
+    notification_dependencies.go
+    notification_inbox_service.go
+  notification_routes.go
 staff/
   domain/
     staff_errors.go
@@ -199,7 +213,7 @@ Identity owns accounts and roles; Student/Staff own their profile workflows.
 Inventory owns blocks, rooms and beds; Allocation owns student-to-bed history.
 Attendance owns scanners, scans, dashboard queries and realtime coordination.
 Leave approval preserves scanned presence. Complaint owns scoped submissions,
-notes and staff resolution/reopening; photos and notifications are follow-up work.
+notes, staff resolution/reopening and private photos. Notification owns the inbox and complaint-alert delivery; external push remains follow-up work.
 
 Provider adapters remain in internal/platform. Handlers/services do not import
 concrete database/provider adapters. App wiring remains in internal/app. Current
@@ -215,3 +229,5 @@ checks migration rollback/reapply and race detection. Live provider/staging test
 remain separate. SHA-256 checks confirm each moved Go file retained its contents.
 
 Issue #66 adds complaint_image_handler/service/repository files and cleanup worker. Shared image_normalization.go validates both Student profile and complaint photos; no cross-module repository imports.
+
+Issue #68 adds notification/domain/notification.go, dto/notification_queries.go, service/notification_inbox_service.go and notification_dependencies.go, handler/notification_inbox_handler.go, repository/notification_inbox_repository.go and notification_delivery_repository.go, and notification_routes.go. It uses PostgreSQL event triggers and a worker, without importing another module's concrete repository.

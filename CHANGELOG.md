@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- #68: add durable complaint alerts, private inbox, unread counts and idempotent
+  mark-read with recipient scope checks and migration 18.
+
 - Add private complaint photos, Pending-only Student changes, scoped reads, safe
   retries, three-image caps and durable cleanup (issue #66; migration 17).
   Share JPEG/PNG normalization with Student profile images; audit photo changes.
