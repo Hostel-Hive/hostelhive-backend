@@ -1075,3 +1075,5 @@ Leave request/decision alerts: [policy and verification](docs/leave-notification
 Hostel announcements: [policy, setup and verification](docs/hostel-announcements.md).
 
 Late access: [early-exit and late-entry requests](docs/late-access-requests.md) (#74).
+
+Attendance permission checks: [single-use grants and incidents](docs/attendance-permission-checks.md) (#76).

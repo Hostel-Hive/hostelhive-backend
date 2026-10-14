@@ -17,7 +17,7 @@ type Store struct {
 
 func New(p *pgxpool.Pool, policy domain.Policy) *Store { return &Store{pool: p, policy: policy} }
 
-const columns = `late_access_id::text,request_id::text,student_id::text,submitted_by::text,direction,expected_at,reason,status,created_at,decided_at,decided_by::text,decision_note`
+const columns = `late_access_id::text,request_id::text,student_id::text,submitted_by::text,direction,expected_at,reason,status,created_at,decided_at,decided_by::text,decision_note,consumed_at,consumed_device_id::text,consumed_event_id::text`
 
 func dbError(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -31,7 +31,7 @@ func dbError(err error) error {
 }
 func scan(row pgx.Row) (domain.Request, error) {
 	var v domain.Request
-	err := row.Scan(&v.LateAccessID, &v.RequestID, &v.StudentID, &v.SubmittedBy, &v.Direction, &v.ExpectedAt, &v.Reason, &v.Status, &v.CreatedAt, &v.DecidedAt, &v.DecidedBy, &v.DecisionNote)
+	err := row.Scan(&v.LateAccessID, &v.RequestID, &v.StudentID, &v.SubmittedBy, &v.Direction, &v.ExpectedAt, &v.Reason, &v.Status, &v.CreatedAt, &v.DecidedAt, &v.DecidedBy, &v.DecisionNote, &v.ConsumedAt, &v.ConsumedDeviceID, &v.ConsumedEventID)
 	if err != nil {
 		return v, dbError(err)
 	}

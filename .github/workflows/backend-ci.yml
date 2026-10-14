@@ -113,6 +113,15 @@ jobs:
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/late_access_upgrade_before.sql
           migrate -path migrations -database "$migration_url" up
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/late_access_upgrade_after.sql
+      - name: Permission upgrade preserves scans, approvals and mixed inbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+          migrate -path migrations -database "$migration_url" goto 21
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/attendance_permission_upgrade_before.sql
+          migrate -path migrations -database "$migration_url" up
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/attendance_permission_upgrade_after.sql
       - name: Race tests with application-wide coverage (database packages serial)
         shell: bash
         run: |

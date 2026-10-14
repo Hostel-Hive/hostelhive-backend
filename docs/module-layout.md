@@ -53,27 +53,33 @@ attendance/
   domain/
     attendance_dashboard.go
     attendance_errors.go
+    attendance_incident.go
     attendance_realtime.go
     attendance_scan.go
     scanner_device.go
   dto/
     attendance_dashboard_requests.go
+    attendance_incident_queries.go
     attendance_scan_requests.go
     scanner_device_requests.go
   handler/
     attendance_dashboard_handler.go
+    attendance_incident_handler.go
     attendance_realtime_handler.go
     attendance_scan_handler.go
     scanner_authentication_middleware.go
     scanner_device_handler.go
   repository/
     attendance_dashboard_repository.go
+    attendance_incident_repository.go
+    attendance_permission_repository.go
     attendance_realtime_repository.go
     attendance_scan_repository.go
     scanner_device_repository.go
   service/
     attendance_dashboard_service.go
     attendance_dependencies.go
+    attendance_incident_service.go
     attendance_realtime_service.go
     attendance_scan_service.go
     scanner_device_service.go
@@ -264,3 +270,5 @@ Issue #70 extends the existing notification module through shared notification e
 Issue #72 adds the announcement module with global publication/read/aggregate receipt APIs. Notification event references and inbox eligibility are extended; app wires modules without cross-module repository imports.
 
 Issue #74 adds the lateaccess module for early-exit/late-entry permission requests. Its repository keeps request/decision and notification intent atomic; attendance remains a separate scan-driven module.
+
+Issue #76 extends attendance with named incident query/service/handler/repository files and a permission repository for the atomic scan transaction. Late-access request history exposes consumed movement metadata; no new module is added.

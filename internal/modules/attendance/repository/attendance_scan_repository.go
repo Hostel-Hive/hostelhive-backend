@@ -35,11 +35,11 @@ func (s *Devices) SetDirection(ctx context.Context, actor, id, direction string)
 	return d, nil
 }
 
-const eventColumns = "event_id::text,device_id::text,student_id::text,direction,outcome,occurred_at"
+const eventColumns = "event_id::text,device_id::text,student_id::text,direction,outcome,occurred_at,COALESCE(access_result,''),late_access_id::text,(SELECT i.incident_id::text FROM hostelhive.attendance_incidents i WHERE i.device_id=attendance_events.device_id AND i.event_id=attendance_events.event_id)"
 
 func scanEvent(row pgx.Row) (domain.Event, error) {
 	var e domain.Event
-	err := row.Scan(&e.EventID, &e.DeviceID, &e.StudentID, &e.Direction, &e.Outcome, &e.OccurredAt)
+	err := row.Scan(&e.EventID, &e.DeviceID, &e.StudentID, &e.Direction, &e.Outcome, &e.OccurredAt, &e.AccessResult, &e.LateAccessID, &e.IncidentID)
 	return e, err
 }
 
@@ -72,7 +72,7 @@ func (s *Devices) Record(ctx context.Context, authenticated domain.Device, event
 	}
 	var prior domain.Event
 	var priorHash []byte
-	err = tx.QueryRow(ctx, "SELECT "+eventColumns+",payload_hash FROM hostelhive.attendance_events WHERE device_id=$1 AND event_id=$2", d.DeviceID, eventID).Scan(&prior.EventID, &prior.DeviceID, &prior.StudentID, &prior.Direction, &prior.Outcome, &prior.OccurredAt, &priorHash)
+	err = tx.QueryRow(ctx, "SELECT "+eventColumns+",payload_hash FROM hostelhive.attendance_events WHERE device_id=$1 AND event_id=$2", d.DeviceID, eventID).Scan(&prior.EventID, &prior.DeviceID, &prior.StudentID, &prior.Direction, &prior.Outcome, &prior.OccurredAt, &prior.AccessResult, &prior.LateAccessID, &prior.IncidentID, &priorHash)
 	if err == nil {
 		if subtle.ConstantTimeCompare(hash, priorHash) != 1 {
 			return domain.Event{}, domain.ErrEventConflict
@@ -135,6 +135,13 @@ func (s *Devices) Record(ctx context.Context, authenticated domain.Device, event
 		if err != nil {
 			return domain.Event{}, domain.ErrUnavailable
 		}
+	}
+	if err = s.evaluateAccess(ctx, tx, e); err != nil {
+		return domain.Event{}, err
+	}
+	e, err = scanEvent(tx.QueryRow(ctx, "SELECT "+eventColumns+" FROM hostelhive.attendance_events WHERE device_id=$1 AND event_id=$2", e.DeviceID, e.EventID))
+	if err != nil {
+		return domain.Event{}, domain.ErrUnavailable
 	}
 	if tx.Commit(ctx) != nil {
 		return domain.Event{}, domain.ErrUnavailable

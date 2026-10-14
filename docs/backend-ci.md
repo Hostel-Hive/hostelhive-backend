@@ -146,3 +146,5 @@ Issue #70 adds schema 18-to-19 preservation fixtures for existing complaint inbo
 Issue #72 adds the required announcement integration package (thirteen total), announcement module coverage, schema19-to20 mixed-inbox preservation, audience/receipt/publication/concurrency tests and existing notification regressions.
 
 Issue #74 adds the required lateaccess integration package (fourteen total), policy/configuration tests and a populated schema20->21 mixed-inbox preservation check.
+
+Issue #76 extends the attendance integration suite with single-use permission/incident checks and populated schema21->22 preservation of approvals, scans, presence and all four existing inbox sources.
