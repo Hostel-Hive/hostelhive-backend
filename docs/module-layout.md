@@ -231,3 +231,5 @@ remain separate. SHA-256 checks confirm each moved Go file retained its contents
 Issue #66 adds complaint_image_handler/service/repository files and cleanup worker. Shared image_normalization.go validates both Student profile and complaint photos; no cross-module repository imports.
 
 Issue #68 adds notification/domain/notification.go, dto/notification_queries.go, service/notification_inbox_service.go and notification_dependencies.go, handler/notification_inbox_handler.go, repository/notification_inbox_repository.go and notification_delivery_repository.go, and notification_routes.go. It uses PostgreSQL event triggers and a worker, without importing another module's concrete repository.
+
+Issue #70 extends the existing notification module through shared notification events and migration 19; leave service/routes and attendance remain unchanged. No new notification module or cross-module repository imports.

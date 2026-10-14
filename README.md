@@ -1069,3 +1069,5 @@ Descriptive module filenames: [naming convention](docs/file-naming.md) and [curr
 Complaint photos (issue #66): [private image API and verification](docs/complaint-images.md). Student changes are Pending-only; shared JPEG/PNG validation preserves profile image behavior.
 
 Complaint notifications and private inbox: [setup and verification](docs/complaint-notifications.md).
+
+Leave request/decision alerts: [policy and verification](docs/leave-notifications.md).

@@ -140,3 +140,5 @@ Issue #64 adds complaint validation and API/PostgreSQL lifecycle, scope and conc
 Issue #66 adds complaint_images_integration_test.go to the required complaint package. CI applies/rolls back/reapplies migration 17 and verifies permission scope, failed uploads, cleanup, frozen evidence and concurrent three-image caps using storage fakes.
 
 Issue #68 adds the required notification PostgreSQL integration package and its module coverage. All twelve integration packages must pass without skips; the existing workflow includes migration 18 rollback/reapply and all notification tests.
+
+Issue #70 adds schema 18-to-19 preservation fixtures for existing complaint inbox/read/pending delivery state, plus leave notification recipient/privacy/concurrency and attendance regression checks in the existing notification integration package.
