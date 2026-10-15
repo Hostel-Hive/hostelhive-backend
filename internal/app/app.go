@@ -95,6 +95,20 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
 	announcement.Register(announcementhandler.New(announcementservice.New(announcementrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	notificationStore := notificationrepo.New(pool)
+	notification.RegisterPush(notificationhandler.NewPush(notificationservice.NewPush(notificationStore), cfg.AccountManagementTimeout), handler, protected)
+	if cfg.FCMEnabled {
+		sender, err := platformfirebase.NewFCMSender(ctx, cfg.FirebaseProjectID)
+		if err != nil {
+			return err
+		}
+		pushCtx, stopPush := context.WithCancel(ctx)
+		pushDone := make(chan struct{})
+		go func() {
+			defer close(pushDone)
+			workers.RunPushDelivery(pushCtx, notificationservice.NewPushDispatcher(notificationStore, sender), logger)
+		}()
+		defer func() { stopPush(); <-pushDone }()
+	}
 	notification.Register(notificationhandler.New(notificationservice.New(notificationStore), cfg.AccountManagementTimeout), handler, protected)
 	notificationCtx, stopNotifications := context.WithCancel(ctx)
 	notificationDone := make(chan struct{})

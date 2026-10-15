@@ -1114,3 +1114,12 @@ complaint PDFs. See [PDF export setup, limits and verification](docs/pdf-report-
 PDF routes append `/export/pdf` to the existing report path; Excel routes remain
 `/export`. No migration or new production setting is required. PDF text support
 and native Sinhala/Tamil limitations are documented in the guide.
+
+## Mobile push notifications (#89)
+
+Optional Firebase Cloud Messaging alerts cover leave/late-access decisions and
+unapproved attendance incidents. Apply migration25; delivery defaults off with
+`FCM_ENABLED=false`. See [device API, mobile setup and verification](docs/mobile-push-notifications.md).
+Live phone delivery requires mobile configuration and is not yet verified.
+
+Flutter integration: [mobile API guide and 12-feature checklist](docs/mobile-integration/HostelHive-Mobile-API-Integration-Guide-2026-10-15.md), with a standalone HTML copy and 25-request Postman collection in the same folder. Current backend contracts and missing mobile workflows are explicitly separated.

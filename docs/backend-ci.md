@@ -179,3 +179,14 @@ also decode PDF downloads and compare source fields, ordering, totals, authoriza
 and unchanged source state. All15 database packages remain mandatory; no new test
 package or migration is introduced. PDF sample rendering supplements CI assertions;
 live Firebase authentication and native PDF viewer inspection remain separate.
+
+## Mobile push (#89)
+
+The existing required notification integration package now checks device ownership,
+concurrent enrollment/dispatch, token generation/logout, current authorization,
+eligible event types and durable provider failure/retry behavior. Real Firebase SDK
+HTTP responses are simulated; no FCM credentials or phone is used. CI explicitly
+verifies populated schema24->25 preserves inbox/read/outbox/source state without
+backfilling old alerts. Existing full migration rollback/reapply and Go/race checks
+include migration25. Required database package count remains15. Live phone delivery
+is a separate pending mobile integration check; CI does not prove receipt.

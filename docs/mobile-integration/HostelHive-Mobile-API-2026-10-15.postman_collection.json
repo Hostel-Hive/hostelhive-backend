@@ -1,0 +1,586 @@
+{
+  "info": {
+    "name": "HostelHive Student Mobile API - reviewed 2026-10-15",
+    "description": "Verified current backend contracts. Read the accompanying guide first. Use dedicated test records and a confirmed running API. No credentials/scripts included. Issue89 requires its current code and migration25; real phone validation pending. Mutations execute only when you choose Send. Do not export real local tokens.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{firebase_id_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "api_base_url",
+      "value": "https://YOUR_VERIFIED_API_HOST/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "firebase_id_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leave_request_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leave_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "late_access_request_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "late_access_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "complaint_request_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "complaint_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "note_request_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expected_version",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "image_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "announcement_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notification_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "push_device_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fcm_registration_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Account and QR",
+      "item": [
+        {
+          "name": "Current account",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/me",
+            "description": "Account metadata only. Does not return full Student, allocation or presence fields."
+          },
+          "response": []
+        },
+        {
+          "name": "Own QR PNG",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "image/png"
+              }
+            ],
+            "url": "{{api_base_url}}/me/qr",
+            "description": "200 PNG bytes. Requires active Student account and unarchived profile."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 Extended leave",
+      "item": [
+        {
+          "name": "Submit leave - mutation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/leaves",
+            "description": "201 Request, including exact retry. Set a stable leave_request_id UUID and future non-overlapping dates.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{leave_request_id}}\",\n  \"starts_at\": \"2027-01-15T09:00:00+05:30\",\n  \"ends_at\": \"2027-01-16T09:00:00+05:30\",\n  \"reason\": \"TEST family visit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List own leaves",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/leaves?limit=20&offset=0",
+            "description": "200 page. Optional status=pending|approved|rejected. Ownership is implicit."
+          },
+          "response": []
+        },
+        {
+          "name": "Own leave detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/leaves/{{leave_id}}",
+            "description": "200 Request with decision metadata; another Student record404."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 Late access",
+      "item": [
+        {
+          "name": "Submit late entry - mutation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/late-access-requests",
+            "description": "One expected movement, not a round trip. Change to OUT and a future early-exit time for an early exit. Stable UUID required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{late_access_request_id}}\",\n  \"direction\": \"IN\",\n  \"expected_at\": \"2027-01-15T21:00:00+05:30\",\n  \"reason\": \"TEST travel delay\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List own late access",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/late-access-requests?limit=20&offset=0",
+            "description": "200 page, optional status. No combined /passes feed."
+          },
+          "response": []
+        },
+        {
+          "name": "Own late-access detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/late-access-requests/{{late_access_id}}",
+            "description": "200 Request; optional consumed_* fields appear after recorded use."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 Complaints",
+      "item": [
+        {
+          "name": "Submit complaint - mutation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/complaints",
+            "description": "JSON only. No title/severity/photos in body. Save returned complaint_id and version.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{complaint_request_id}}\",\n  \"category\": \"maintenance\",\n  \"description\": \"TEST room light is not working.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List own complaints",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/complaints?limit=20&offset=0",
+            "description": "200 page. Optional category/status/created_from/created_to; timestamps must be URL-encoded."
+          },
+          "response": []
+        },
+        {
+          "name": "Own complaint detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/complaints/{{complaint_id}}",
+            "description": "200 Complaint. Timeline and images are separate requests."
+          },
+          "response": []
+        },
+        {
+          "name": "Complaint timeline",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/complaints/{{complaint_id}}/updates?limit=20&offset=0",
+            "description": "200 page of Update objects ordered by version ascending."
+          },
+          "response": []
+        },
+        {
+          "name": "Add note - mutation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/complaints/{{complaint_id}}/notes",
+            "description": "200 Update. Set note_request_id to stable UUID and expected_version to latest numeric complaint version. Keep original values on an exact retry.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{note_request_id}}\",\n  \"expected_version\": {{expected_version}},\n  \"text\": \"TEST the issue is still present.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 Private complaint photos",
+      "item": [
+        {
+          "name": "Upload JPEG - mutation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              }
+            ],
+            "url": "{{api_base_url}}/complaints/{{complaint_id}}/images/{{image_id}}",
+            "description": "Choose binary JPEG <=5MiB, dimensions<=4096 and total pixels<=12 million. Set PNG media type for a PNG. Maximum3 images; Pending-only new writes. 201/200 retry.",
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": ""
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List attached images",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/complaints/{{complaint_id}}/images",
+            "description": "200 {items,version}; no pagination/public URLs."
+          },
+          "response": []
+        },
+        {
+          "name": "Read private image bytes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "image/jpeg, image/png"
+              }
+            ],
+            "url": "{{api_base_url}}/complaints/{{complaint_id}}/images/{{image_id}}",
+            "description": "200 authorized JPEG/PNG bytes, not JSON."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove image - mutation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/complaints/{{complaint_id}}/images/{{image_id}}",
+            "description": "200 ImageRemoval JSON, not204. First removal Pending-only; own exact repeat is safe."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 Announcements",
+      "item": [
+        {
+          "name": "Global announcement feed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/announcements?limit=20&offset=0",
+            "description": "200 page. Requires current eligible Student profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Announcement detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/announcements/{{announcement_id}}",
+            "description": "200 Announcement. Does not mark related notification read."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 Notification inbox",
+      "item": [
+        {
+          "name": "Own inbox",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/notifications?limit=20&offset=0",
+            "description": "200 page. Add unread=true for unread-only; unread=false means ALL, not read-only."
+          },
+          "response": []
+        },
+        {
+          "name": "Unread count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/notifications/unread-count",
+            "description": "200 {unread:number}; no query/body."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark one notification read - mutation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/notifications/{{notification_id}}/read",
+            "description": "Empty body. 200 Notification; repeated read preserves the first read_at. Use notification UUID, not source ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "08 Push devices - requires issue 89",
+      "item": [
+        {
+          "name": "Register or refresh phone - mutation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/me/push-devices/{{push_device_id}}",
+            "description": "200 metadata. Retain installation UUID; real FCM registration token needed. Worker may be disabled even if registration succeeds.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"android\",\n  \"token\": \"{{fcm_registration_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List active owned phones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/me/push-devices",
+            "description": "200 {items,total}, no token values or pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Unregister phone - mutation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/me/push-devices/{{push_device_id}}",
+            "description": "204 empty body; call before Firebase sign-out. No recall of already accepted provider messages."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

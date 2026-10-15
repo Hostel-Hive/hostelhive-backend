@@ -328,3 +328,12 @@ and existing report repositories preserve source SQL and permission boundaries.
 - Report service writer ports keep PDF/Excel SDKs out of the module core.
 
 Shared files report_export_handler.go and report_export_service.go cover both formats; report_export_integration_test.go verifies both formats against PostgreSQL.
+
+## Mobile push (#89)
+
+Notification adds named notification_push domain/DTO/service files,
+notification_push_devices handler/repository files and a notification_push_delivery
+repository. Service ports isolate Firebase; platform/firebase/fcm_push_sender.go owns the
+SDK and workers/notification_push_delivery.go owns polling/shutdown orchestration.
+Existing source workflows retain their durable inbox outbox; migration25 queues
+eligible per-device jobs when inbox rows are inserted. No new module is introduced.

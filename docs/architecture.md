@@ -153,3 +153,13 @@ internal/platform/pdfreport embeds fonts and handles bounded, paginated A4 layou
 No module core imports the PDF renderer/font SDK. PDF and Excel routes retain
 separate two-slot admission pools. See pdf-report-exports.md for resource limits,
 source consistency and the explicit complex-script text-display limitation.
+
+## Mobile push delivery (#89)
+
+The notification module exposes owned registration APIs and push queue/sender ports.
+The Firebase platform adapter implements sending and provider error translation;
+a separate worker dispatches durable per-device jobs. Local enqueue is atomic with
+inbox insertion, while external calls occur only in dispatch transactions bounded
+by deadlines and per-user/device locks. Current inbox eligibility and registration
+generations are checked before sending. FCM acceptance is separate from inbox reads
+and phone receipt. See [push contract and mobile handoff](mobile-push-notifications.md).
