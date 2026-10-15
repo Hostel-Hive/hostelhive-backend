@@ -27,7 +27,7 @@ internal/modules/staff/       Staff profile management and own-profile self-serv
 internal/modules/inventory/   Block, room and bed listings and Admin management
 internal/modules/allocation/  Bed assignment, transfer, revocation and history
 internal/modules/attendance/  Scanner identity, explicit entry/exit and presence
-internal/modules/report/      Recorded attendance history and daily movement reports
+internal/modules/report/      Read-only attendance, leave and complaint reports
 internal/workers/             User-revocation retries and student-image cleanup
 tests/integration/            Disposable PostgreSQL integration suites
 tests/migration/              SQL constraint verification
@@ -1090,3 +1090,11 @@ Student and current status. Full-period pending/approved/rejected totals accompa
 paginated request and decision details, including archived/inactive history.
 Apply migration 24 and restart. See [API and verification](docs/leave-request-reports.md).
 Reports preserve leave decisions and scan-based attendance; exports remain separate.
+
+## Complaint reports - issue #83
+
+Active Admin/Warden can report on complaints by local submission-date range,
+Student, category and current status, with full-period status/category totals and
+recorded current resolution details. Reopened complaints expose no stale current
+resolution. Archived/inactive history and private-photo permissions are preserved.
+No new migration beyond schema24; rebuild and restart. See [API and verification](docs/complaint-reports.md).

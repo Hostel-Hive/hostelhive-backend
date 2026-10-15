@@ -131,3 +131,9 @@ Issue #81 extends report with leave-request queries. Attendance and leave report
 share strict query parsing, calendar validation, error mapping and transactional
 staff authorization. Leave reports read submission dates/current decisions without
 calling leave workflow writes; source history and scan-based presence are preserved.
+
+Issue #83 extends report with complaint summaries and current resolution audit
+metadata. Complaint rows are counted before a bounded page-level audit lookup,
+preventing update-history joins from inflating totals. One statement supplies rows,
+summary and resolution. Source complaint/image/notification modules are not imported
+by production report code. Shared HTTP queries accept only route-declared filters.

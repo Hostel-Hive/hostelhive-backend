@@ -19,3 +19,7 @@ func RegisterAttendance(a *handler.AttendanceAPI, mux *http.ServeMux, authentica
 func RegisterLeaves(a *handler.LeaveAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
 	mux.Handle("GET /api/v1/reports/leaves", authenticate(middleware.RequireRoles(identity.RoleAdmin, identity.RoleWarden)(http.HandlerFunc(a.Requests))))
 }
+
+func RegisterComplaints(a *handler.ComplaintAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/v1/reports/complaints", authenticate(middleware.RequireRoles(identity.RoleAdmin, identity.RoleWarden)(http.HandlerFunc(a.Records))))
+}
