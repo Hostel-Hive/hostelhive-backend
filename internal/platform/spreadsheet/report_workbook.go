@@ -39,7 +39,7 @@ func cell(f *excelize.File, sheet, address string, v domain.ExportCell) error {
 	}
 	return f.SetCellInt(sheet, address, *v.Number)
 }
-func (s *ReportWorkbooks) Build(ctx context.Context, doc domain.ExportWorkbook) ([]byte, error) {
+func (s *ReportWorkbooks) Build(ctx context.Context, doc domain.ExportDocument) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}

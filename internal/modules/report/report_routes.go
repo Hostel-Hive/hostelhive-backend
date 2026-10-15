@@ -33,3 +33,13 @@ func RegisterExports(a *handler.ExportAPI, mux *http.ServeMux, authenticate func
 	mux.Handle("GET /api/v1/reports/leaves/export", readers(a.Leaves))
 	mux.Handle("GET /api/v1/reports/complaints/export", readers(a.Complaints))
 }
+
+func RegisterPDFExports(a *handler.ExportAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	readers := func(h http.HandlerFunc) http.Handler {
+		return authenticate(middleware.RequireRoles(identity.RoleAdmin, identity.RoleWarden)(h))
+	}
+	mux.Handle("GET /api/v1/reports/attendance/export/pdf", readers(a.Movements))
+	mux.Handle("GET /api/v1/reports/attendance/daily/export/pdf", readers(a.Daily))
+	mux.Handle("GET /api/v1/reports/leaves/export/pdf", readers(a.Leaves))
+	mux.Handle("GET /api/v1/reports/complaints/export/pdf", readers(a.Complaints))
+}

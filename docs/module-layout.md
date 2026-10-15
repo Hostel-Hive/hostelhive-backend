@@ -209,7 +209,7 @@ report/
   handler/
     attendance_report_handler.go
     complaint_report_handler.go
-    report_excel_export_handler.go
+    report_export_handler.go
     leave_report_handler.go
     report_query_handler.go
     report_response_handler.go
@@ -221,7 +221,7 @@ report/
   service/
     attendance_report_service.go
     complaint_report_service.go
-    report_excel_export_service.go
+    report_export_service.go
     leave_report_service.go
     report_dependencies.go
     report_period_validation.go
@@ -315,6 +315,16 @@ inside report. The shared query parser accepts explicit per-route filter lists;
 attendance and leave query contracts remain unchanged. Existing complaint table
 and audit indexes are reused without a migration or concrete cross-module imports.
 
-Issue #85 adds report export domain/DTO, report_excel_export_handler/service and
+Issue #85 adds report export domain/DTO, report_export_handler/service (shared with PDF in #87) and
 platform/spreadsheet/report_workbook.go. The adapter owns Excelize; service ports
 and existing report repositories preserve source SQL and permission boundaries.
+
+## Printable report exports (#87)
+
+- internal/platform/pdfreport/report_pdf_document.go: embedded fonts, printable
+  report tables, long-record continuation and bounded PDF generation.
+- internal/modules/report/handler/report_pdf_export_handler.go: PDF constructor
+  using shared download validation, error handling and response headers.
+- Report service writer ports keep PDF/Excel SDKs out of the module core.
+
+Shared files report_export_handler.go and report_export_service.go cover both formats; report_export_integration_test.go verifies both formats against PostgreSQL.

@@ -42,13 +42,13 @@ func (s *exportSource) Records(_ context.Context, a string, f dto.ComplaintFilte
 }
 
 type exportWriter struct {
-	doc   domain.ExportWorkbook
+	doc   domain.ExportDocument
 	err   error
 	calls int
 	empty bool
 }
 
-func (w *exportWriter) Build(_ context.Context, d domain.ExportWorkbook) ([]byte, error) {
+func (w *exportWriter) Build(_ context.Context, d domain.ExportDocument) ([]byte, error) {
 	w.doc = d
 	w.calls++
 	if w.empty {
@@ -155,7 +155,7 @@ func TestExportLimitAndFailures(t *testing.T) {
 	if _, err := s.Export(ctx, "admin", domain.LeaveReport, q); !errors.Is(err, domain.ErrUnavailable) {
 		t.Fatal(err)
 	}
-	if err := completeExport(-1, 0, false); err == nil {
+	if err := completeExport(-1, 0, false, domain.ExportRowLimit); err == nil {
 		t.Fatal("negative total accepted")
 	}
 }

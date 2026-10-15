@@ -144,3 +144,12 @@ snapshot and pass explicit text/numeric cells to the platform/spreadsheet adapte
 The handler admits at most two simultaneous exports and buffers generation before
 writing attachment headers. No export files, cross-module repositories or new
 schema tables are introduced. Spreadsheet SDK imports are blocked in core layers.
+
+## PDF report adapter (#87)
+
+Report exports share a format-neutral ExportDocument and ExportDocumentWriter
+port. The PDF constructor uses the existing source mapping with a1000-row cap;
+internal/platform/pdfreport embeds fonts and handles bounded, paginated A4 layout.
+No module core imports the PDF renderer/font SDK. PDF and Excel routes retain
+separate two-slot admission pools. See pdf-report-exports.md for resource limits,
+source consistency and the explicit complex-script text-display limitation.
