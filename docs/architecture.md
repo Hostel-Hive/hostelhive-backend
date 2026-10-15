@@ -41,6 +41,7 @@ The worker retries pending jobs and stops before the app closes the database poo
 | `internal/modules/allocation` | Transactional bed assignment, transfer, revocation and audited history |
 | `internal/modules/inventory` | Admin/Warden listings and Admin-only inventory creation/renaming |
 | `internal/modules/attendance` | Scanner identity, explicit entry/exit events, retry protection and student presence |
+| `internal/modules/report` | Read-only attendance history and daily movement statistics |
 | `internal/platform/objectstorage` | Private Cloudflare R2 image adapter |
 | `internal/workers` | Durable user-revocation and student-image cleanup orchestration |
 
@@ -123,3 +124,5 @@ The worker releases publication locks before network writes, retries durable
 intents and reconciles periodically. Backend-owned, expiring staff grants and
 default-deny rules protect direct client reads; explicit expiry/revocation writes
 cancel subscriptions. Cross-service revocation remains eventually consistent.
+
+Issue #78 adds a report module with dedicated transport queries, calendar validation and read-only repositories. Each report uses one SQL statement snapshot for rows, totals and summary, and rechecks current staff authority inside its transaction. It never imports another module''s concrete repository or modifies source attendance.

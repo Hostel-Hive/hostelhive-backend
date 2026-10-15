@@ -1,12 +1,12 @@
 # Module layout and file naming
 
-Reviewed 2026-10-14. Modules follow the existing modular monolith. One cohesive
+Reviewed 2026-10-15. Modules follow the existing modular monolith. One cohesive
 file per folder is valid; file counts and size alone do not determine quality.
 
 | Layer | Responsibility |
 |---|---|
 | domain | Business records, states, filters and errors |
-| dto | Write request payloads |
+| dto | Transport payloads and report/filter queries |
 | handler | HTTP parsing, response mapping and middleware |
 | service | Use cases, validation and named dependency contracts |
 | repository | SQL, authority checks, locks and transactions |
@@ -195,6 +195,19 @@ notification/
     notification_dependencies.go
     notification_inbox_service.go
   notification_routes.go
+report/
+  domain/
+    attendance_report.go
+  dto/
+    attendance_report_queries.go
+  handler/
+    attendance_report_handler.go
+  repository/
+    attendance_report_repository.go
+  service/
+    attendance_report_service.go
+    report_dependencies.go
+  report_routes.go
 staff/
   domain/
     staff_errors.go
@@ -272,3 +285,5 @@ Issue #72 adds the announcement module with global publication/read/aggregate re
 Issue #74 adds the lateaccess module for early-exit/late-entry permission requests. Its repository keeps request/decision and notification intent atomic; attendance remains a separate scan-driven module.
 
 Issue #76 extends attendance with named incident query/service/handler/repository files and a permission repository for the atomic scan transaction. Late-access request history exposes consumed movement metadata; no new module is added.
+
+Issue #78 introduces report/domain/attendance_report.go, dto/attendance_report_queries.go, handler/attendance_report_handler.go, service/attendance_report_service.go and report_dependencies.go, repository/attendance_report_repository.go and report_routes.go. Reports read existing source tables without cross-module repository imports or empty future report implementations.
