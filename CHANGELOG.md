@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- #91: add Student-owned profile, guardians, current accommodation and scan-based presence reads, plus authenticated own profile-image retrieval. Preserve null/UNKNOWN states, existing staff permissions and source records; update mobile handoff and tests. No migration.
+
 - #89: add optional FCM push for leave/late-access decisions and unapproved attendance incidents. Add owned device registration, durable bounded retries, token rotation/logout and current-permission checks, generic private payloads and migration25 preservation tests. Phone setup and live delivery verification remain pending.
 
 - #87: add Admin/Warden PDF exports for attendance, daily totals, leaves and complaints. Reuse source snapshots/filters, repeat printable headings, wrap/continue long records and include summaries/page numbers. Bound exports to 1000 rows, 200 pages and 16 MiB; add independent decoding, database and visual verification. Document complex-script code point display. No new migration.

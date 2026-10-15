@@ -250,22 +250,26 @@ student/
     student_image.go
     student_import.go
     student_profile.go
+    student_own_profile.go
   dto/
     student_profile_requests.go
   handler/
     student_csv_import_handler.go
     student_image_handler.go
     student_profile_handler.go
+    student_own_profile_handler.go
     student_qr_handler.go
   repository/
     student_image_repository.go
     student_profile_repository.go
+    student_own_profile_repository.go
     student_qr_repository.go
   service/
     student_csv_import_service.go
     student_dependencies.go
     student_image_service.go
     student_profile_service.go
+    student_own_profile_service.go
     student_profile_validation.go
     student_qr_service.go
   student_routes.go

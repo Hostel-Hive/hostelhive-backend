@@ -124,6 +124,36 @@
             "description": "200 PNG bytes. Requires active Student account and unarchived profile."
           },
           "response": []
+        },
+        {
+          "name": "Own Student profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/me/student-profile",
+            "description": "Issue #91. Active Student and unarchived profile required. No query or body. Own profile only. See integration guide section4.3 for optional data and errors."
+          },
+          "response": []
+        },
+        {
+          "name": "Own Student profile image",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "image/jpeg, image/png"
+              }
+            ],
+            "url": "{{api_base_url}}/me/student-profile/image",
+            "description": "Issue #91. Active Student and unarchived profile required. No query or body. Own profile only. See integration guide section4.3 for optional data and errors."
+          },
+          "response": []
         }
       ]
     },
