@@ -23,3 +23,13 @@ func RegisterLeaves(a *handler.LeaveAPI, mux *http.ServeMux, authenticate func(h
 func RegisterComplaints(a *handler.ComplaintAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
 	mux.Handle("GET /api/v1/reports/complaints", authenticate(middleware.RequireRoles(identity.RoleAdmin, identity.RoleWarden)(http.HandlerFunc(a.Records))))
 }
+
+func RegisterExports(a *handler.ExportAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	readers := func(h http.HandlerFunc) http.Handler {
+		return authenticate(middleware.RequireRoles(identity.RoleAdmin, identity.RoleWarden)(h))
+	}
+	mux.Handle("GET /api/v1/reports/attendance/export", readers(a.Movements))
+	mux.Handle("GET /api/v1/reports/attendance/daily/export", readers(a.Daily))
+	mux.Handle("GET /api/v1/reports/leaves/export", readers(a.Leaves))
+	mux.Handle("GET /api/v1/reports/complaints/export", readers(a.Complaints))
+}

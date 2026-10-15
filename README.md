@@ -1098,3 +1098,11 @@ Student, category and current status, with full-period status/category totals an
 recorded current resolution details. Reopened complaints expose no stale current
 resolution. Archived/inactive history and private-photo permissions are preserved.
 No new migration beyond schema24; rebuild and restart. See [API and verification](docs/complaint-reports.md).
+
+## Excel report exports - issue #85
+
+Admin/Warden can download attendance movements/daily totals, leave and complaint
+reports as .xlsx files with Summary and Data sheets. Existing filters/permissions
+and history are preserved. Exports include all matching rows up to5000, reject
+pagination and oversized results, and store user text as literal cells. No new
+migration beyond schema24; rebuild/restart. See [API, limits and verification](docs/excel-report-exports.md).

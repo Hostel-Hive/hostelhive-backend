@@ -163,3 +163,11 @@ source/image/notification preservation and existing complaint/photo scope checks
 The route-specific shared parser regression checks also cover attendance and leave.
 All 15 packages remain mandatory. Existing coverage/race checks include these tests
 automatically; there is no new migration, provider credential or CI job.
+
+Issue #85 extends the required report PostgreSQL suite with real XLSX downloads,
+all matching records beyond JSON page size, exact5000/5001-row boundary tests,
+filters, history/permission preservation and safe error downloads. Unit tests
+independently parse workbook ZIP/XML to reject formulas/external relationships.
+Coverage evidence adds internal/platform/spreadsheet; architecture checks keep
+Excelize in its platform adapter. The existing race/build/15-package checks pick
+up all tests automatically. go.mod/go.sum pin Excelize v2.11.0; no new migration.

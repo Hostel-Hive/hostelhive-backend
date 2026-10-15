@@ -60,6 +60,7 @@ import (
 	platformfirebase "github.com/Hostel-Hive/hostelhive-backend/internal/platform/firebase"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/objectstorage"
 	database "github.com/Hostel-Hive/hostelhive-backend/internal/platform/postgres"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/spreadsheet"
 	authentication "github.com/Hostel-Hive/hostelhive-backend/internal/shared/middleware"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/workers"
 )
@@ -126,6 +127,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	attendance.Register(deviceAPI, handler, protected)
 	attendance.RegisterScans(attendancehandler.NewScanAPI(attendanceservice.NewScans(attendanceStore, cfg.AttendanceCooldown), cfg.AccountManagementTimeout), deviceAPI, handler, protected)
 	attendance.RegisterIncidents(attendancehandler.NewIncidentAPI(attendanceservice.NewIncidents(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
+	report.RegisterExports(reporthandler.NewExports(reportservice.NewExports(reportrepo.NewAttendance(pool), reportrepo.NewLeaves(pool), reportrepo.NewComplaints(pool), spreadsheet.NewReportWorkbooks(), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	report.RegisterComplaints(reporthandler.NewComplaints(reportservice.NewComplaints(reportrepo.NewComplaints(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	report.RegisterLeaves(reporthandler.NewLeaves(reportservice.NewLeaves(reportrepo.NewLeaves(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	report.RegisterAttendance(reporthandler.NewAttendance(reportservice.NewAttendance(reportrepo.NewAttendance(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
