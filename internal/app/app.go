@@ -126,6 +126,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	attendance.Register(deviceAPI, handler, protected)
 	attendance.RegisterScans(attendancehandler.NewScanAPI(attendanceservice.NewScans(attendanceStore, cfg.AttendanceCooldown), cfg.AccountManagementTimeout), deviceAPI, handler, protected)
 	attendance.RegisterIncidents(attendancehandler.NewIncidentAPI(attendanceservice.NewIncidents(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
+	report.RegisterLeaves(reporthandler.NewLeaves(reportservice.NewLeaves(reportrepo.NewLeaves(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	report.RegisterAttendance(reporthandler.NewAttendance(reportservice.NewAttendance(reportrepo.NewAttendance(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	attendance.RegisterDashboard(attendancehandler.NewDashboardAPI(attendanceservice.NewDashboard(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
 	inventory.Register(ihandler.New(iservice.New(irepo.New(pool)), cfg.InventoryTimeout), handler, protected)

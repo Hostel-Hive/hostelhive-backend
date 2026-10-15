@@ -198,15 +198,24 @@ notification/
 report/
   domain/
     attendance_report.go
+    leave_report.go
   dto/
     attendance_report_queries.go
+    leave_report_queries.go
   handler/
     attendance_report_handler.go
+    leave_report_handler.go
+    report_query_handler.go
+    report_response_handler.go
   repository/
     attendance_report_repository.go
+    leave_report_repository.go
+    report_authorization_repository.go
   service/
     attendance_report_service.go
+    leave_report_service.go
     report_dependencies.go
+    report_period_validation.go
   report_routes.go
 staff/
   domain/
@@ -287,3 +296,7 @@ Issue #74 adds the lateaccess module for early-exit/late-entry permission reques
 Issue #76 extends attendance with named incident query/service/handler/repository files and a permission repository for the atomic scan transaction. Late-access request history exposes consumed movement metadata; no new module is added.
 
 Issue #78 introduces report/domain/attendance_report.go, dto/attendance_report_queries.go, handler/attendance_report_handler.go, service/attendance_report_service.go and report_dependencies.go, repository/attendance_report_repository.go and report_routes.go. Reports read existing source tables without cross-module repository imports or empty future report implementations.
+
+Issue #81 adds descriptive leave_report files within report and shares period
+validation, HTTP query/response handling and repository authorization with attendance.
+There is no new module and no cross-module concrete repository import.

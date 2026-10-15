@@ -126,3 +126,8 @@ default-deny rules protect direct client reads; explicit expiry/revocation write
 cancel subscriptions. Cross-service revocation remains eventually consistent.
 
 Issue #78 adds a report module with dedicated transport queries, calendar validation and read-only repositories. Each report uses one SQL statement snapshot for rows, totals and summary, and rechecks current staff authority inside its transaction. It never imports another module''s concrete repository or modifies source attendance.
+
+Issue #81 extends report with leave-request queries. Attendance and leave reports
+share strict query parsing, calendar validation, error mapping and transactional
+staff authorization. Leave reports read submission dates/current decisions without
+calling leave workflow writes; source history and scan-based presence are preserved.
