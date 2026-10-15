@@ -14,13 +14,14 @@ import (
 )
 
 type ExportAPI struct {
-	service service.ExcelReports
-	timeout time.Duration
-	slots   chan struct{}
+	service     service.ReportExports
+	timeout     time.Duration
+	slots       chan struct{}
+	contentType string
 }
 
-func NewExports(s service.ExcelReports, t time.Duration) *ExportAPI {
-	return &ExportAPI{s, t, make(chan struct{}, 2)}
+func NewExports(s service.ReportExports, t time.Duration) *ExportAPI {
+	return &ExportAPI{s, t, make(chan struct{}, 2), domain.ExcelContentType}
 }
 func (a *ExportAPI) Movements(w http.ResponseWriter, r *http.Request) {
 	a.download(w, r, domain.MovementReport, "direction")
@@ -68,7 +69,7 @@ func (a *ExportAPI) download(w http.ResponseWriter, r *http.Request, kind domain
 		return
 	}
 	// Buffer generation completes before binary headers; failures remain JSON errors.
-	w.Header().Set("Content-Type", domain.ExcelContentType)
+	w.Header().Set("Content-Type", a.contentType)
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": file.Name}))
 	w.Header().Set("Content-Length", strconv.Itoa(len(file.Data)))
 	w.Header().Set("Cache-Control", "no-store")

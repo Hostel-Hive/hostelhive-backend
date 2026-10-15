@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- #87: add Admin/Warden PDF exports for attendance, daily totals, leaves and complaints. Reuse source snapshots/filters, repeat printable headings, wrap/continue long records and include summaries/page numbers. Bound exports to 1000 rows, 200 pages and 16 MiB; add independent decoding, database and visual verification. Document complex-script code point display. No new migration.
+
 - #85: add Admin/Warden Excel exports for attendance movements/daily totals, leave and complaint reports. Include snapshot-consistent full results up to 5000 rows, metadata/totals, literal text safety and bounded concurrent downloads. Pin Excelize v2.11.0; add adapter, integration and workbook validation coverage. No new migration.
 
 - #83: add Admin/Warden complaint reports with submission-date, Student, category and current-status filters; full-period status/category totals and recorded resolution details. Preserve reopened/legacy semantics, private images and source workflows; no new migration.

@@ -5,6 +5,7 @@ import (
 	identity "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/dto"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/service"
 	m "github.com/Hostel-Hive/hostelhive-backend/internal/shared/middleware"
 	"net/http"
 	"net/http/httptest"
@@ -104,9 +105,11 @@ func (s blockingExport) Export(ctx context.Context, _ string, _ domain.ReportKin
 		return domain.ExportFile{}, ctx.Err()
 	}
 }
-func TestExportConcurrencyBound(t *testing.T) {
+func TestExportConcurrencyBound(t *testing.T)    { testExportConcurrencyBound(t, NewExports) }
+func TestPDFExportConcurrencyBound(t *testing.T) { testExportConcurrencyBound(t, NewPDFExports) }
+func testExportConcurrencyBound(t *testing.T, constructor func(service.ReportExports, time.Duration) *ExportAPI) {
 	stub := blockingExport{make(chan struct{}, 2), make(chan struct{})}
-	api := NewExports(stub, 5*time.Second)
+	api := constructor(stub, 5*time.Second)
 	method := m.Middleware(verifier{}, accounts{identity.RoleAdmin}, time.Second)(http.HandlerFunc(api.Movements))
 	call := func() *httptest.ResponseRecorder {
 		r := httptest.NewRequest("GET", "/?from=2026-10-14&to=2026-10-15", nil)

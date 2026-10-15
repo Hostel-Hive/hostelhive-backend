@@ -1106,3 +1106,11 @@ reports as .xlsx files with Summary and Data sheets. Existing filters/permission
 and history are preserved. Exports include all matching rows up to5000, reject
 pagination and oversized results, and store user text as literal cells. No new
 migration beyond schema24; rebuild/restart. See [API, limits and verification](docs/excel-report-exports.md).
+
+### PDF report exports (#87)
+
+Admin/Warden can download printable attendance, daily attendance, leave and
+complaint PDFs. See [PDF export setup, limits and verification](docs/pdf-report-exports.md).
+PDF routes append `/export/pdf` to the existing report path; Excel routes remain
+`/export`. No migration or new production setting is required. PDF text support
+and native Sinhala/Tamil limitations are documented in the guide.

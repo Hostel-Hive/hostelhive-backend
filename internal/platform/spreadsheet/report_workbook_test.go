@@ -18,7 +18,7 @@ import (
 func TestLiteralTextWorkbookAndStructure(t *testing.T) {
 	n, big := int64(42), int64(math.MaxInt64)
 	values := []string{"=HYPERLINK(\"https://example.invalid\",\"click\")", "+SUM(1,2)", "-1+2", "@SUM(1,2)", "\t=1+1", "'literal apostrophe", "https://example.invalid", "quoted \" & <xml>\nසිංහල தமிழ்"}
-	doc := domain.ExportWorkbook{Title: "Safe report", Metadata: [][2]string{{"Timezone", "Asia/Colombo"}, {"Student ID", "All"}}, Summary: []domain.ExportMetric{{Name: "Count", Value: 42}}, Headers: []string{"Description", "Count", "Exact Version"}}
+	doc := domain.ExportDocument{Title: "Safe report", Metadata: [][2]string{{"Timezone", "Asia/Colombo"}, {"Student ID", "All"}}, Summary: []domain.ExportMetric{{Name: "Count", Value: 42}}, Headers: []string{"Description", "Count", "Exact Version"}}
 	for _, text := range values {
 		doc.Rows = append(doc.Rows, []domain.ExportCell{{Text: text}, {Number: &n}, {Number: &big}})
 	}
@@ -103,7 +103,7 @@ func TestLiteralTextWorkbookAndStructure(t *testing.T) {
 }
 func TestEmptyAndInvalidWorkbooks(t *testing.T) {
 	writer := NewReportWorkbooks()
-	data, err := writer.Build(context.Background(), domain.ExportWorkbook{Title: "Empty", Headers: []string{"ID"}})
+	data, err := writer.Build(context.Background(), domain.ExportDocument{Title: "Empty", Headers: []string{"ID"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,14 +117,14 @@ func TestEmptyAndInvalidWorkbooks(t *testing.T) {
 		t.Fatal(rows, err)
 	}
 	n := int64(1)
-	for _, doc := range []domain.ExportWorkbook{{}, {Headers: make([]string, 41)}, {Headers: []string{"ID"}, Rows: make([][]domain.ExportCell, domain.ExportRowLimit+1)}, {Headers: []string{"ID"}, Rows: [][]domain.ExportCell{{}}}, {Headers: []string{"ID"}, Rows: [][]domain.ExportCell{{{Text: "both", Number: &n}}}}} {
+	for _, doc := range []domain.ExportDocument{{}, {Headers: make([]string, 41)}, {Headers: []string{"ID"}, Rows: make([][]domain.ExportCell, domain.ExportRowLimit+1)}, {Headers: []string{"ID"}, Rows: [][]domain.ExportCell{{}}}, {Headers: []string{"ID"}, Rows: [][]domain.ExportCell{{{Text: "both", Number: &n}}}}} {
 		if _, err := writer.Build(context.Background(), doc); err == nil {
 			t.Fatal("invalid workbook accepted")
 		}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := writer.Build(ctx, domain.ExportWorkbook{Headers: []string{"ID"}}); !errors.Is(err, context.Canceled) {
+	if _, err := writer.Build(ctx, domain.ExportDocument{Headers: []string{"ID"}}); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}
 	var buffer bytes.Buffer

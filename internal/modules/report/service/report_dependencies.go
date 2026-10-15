@@ -30,9 +30,9 @@ type ComplaintReports interface {
 	Records(context.Context, string, dto.ComplaintQuery) (domain.ComplaintPage, error)
 }
 
-type ExcelWorkbookWriter interface {
-	Build(context.Context, domain.ExportWorkbook) ([]byte, error)
+type ExportDocumentWriter interface {
+	Build(context.Context, domain.ExportDocument) ([]byte, error)
 }
-type ExcelReports interface {
+type ReportExports interface {
 	Export(context.Context, string, domain.ReportKind, dto.ExportQuery) (domain.ExportFile, error)
 }

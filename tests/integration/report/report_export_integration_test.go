@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	identityrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/repository"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report"
 	d "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/domain"
@@ -12,11 +13,14 @@ import (
 	h "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/handler"
 	repo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/repository"
 	svc "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/pdfreport"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/spreadsheet"
 	m "github.com/Hostel-Hive/hostelhive-backend/internal/shared/middleware"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	pdfread "github.com/ledongthuc/pdf"
 	"github.com/xuri/excelize/v2"
+	"io"
 	"mime"
 	"net/http"
 	"net/http/httptest"
@@ -25,9 +29,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 )
 
-func TestExcelReportExports(t *testing.T) {
+func TestExcelAndPDFReportExports(t *testing.T) {
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
 		t.Skip("requires disposable PostgreSQL migrated to24")
@@ -147,6 +152,8 @@ func TestExcelReportExports(t *testing.T) {
 	mux := http.NewServeMux()
 	auth := m.Middleware(verifier{}, identityrepo.NewPostgresAccounts(pool), time.Second)
 	report.RegisterExports(h.NewExports(exports, 30*time.Second), mux, auth)
+	pdfExports := svc.NewPDFExports(a, l, c, pdfreport.NewReports(), loc)
+	report.RegisterPDFExports(h.NewPDFExports(pdfExports, 30*time.Second), mux, auth)
 	report.RegisterAttendance(h.NewAttendance(svc.NewAttendance(a, loc), 3*time.Second), mux, auth)
 	report.RegisterLeaves(h.NewLeaves(svc.NewLeaves(l, loc), 3*time.Second), mux, auth)
 	report.RegisterComplaints(h.NewComplaints(svc.NewComplaints(c, loc), 3*time.Second), mux, auth)
@@ -326,6 +333,46 @@ func TestExcelReportExports(t *testing.T) {
 				t.Fatal("missing/duplicate/unsorted export records", route)
 			}
 		}
+		// Decode actual PDFs independently and compare every exported source cell.
+		for _, role := range []string{"admin", "warden"} {
+			pdfText := verifyDatabasePDF(t, call(base+route+"/export/pdf"+q, role, "", 200))
+			for _, row := range rows[1:] {
+				for _, cell := range row {
+					expected := fixturePDFText(cell)
+					if !strings.Contains(pdfText, expected) {
+						t.Fatal("PDF missing or changed source cell", route, cell)
+					}
+				}
+			}
+			if !strings.Contains(pdfText, "TotalMatchingRows"+strconv.Itoa(wantRows)) || !strings.Contains(pdfText, "ExportRowLimit1000") || !strings.Contains(pdfText, "Asia/Colombo") {
+				t.Fatal("PDF metadata/summary", route)
+			}
+			if ids != "" {
+				previous := -1
+				for _, id := range strings.Split(ids, ",") {
+					index := strings.Index(pdfText, id)
+					if index <= previous {
+						t.Fatal("PDF record ordering", route, id)
+					}
+					previous = index
+				}
+			}
+			if strings.Contains(pdfText, privateKey) || strings.Contains(pdfText, "@example.invalid") {
+				t.Fatal("private information in PDF")
+			}
+		}
+		for _, role := range []string{"other-student", "sub", "security", "inactive"} {
+			call(base+route+"/export/pdf"+q, role, "", 403)
+		}
+		call(base+route+"/export/pdf"+q, "", "", 401)
+		for _, bad := range []string{"", q + "&limit=1", q + "&offset=0", q + "&format=pdf", q + "&from=2046-06-10", q + "&student_id=bad", "?from=2046-01-01&to=2047-01-02"} {
+			call(base+route+"/export/pdf"+bad, "admin", "", 400)
+		}
+		call(base+route+"/export/pdf"+q, "admin", "{}", 400)
+		emptyPDF := verifyDatabasePDF(t, call(base+route+"/export/pdf?from=2046-06-10&to=2046-06-10&student_id="+uuid.NewString(), "admin", "", 200))
+		if route != "attendance/daily" && !strings.Contains(emptyPDF, "Nomatchingrecords") {
+			t.Fatal("empty PDF", route)
+		}
 		wardRows, _ := workbook(base+route+"/export"+q, "warden")
 		if len(wardRows) != len(rows) {
 			t.Fatal("Warden export differs")
@@ -356,12 +403,17 @@ func TestExcelReportExports(t *testing.T) {
 		count         int
 	}{{"attendance", "direction=OUT", 51}, {"attendance/daily", "direction=OUT", 1}, {"leaves", "status=approved", 34}, {"complaints", "category=disciplinary&status=resolved", 52}} {
 		rows, summary := workbook(base+tc.route+"/export"+q+"&"+tc.filter, "admin")
+		text := verifyDatabasePDF(t, call(base+tc.route+"/export/pdf"+q+"&"+tc.filter, "admin", "", 200))
+		if !strings.Contains(text, "TotalMatchingRows"+strconv.Itoa(tc.count)) {
+			t.Fatal("PDF filtered total", tc)
+		}
 		if len(rows) != tc.count+1 || summary["Total Matching Rows"] != strconv.Itoa(tc.count) {
 			t.Fatal(tc, len(rows), summary)
 		}
 	}
 	for _, tc := range []struct{ route, filter string }{{"attendance", "status=pending"}, {"attendance/daily", "category=maintenance"}, {"leaves", "category=maintenance"}, {"complaints", "direction=IN"}} {
 		call(base+tc.route+"/export"+q+"&"+tc.filter, "admin", "", 400)
+		call(base+tc.route+"/export/pdf"+q+"&"+tc.filter, "admin", "", 400)
 	}
 	exec(`UPDATE hostelhive.users SET role='student' WHERE user_id=$1`, admin)
 	for _, kind := range []d.ReportKind{d.MovementReport, d.DailyReport, d.LeaveReport, d.ComplaintReport} {
@@ -370,8 +422,30 @@ func TestExcelReportExports(t *testing.T) {
 		}
 	}
 	exec(`UPDATE hostelhive.users SET role='admin' WHERE user_id=$1`, admin)
+	for _, kind := range []d.ReportKind{d.MovementReport, d.DailyReport, d.LeaveReport, d.ComplaintReport} {
+		exec(`UPDATE hostelhive.users SET role='student' WHERE user_id=$1`, admin)
+		_, err := pdfExports.Export(ctx, prefix+"admin", kind, dto.ExportQuery{From: "2046-06-10", To: "2046-06-10", StudentID: sid})
+		exec(`UPDATE hostelhive.users SET role='admin' WHERE user_id=$1`, admin)
+		if !errors.Is(err, d.ErrForbidden) {
+			t.Fatal("PDF stale authority accepted", kind, err)
+		}
+	}
 	if state() != before {
 		t.Fatal("export mutated source, permission consumption, images or notifications")
+	}
+	// A complete 1000-row PDF succeeds; one more returns JSON 413 before rendering.
+	exec(`INSERT INTO hostelhive.complaints(request_id,student_id,submitted_by,category,description,created_at,updated_at)
+ SELECT gen_random_uuid(),$1,$2,'maintenance','PDF boundary','2049-01-01T00:00:00Z','2049-01-01T00:00:00Z' FROM generate_series(1,1000)`, sid, owner)
+	pdfBoundary := base + "complaints/export/pdf?from=2049-01-01&to=2049-01-01&student_id=" + sid
+	pdfStarted := time.Now()
+	pdfText := verifyDatabasePDF(t, call(pdfBoundary, "admin", "", 200))
+	t.Logf("1000-row PDF export and decode: %s", time.Since(pdfStarted))
+	if !strings.Contains(pdfText, "TotalMatchingRows1000") {
+		t.Fatal("PDF boundary summary")
+	}
+	exec(`INSERT INTO hostelhive.complaints(request_id,student_id,submitted_by,category,description,created_at,updated_at) VALUES(gen_random_uuid(),$1,$2,'maintenance','Over PDF limit','2049-01-01T00:00:00Z','2049-01-01T00:00:00Z')`, sid, owner)
+	if w := call(pdfBoundary, "admin", "", 413); !strings.Contains(w.Body.String(), "report_export_too_large") {
+		t.Fatal(w.Body.String())
 	}
 	// Allow CI race-instrumentation overhead in this test; production retains its configured timeout.
 	exec(`INSERT INTO hostelhive.complaints(request_id,student_id,submitted_by,category,description,created_at,updated_at)
@@ -387,4 +461,54 @@ func TestExcelReportExports(t *testing.T) {
 	if w := call(boundary, "admin", "", 413); !strings.Contains(w.Body.String(), "report_export_too_large") {
 		t.Fatal(w.Body.String())
 	}
+}
+
+func fixturePDFText(value string) string {
+	var out strings.Builder
+	for _, r := range value {
+		if unicode.IsSpace(r) {
+			continue
+		}
+		if r == '\\' {
+			out.WriteString(`\\`)
+			continue
+		}
+		if r > 0x024f && !unicode.In(r, unicode.Greek, unicode.Cyrillic, unicode.Punct, unicode.Symbol) {
+			out.WriteString(fmt.Sprintf(`\u{%04X}`, r))
+		} else {
+			out.WriteRune(r)
+		}
+	}
+	return out.String()
+}
+func verifyDatabasePDF(t *testing.T, w *httptest.ResponseRecorder) string {
+	t.Helper()
+	if w.Header().Get("Content-Type") != d.PDFContentType || w.Header().Get("Content-Length") != strconv.Itoa(w.Body.Len()) || w.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatal(w.Header())
+	}
+	media, parameters, err := mime.ParseMediaType(w.Header().Get("Content-Disposition"))
+	if err != nil || media != "attachment" || !strings.HasSuffix(parameters["filename"], ".pdf") {
+		t.Fatal(w.Header(), err)
+	}
+	reader, err := pdfread.NewReader(bytes.NewReader(w.Body.Bytes()), int64(w.Body.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reader.NumPage() < 2 || reader.NumPage() > d.PDFExportPageLimit {
+		t.Fatal("PDF page count", reader.NumPage())
+	}
+	plain, err := reader.GetPlainText()
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, err := io.ReadAll(plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, string(text))
 }

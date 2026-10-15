@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/dto"
 	"strconv"
@@ -12,12 +13,14 @@ type Exports struct {
 	attendance *Attendance
 	leaves     *Leaves
 	complaints *Complaints
-	writer     ExcelWorkbookWriter
+	writer     ExportDocumentWriter
 	location   *time.Location
+	rowLimit   int
+	suffix     string
 }
 
-func NewExports(a AttendanceRepository, l LeaveRepository, c ComplaintRepository, w ExcelWorkbookWriter, loc *time.Location) *Exports {
-	return &Exports{NewAttendance(a, loc), NewLeaves(l, loc), NewComplaints(c, loc), w, loc}
+func NewExports(a AttendanceRepository, l LeaveRepository, c ComplaintRepository, w ExportDocumentWriter, loc *time.Location) *Exports {
+	return &Exports{NewAttendance(a, loc), NewLeaves(l, loc), NewComplaints(c, loc), w, loc, domain.ExportRowLimit, ".xlsx"}
 }
 func textRow(values ...string) []domain.ExportCell {
 	row := make([]domain.ExportCell, len(values))
@@ -40,8 +43,8 @@ func (s *Exports) optionalTime(v *time.Time) string {
 	}
 	return s.timestamp(*v)
 }
-func completeExport(total int64, rows int, more bool) error {
-	if total > domain.ExportRowLimit {
+func completeExport(total int64, rows int, more bool, limit int) error {
+	if total > int64(limit) {
 		return domain.ErrExportTooLarge
 	}
 	if total < 0 || int64(rows) != total || more {
@@ -54,7 +57,7 @@ func (s *Exports) Export(ctx context.Context, actor string, kind domain.ReportKi
 	if ctx.Err() != nil {
 		return file, domain.ErrUnavailable
 	}
-	doc := domain.ExportWorkbook{Rows: [][]domain.ExportCell{}}
+	doc := domain.ExportDocument{Rows: [][]domain.ExportCell{}}
 	var total int64
 	switch kind {
 	case domain.MovementReport, domain.DailyReport:
@@ -65,13 +68,13 @@ func (s *Exports) Export(ctx context.Context, actor string, kind domain.ReportKi
 		if err != nil {
 			return file, err
 		}
-		f.Limit = domain.ExportRowLimit + 1
+		f.Limit = s.rowLimit + 1
 		if kind == domain.MovementReport {
 			p, err := s.attendance.store.Movements(ctx, actor, f)
 			if err != nil {
 				return file, err
 			}
-			if err = completeExport(p.Total, len(p.Items), p.HasMore); err != nil {
+			if err = completeExport(p.Total, len(p.Items), p.HasMore, s.rowLimit); err != nil {
 				return file, err
 			}
 			total = p.Total
@@ -86,7 +89,7 @@ func (s *Exports) Export(ctx context.Context, actor string, kind domain.ReportKi
 			if err != nil {
 				return file, err
 			}
-			if err = completeExport(p.Total, len(p.Items), p.HasMore); err != nil {
+			if err = completeExport(p.Total, len(p.Items), p.HasMore, s.rowLimit); err != nil {
 				return file, err
 			}
 			total = p.Total
@@ -106,12 +109,12 @@ func (s *Exports) Export(ctx context.Context, actor string, kind domain.ReportKi
 		if err != nil {
 			return file, err
 		}
-		f.Limit = domain.ExportRowLimit + 1
+		f.Limit = s.rowLimit + 1
 		p, err := s.leaves.store.Requests(ctx, actor, f)
 		if err != nil {
 			return file, err
 		}
-		if err = completeExport(p.Total, len(p.Items), p.HasMore); err != nil {
+		if err = completeExport(p.Total, len(p.Items), p.HasMore, s.rowLimit); err != nil {
 			return file, err
 		}
 		total = p.Total
@@ -130,12 +133,12 @@ func (s *Exports) Export(ctx context.Context, actor string, kind domain.ReportKi
 		if err != nil {
 			return file, err
 		}
-		f.Limit = domain.ExportRowLimit + 1
+		f.Limit = s.rowLimit + 1
 		p, err := s.complaints.store.Records(ctx, actor, f)
 		if err != nil {
 			return file, err
 		}
-		if err = completeExport(p.Total, len(p.Items), p.HasMore); err != nil {
+		if err = completeExport(p.Total, len(p.Items), p.HasMore, s.rowLimit); err != nil {
 			return file, err
 		}
 		total = p.Total
@@ -155,15 +158,18 @@ func (s *Exports) Export(ctx context.Context, actor string, kind domain.ReportKi
 	}
 	doc.Metadata = append([][2]string{{"Report", doc.Title}, {"From", q.From}, {"To", q.To}, {"Timezone", s.location.String()}, {"Student ID", allFilter(q.StudentID)}}, doc.Metadata...)
 	doc.Metadata = append(doc.Metadata, [2]string{"Timestamps", "RFC3339 text in hostel timezone; original instants preserved"}, [2]string{"Blank Values", "Empty, not recorded or not applicable; no missing decision/permission/resolution is inferred"})
-	doc.Summary = append([]domain.ExportMetric{{Name: "Total Matching Rows", Value: total}, {Name: "Exported Rows", Value: int64(len(doc.Rows))}, {Name: "Export Row Limit", Value: domain.ExportRowLimit}}, doc.Summary...)
+	doc.Summary = append([]domain.ExportMetric{{Name: "Total Matching Rows", Value: total}, {Name: "Exported Rows", Value: int64(len(doc.Rows))}, {Name: "Export Row Limit", Value: int64(s.rowLimit)}}, doc.Summary...)
 	if s.writer == nil || ctx.Err() != nil {
 		return file, domain.ErrUnavailable
 	}
 	data, err := s.writer.Build(ctx, doc)
+	if errors.Is(err, domain.ErrExportTooLarge) {
+		return file, domain.ErrExportTooLarge
+	}
 	if err != nil || ctx.Err() != nil || len(data) == 0 {
 		return file, domain.ErrUnavailable
 	}
-	file.Name = "hostelhive-" + string(kind) + "-" + q.From + "-to-" + q.To + ".xlsx"
+	file.Name = "hostelhive-" + string(kind) + "-" + q.From + "-to-" + q.To + s.suffix
 	file.Data = data
 	return file, nil
 }
@@ -175,4 +181,11 @@ func allFilter(v string) string {
 		return "All"
 	}
 	return v
+}
+
+// NewPDFExports reuses the same snapshot queries and source-to-document mapping as Excel.
+func NewPDFExports(a AttendanceRepository, l LeaveRepository, c ComplaintRepository, w ExportDocumentWriter, loc *time.Location) *Exports {
+	s := NewExports(a, l, c, w, loc)
+	s.rowLimit, s.suffix = domain.PDFExportRowLimit, ".pdf"
+	return s
 }

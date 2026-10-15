@@ -171,3 +171,11 @@ independently parse workbook ZIP/XML to reject formulas/external relationships.
 Coverage evidence adds internal/platform/spreadsheet; architecture checks keep
 Excelize in its platform adapter. The existing race/build/15-package checks pick
 up all tests automatically. go.mod/go.sum pin Excelize v2.11.0; no new migration.
+
+## PDF reports (#87)
+
+Coverage includes internal/platform/pdfreport. Existing report integration tests
+also decode PDF downloads and compare source fields, ordering, totals, authorization
+and unchanged source state. All15 database packages remain mandatory; no new test
+package or migration is introduced. PDF sample rendering supplements CI assertions;
+live Firebase authentication and native PDF viewer inspection remain separate.
