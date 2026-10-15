@@ -4,10 +4,10 @@
 | --- | --- |
 | Audience | Flutter mobile application developer |
 | Reviewed | 15 October 2026, Asia/Colombo |
-| Contract version | Feature-branch snapshot 1.2 |
+| Contract version | Feature-branch snapshot 1.3 |
 | Backend | Hostel-Hive/hostelhive-backend |
-| Inspected branch | feature/89-mobile-push-notifications |
-| Base revision | 78ad300 plus issue #89 feature-branch changes |
+| Inspected branch | codex/91-current-student-profile |
+| Base revision | f16d45a plus issue #91 changes |
 
 This guide describes the backend that exists today. It is not a proposal to
 implement the endpoint names from the earlier mobile mock repository. Examples
@@ -30,8 +30,8 @@ and deployed end-to-end behavior have not been audited in this repository.
 | --- | --- | --- | --- | --- |
 | 1 | Login and session handling | Available through Firebase and /me | Sections2,3 and4.1 | Use email sign-in, obtain current Firebase ID token, call /me and verify Student role. Restore/refresh safely. Student-ID login is not implemented. |
 | 2 | Password reset/change | Firebase flows available; compulsory first-login flow missing | Sections3.4 and18 | Implement provider reset/change/reauthentication and generic UI messages. No must_change_password field or backend first-login enforcement exists. |
-| 3 | Home dashboard | Partial | Sections4,10 and18 | Account name and inbox unread count are available. A complete Student home summary with current presence/accommodation is missing. Do not use staff dashboard APIs or fabricate IN/OUT. |
-| 4 | Student profile and accommodation details | Partial: account metadata only | Sections4.1,13 and18 | Display available /me fields. Full own profile, guardian, phone, index/year, allocation and profile-photo access need an agreed Student self-profile API. |
+| 3 | Home dashboard | Profile, accommodation, presence and unread count available | Sections4.3 and10 | Combine the owned profile with the inbox unread count. Show UNKNOWN honestly; refresh after returning to the app. |
+| 4 | Student profile and accommodation details | Available in #91 | Section4.3 | Use /me/student-profile and its authenticated image endpoint. Handle null accommodation/image and missing/archived profile errors. No Student editing endpoint is added. |
 | 5 | Student QR display | Available | Section4.2 | Fetch /me/qr with Bearer auth and render PNG bytes. Require an eligible profile; handle errors and clear private images on account switch. |
 | 6 | Own attendance history | Missing Student-facing API | Sections13 and18 | Keep the screen unavailable until an ownership-scoped history API is agreed/implemented. Existing attendance readers are staff-only. |
 | 7 | Extended leave requests and history | Available for agreed request/decision model | Section5 | Create/list/detail through /leaves, preserve request UUID on retry and display decision_note. No quota or cancellation support; approval does not change presence. |
@@ -65,7 +65,7 @@ approved amendments alongside this current API reference.
 1. Flutter authenticates with Firebase Authentication. There are no Go /auth/login,
    /auth/forgot-password, /auth/reset-password or /auth/logout endpoints.
 2. Every business API path starts with /api/v1. Send a Firebase ID token as Bearer.
-3. /me returns account metadata, not a complete Student/guardian/room/presence profile.
+3. /me returns account metadata. Use /me/student-profile for the Student profile, guardians, current room/bed and scan-based presence.
 4. Extended leave and late access are separate models and endpoints. There is no
    /passes endpoint, 18-day quota, Going Home endpoint or cancellation endpoint.
 5. Complaints are created as JSON. Photos upload separately as image bytes.
@@ -120,7 +120,7 @@ check the HTTP status and Content-Type before attempting to display bytes.
 | --- | --- | --- |
 | Firebase UID | Firebase identity string | SDK identity; backend resolves it from the ID token |
 | user_id | Local account UUID | Account references; NOT a Student profile UUID |
-| student_id | Student profile UUID | Returned by leave/complaint requests; not returned by current /me |
+| student_id | Student profile UUID | Returned by /me/student-profile and leave/complaint requests; not returned by /me |
 | request_id | Client-generated UUID for one logical operation | Create leave/late-access/complaint or add note; retain for exact retries |
 | leave_id | Server-issued extended-leave UUID | /leaves/{leaveID} |
 | late_access_id | Server-issued single-movement permission UUID | /late-access-requests/{lateAccessID} |
@@ -239,7 +239,7 @@ if (idToken == null) {
 
 Do not trim or change the password. Student-ID login is not implemented; use email.
 The SDK result is not the proposed backend {token, student} response. Store the
-/me account separately from Firebase's User object and from the missing full profile.
+/me account separately from Firebase's User object and the /me/student-profile response.
 
 A revoked/expired/disabled token normally produces401; a valid Firebase identity
 without an active eligible local account produces403. A transient account lookup
@@ -310,15 +310,9 @@ Auth: any active provisioned application account. Body/query: none. Success 200:
 | full_name | optional string | Current profile-derived name; may be omitted |
 | designation | optional string | Staff designation where applicable; normally absent for Students |
 
-Full Student profile, student_id/index_no, faculty/year, phone, guardians,
-block/room/bed and presence are NOT returned. No is_inside field exists here.
-Current /students/{studentID}, /allocations and attendance readers are staff-only;
-the Student app cannot combine those routes to bypass the missing self-profile API.
-
-**UI guidance:** show available account fields. Represent unavailable profile data
-as unavailable, not fabricated/mock values. A complete profile/home card awaits a
-Student-owned aggregate endpoint. Department and faculty are not automatically
-interchangeable. Presence must eventually support UNKNOWN as well as IN/OUT.
+These fields are account metadata only. Use section4.3 for full Student details.
+Staff-only /students and /allocations routes remain unavailable to Students.
+Faculty is the schema's field; do not silently treat it as a department.
 
 ### 4.2 GET /api/v1/me/qr
 
@@ -335,6 +329,94 @@ show plain text instead of a web link; gate scanners consume this application fo
 A missing/archived/ineligible profile can give 404 not_found; auth403/401 and
 student_profiles_unavailable503 are also possible. Respect Cache-Control:no-store;
 clear displayed private data on logout/account switch. No Student QR rotation API.
+
+### 4.3 Own Student profile, accommodation and presence (#91)
+
+```http
+GET /api/v1/me/student-profile
+Authorization: Bearer FIREBASE_ID_TOKEN
+```
+
+Active Student role only. The target comes from the verified Firebase identity;
+no student_id, user_id, filters, query parameters or request body are accepted.
+Success 200 is a direct JSON object. Account-only /me remains unchanged.
+All profile, guardians, active allocation and presence reads share one read-only
+PostgreSQL repeatable-read snapshot. Reads do not update attendance or timestamps.
+
+```json
+{
+  "student_id": "11111111-1111-4111-8111-111111111111",
+  "index_no": "SC/2026/001",
+  "full_name": "Example Student",
+  "faculty": "Science",
+  "year": 2,
+  "contact_phone": "+94771234567",
+  "email": "student@example.invalid",
+  "guardians": [
+    {
+      "guardian_id": "22222222-2222-4222-8222-222222222222",
+      "name": "Example Guardian",
+      "relationship": "Parent",
+      "contact_phone": "+94771234568"
+    }
+  ],
+  "profile_image_url": "/api/v1/me/student-profile/image",
+  "accommodation": {
+    "allocation_id": "33333333-3333-4333-8333-333333333333",
+    "block_id": "44444444-4444-4444-8444-444444444444",
+    "block_name": "Block A",
+    "room_id": "55555555-5555-4555-8555-555555555555",
+    "room_no": "101",
+    "bed_id": "66666666-6666-4666-8666-666666666666",
+    "bed_no": "B1",
+    "started_at": "2026-10-01T09:00:00+05:30"
+  },
+  "presence": {
+    "status": "IN",
+    "updated_at": "2026-10-15T10:00:00+05:30"
+  }
+}
+```
+
+All listed keys are returned. Guardian fields are strings; year is an integer.
+The remaining profile fields and accommodation IDs/names are strings, with
+started_at an RFC3339 timestamp. guardians is an array, empty when none exist.
+accommodation is null when no current allocation exists, including after its end.
+profile_image_url is null when no photo is attached. presence is always an object:
+status is IN or OUT from recorded scans, or UNKNOWN with updated_at null when
+there is no presence record. A known status has an RFC3339 updated_at timestamp.
+This is the last recorded scan state; approval and the passage of time do not
+change it. No is_inside boolean is supplied; preserve UNKNOWN in the UI.
+
+Download the optional profile photo with a second authenticated, empty-body GET:
+
+```http
+GET /api/v1/me/student-profile/image
+Authorization: Bearer FIREBASE_ID_TOKEN
+```
+
+Success 200 returns normalized JPEG/PNG bytes, with the actual Content-Type,
+Cache-Control:no-store and X-Content-Type-Options:nosniff. Resolve the returned
+origin-relative URL against the API origin, not by appending it to /api/v1.
+Use an HTTP image loader that sends the Bearer token; do not put tokens in URLs.
+The app receives no R2 object key, credentials or public bucket URL. Clear cached
+private data on logout/account switch. This endpoint only reads the signed-in
+Student's photo; Student upload/update/delete is not introduced by this ticket.
+
+| Result | Meaning / client handling |
+| --- | --- |
+| 400 invalid_input | Query parameters or a non-empty GET body; fix the request |
+| 401 unauthorized | Invalid/expired/missing Firebase login; refresh once as described above |
+| 403 forbidden | Inactive account or non-Student role; stop, do not loop retries |
+| 404 not_found | Missing/archived Student profile, or no photo on the image endpoint |
+| 503 student_profiles_unavailable | Database or image-object read failure; bounded retry |
+| 503 student_images_unavailable | An attached photo exists but image storage is not configured |
+
+Profile JSON remains available when R2 is disabled. An image URL indicates an
+attached photo, not proof that storage is currently reachable. Handle image 404
+if a staff member removes it between the two requests. No profile-image bytes
+are embedded in JSON. The route accepts no other Student identifier and does
+not grant access to staff-only profile, allocation or attendance readers.
 
 ## 5. Extended leave requests
 
@@ -1069,6 +1151,8 @@ the braces. Staff approval actions in sections5/6 are deliberately absent here.
 | Method | Actual path | Success | Response |
 | --- | --- | --- | --- |
 | GET | /api/v1/me | 200 | Account JSON |
+| GET | /api/v1/me/student-profile | 200 | Owned Student profile, accommodation and presence |
+| GET | /api/v1/me/student-profile/image | 200 | Own JPEG/PNG bytes |
 | GET | /api/v1/me/qr | 200 | PNG bytes |
 | POST | /api/v1/leaves | 201 | Leave Request |
 | GET | /api/v1/leaves | 200 | Request page |
@@ -1109,7 +1193,7 @@ These are compatibility decisions, not permission to invent new backend routes.
 | POST /auth/forgot-password | Firebase reset email | Do not expect Go 204 |
 | POST /auth/reset-password | Firebase action-code reset | No Go reset endpoint |
 | POST /auth/logout | Firebase sign-out plus push cleanup | No backend revoke-session/logout API |
-| ProfileRepository GET /me with full profile | GET /api/v1/me for account only | Complete self-profile/allocation/presence payload missing |
+| ProfileRepository GET /me with full profile | GET /api/v1/me/student-profile; /me remains account-only | Map nullable accommodation/image and UNKNOWN presence; section4.3 |
 | PassRepository GET /passes | Separate /leaves and /late-access-requests | Reliable combined feed/pagination absent |
 | GET /passes/{id} | Type-specific detail path | Retain type discriminator |
 | GET /passes/quota | None | No 18-day quota calculation/enforcement |
@@ -1124,9 +1208,9 @@ These are compatibility decisions, not permission to invent new backend routes.
 | POST /inbox/{id}/read | POST /api/v1/notifications/{notificationID}/read | Empty body; decode returned Notification |
 | POST /inbox/read-all | None | No bulk-read endpoint |
 
-Student-owned attendance history, complete profile data and own profile-photo
-retrieval are also not supplied by current Student APIs. Do not call staff-only
-Student/profile-image/attendance routes or fill real screens from permanent mocks.
+Student-owned attendance history remains absent. Own profile and photo retrieval
+are supplied by section4.3. Do not call staff-only Student/allocation/attendance
+routes or fill real screens from permanent mocks.
 A missing feature should be visibly unavailable until its contract is agreed.
 
 ## 14. Recommended client structure and operation state
@@ -1223,7 +1307,7 @@ Backend local automated evidence is described in section19.
 | Login | Firebase sign-in followed by /me succeeds as Student; no fake /auth/login |
 | Access | Wrong role and inactive/local-unprovisioned accounts cannot enter Student workflows |
 | Refresh | Expired token gets one fresh-token attempt; persistent auth failure returns to sign-in |
-| Account | Missing /me profile fields show unavailable state rather than fabricated values |
+| Account/profile | /me remains account-only; /me/student-profile supplies owned details, null allocation/image and UNKNOWN presence |
 | QR | Authenticated PNG displays; switching accounts does not show prior Student's QR |
 | Leave | Create future non-overlapping request; exact retry yields same leave_id; overlap returns 409 |
 | Leave decision | Staff changes status; Student sees decision_note after refresh; presence remains scan-based |
@@ -1243,7 +1327,7 @@ Backend local automated evidence is described in section19.
 | Push receipt | Fresh leave/late-access decision reaches registered Student phone; actual receipt observed |
 | Push lifecycle | Foreground/background/cold start, token refresh and logout/account switch tested |
 | Push scope | Complaint/ordinary announcement remain inbox-only; staff incidents are not Student push |
-| Missing features | No fake quota, cancellation, Going Home, full profile or bulk-read success shown |
+| Missing features | No fake quota, cancellation, Going Home, attendance history or bulk-read success shown |
 
 Use two dedicated Student accounts for ownership tests and an Admin/Warden test
 account only for staff-side coordination. Keep those credentials out of source,
@@ -1272,7 +1356,7 @@ screenshots, screenshots of consoles, Postman exports and version control.
 |FCM job accepted but nothing displayed| Provider acceptance is not receipt; check mobile permission/foreground handling and actual device setup |
 |409 push_device_conflict after account switch| Old token still bound, duplicate installation entry or cap; complete cleanup and rotate token |
 |Phone cannot reach127.0.0.1| That address points to the phone; obtain reachable backend URL |
-|Calling /me does not return room/guardians| Current contract is account-only; full self-profile is not implemented |
+|Calling /me does not return room/guardians| /me is account-only; call /me/student-profile (section4.3) |
 
 Do not fix endpoint mismatches by weakening authentication, making storage public,
 hardcoding Admin credentials or storing passwords in PostgreSQL/the mobile app.
@@ -1281,7 +1365,7 @@ hardcoding Admin credentials or storing passwords in PostgreSQL/the mobile app.
 
 | Item | Current status | Required next action |
 | --- | --- | --- |
-| Full Student profile/home aggregate | Missing | Agree owned profile + guardians + allocation + presence response, including UNKNOWN |
+| Full Student profile/home aggregate | Implemented in #91; deployment must be confirmed | Use /me/student-profile and authenticated /image; section4.3 |
 | First-login enforcement | Missing | Agree onboarding lifecycle; backend state/enforcement if compulsory |
 | Student-ID login | Missing | Confirm email-only or design safe identifier resolution |
 | 18-day yearly quota| Missing; not currently enforced | Agree year, entitlement, day counting, overlap/cancellation effects before implementation |
@@ -1310,6 +1394,7 @@ to the backend repository, not links to an already deployed API.
 | Area | Principal implementation sources |
 | --- | --- |
 | Auth/account | internal/shared/middleware/authentication.go; internal/modules/identity/identity_routes.go; handler/current_account_handler.go; domain/user_account.go |
+| Own profile | student/domain/student_own_profile.go; handler/student_own_profile_handler.go; repository/student_own_profile_repository.go |
 | QR | internal/modules/student/student_routes.go; handler/student_qr_handler.go; service/student_qr_service.go |
 | Leave | internal/modules/leave/leave_routes.go; dto/leave_requests.go; domain/leave_request.go; handler/leave_handler.go |
 | Late access | internal/modules/lateaccess/late_access_routes.go; dto/late_access_requests.go; domain/late_access_request.go; handler/late_access_handler.go |
@@ -1322,7 +1407,7 @@ to the backend repository, not links to an already deployed API.
 For paths starting with handler/domain/service/dto in a row, resolve them under
 that row's module directory. Read the backend docs/*.md feature guide for staff-side
 manual tests and deployment prerequisites. Earlier ticket docs may say a later
-feature was future work; this guide incorporates subsequent implementation through #89.
+feature was future work; this guide incorporates subsequent implementation through #91.
 
 Existing local evidence: the 15 October full backend run passed 80 package results,
 all 15 required database packages without skips, and reported 85.2% statement coverage.

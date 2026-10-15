@@ -5,7 +5,7 @@ Prepared: 15 October 2026.
 ## Start here
 
 1. Open HostelHive-Mobile-API-Integration-Guide-2026-10-15.html in a browser.
-   It contains a clickable contents list,25 actual endpoints, schemas/examples,
+   It contains a clickable contents list,27 actual endpoints, schemas/examples,
    authentication, retries, image rules, phone lifecycle and integration checks.
 2. Start with the 12-feature checklist, then read sections1,2 and13 before adapting the Flutter repositories. The earlier
    proposed /auth, /passes and /inbox paths are not the actual Go API contract.
@@ -21,7 +21,7 @@ Prepared: 15 October 2026.
 
 - HTML guide: browser-readable handoff, printable if desired.
 - Markdown guide: editable developer documentation.
-- Postman collection:25 requests, no automatic execution scripts or real credentials.
+- Postman collection:27 requests, no automatic execution scripts or real credentials.
 - This README.
 
 ## Important availability limits
@@ -29,8 +29,7 @@ Prepared: 15 October 2026.
 The guide describes the current backend working tree, not proof of deployment.
 Issue89 push code is locally implemented on the feature branch in this snapshot; confirm
 its server availability, migration25 and FCM configuration with the backend owner.
-Live phone delivery is not yet verified. Full Student profile, compulsory first-login
-state, Going Home, quota, cancellation and bulk mark-read remain explicit gaps.
+Live phone delivery is not yet verified. Issue #91 adds owned Student profile, accommodation, presence and image reads; see section4.3 and confirm deployment. Compulsory first-login state, own attendance history, Going Home, quota, cancellation and bulk mark-read remain explicit gaps.
 Do not show successful mock behavior as if those APIs already exist.
 
 No backend code, database records or Firebase settings were changed to create

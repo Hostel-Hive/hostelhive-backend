@@ -173,6 +173,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		}()
 		defer func() { stopCleanup(); <-cleanupDone; <-complaintCleanupDone }()
 	}
+	student.RegisterOwnProfile(shandler.NewOwnProfileAPI(sservice.NewOwnProfiles(studentStore), images, cfg.StudentProfileTimeout), handler, protected)
 	student.RegisterImages(shandler.NewImageAPI(images, cfg.StudentProfileTimeout), handler, protected)
 	complaint.RegisterImages(complainthandler.NewImageAPI(complaintservice.NewImages(complaintStore, complaintObjects), cfg.StudentProfileTimeout), handler, protected)
 	srv := &http.Server{
