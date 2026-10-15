@@ -6,7 +6,7 @@ from pathlib import Path
 PREFIX = "github.com/Hostel-Hive/hostelhive-backend/"
 GROUPS = ("internal/modules/report/", "internal/modules/lateaccess/", "internal/modules/announcement/", "internal/modules/notification/", "internal/modules/complaint/", "internal/modules/leave/", "internal/modules/attendance/", "internal/modules/allocation/", "internal/modules/inventory/", "internal/modules/identity/", "internal/modules/staff/",
           "internal/modules/student/", "internal/shared/middleware/",
-          "internal/platform/firebase/")
+          "internal/platform/firebase/", "internal/platform/spreadsheet/")
 
 
 def summarize(profile):

@@ -29,3 +29,10 @@ type ComplaintRepository interface {
 type ComplaintReports interface {
 	Records(context.Context, string, dto.ComplaintQuery) (domain.ComplaintPage, error)
 }
+
+type ExcelWorkbookWriter interface {
+	Build(context.Context, domain.ExportWorkbook) ([]byte, error)
+}
+type ExcelReports interface {
+	Export(context.Context, string, domain.ReportKind, dto.ExportQuery) (domain.ExportFile, error)
+}

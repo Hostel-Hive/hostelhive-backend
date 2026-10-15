@@ -137,3 +137,10 @@ metadata. Complaint rows are counted before a bounded page-level audit lookup,
 preventing update-history joins from inflating totals. One statement supplies rows,
 summary and resolution. Source complaint/image/notification modules are not imported
 by production report code. Shared HTTP queries accept only route-declared filters.
+
+Issue #85 adds Excel export use cases behind ExcelWorkbookWriter. Core report
+services reuse existing query interfaces and validation, fetch one bounded source
+snapshot and pass explicit text/numeric cells to the platform/spreadsheet adapter.
+The handler admits at most two simultaneous exports and buffers generation before
+writing attachment headers. No export files, cross-module repositories or new
+schema tables are introduced. Spreadsheet SDK imports are blocked in core layers.

@@ -199,14 +199,17 @@ report/
   domain/
     attendance_report.go
     complaint_report.go
+    report_export.go
     leave_report.go
   dto/
     attendance_report_queries.go
     complaint_report_queries.go
+    report_export_query.go
     leave_report_queries.go
   handler/
     attendance_report_handler.go
     complaint_report_handler.go
+    report_excel_export_handler.go
     leave_report_handler.go
     report_query_handler.go
     report_response_handler.go
@@ -218,6 +221,7 @@ report/
   service/
     attendance_report_service.go
     complaint_report_service.go
+    report_excel_export_service.go
     leave_report_service.go
     report_dependencies.go
     report_period_validation.go
@@ -310,3 +314,7 @@ Issue #83 adds named complaint_report domain/DTO/handler/service/repository file
 inside report. The shared query parser accepts explicit per-route filter lists;
 attendance and leave query contracts remain unchanged. Existing complaint table
 and audit indexes are reused without a migration or concrete cross-module imports.
+
+Issue #85 adds report export domain/DTO, report_excel_export_handler/service and
+platform/spreadsheet/report_workbook.go. The adapter owns Excelize; service ports
+and existing report repositories preserve source SQL and permission boundaries.
