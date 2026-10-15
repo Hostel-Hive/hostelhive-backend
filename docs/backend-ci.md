@@ -148,3 +148,5 @@ Issue #72 adds the required announcement integration package (thirteen total), a
 Issue #74 adds the required lateaccess integration package (fourteen total), policy/configuration tests and a populated schema20->21 mixed-inbox preservation check.
 
 Issue #76 extends the attendance integration suite with single-use permission/incident checks and populated schema21->22 preservation of approvals, scans, presence and all four existing inbox sources.
+
+Issue #78 adds the report module and fifteenth required PostgreSQL integration package. Coverage evidence fails if report is skipped or missing. Existing CI Go/race and complete migration rollback/reapply jobs automatically include the new tests and migration 23. Date tests include timezone boundaries, daylight saving and leap years; report API tests cover history retention, legacy classifications, role restrictions, filters and full-period totals.

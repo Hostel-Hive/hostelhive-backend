@@ -27,6 +27,7 @@ internal/modules/staff/       Staff profile management and own-profile self-serv
 internal/modules/inventory/   Block, room and bed listings and Admin management
 internal/modules/allocation/  Bed assignment, transfer, revocation and history
 internal/modules/attendance/  Scanner identity, explicit entry/exit and presence
+internal/modules/report/      Recorded attendance history and daily movement reports
 internal/workers/             User-revocation retries and student-image cleanup
 tests/integration/            Disposable PostgreSQL integration suites
 tests/migration/              SQL constraint verification
@@ -1077,3 +1078,7 @@ Hostel announcements: [policy, setup and verification](docs/hostel-announcements
 Late access: [early-exit and late-entry requests](docs/late-access-requests.md) (#74).
 
 Attendance permission checks: [single-use grants and incidents](docs/attendance-permission-checks.md) (#76).
+
+## Attendance history reports - issue #78
+
+Admin/Warden can query recorded movements and daily scan totals by hostel-local date range, Student and direction. Apply migration 23 and restart. See [attendance history reports](docs/attendance-history-reports.md) for filters, response semantics and verification. Reports preserve archived history and unspecified legacy permission results; they do not infer historical occupancy. PDF/Excel exports remain separate.

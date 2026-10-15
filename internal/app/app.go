@@ -45,6 +45,10 @@ import (
 	notificationhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification/handler"
 	notificationrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification/repository"
 	notificationservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report"
+	reporthandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/handler"
+	reportrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/repository"
+	reportservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/service"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff"
 	staffhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff/handler"
 	staffrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff/repository"
@@ -122,6 +126,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	attendance.Register(deviceAPI, handler, protected)
 	attendance.RegisterScans(attendancehandler.NewScanAPI(attendanceservice.NewScans(attendanceStore, cfg.AttendanceCooldown), cfg.AccountManagementTimeout), deviceAPI, handler, protected)
 	attendance.RegisterIncidents(attendancehandler.NewIncidentAPI(attendanceservice.NewIncidents(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
+	report.RegisterAttendance(reporthandler.NewAttendance(reportservice.NewAttendance(reportrepo.NewAttendance(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	attendance.RegisterDashboard(attendancehandler.NewDashboardAPI(attendanceservice.NewDashboard(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
 	inventory.Register(ihandler.New(iservice.New(irepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	staff.Register(staffhandler.New(staffservice.New(staffrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
