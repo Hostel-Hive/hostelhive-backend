@@ -156,3 +156,10 @@ leave reports, current-status totals, decision details, archived/inactive histor
 pagination, role checks and read-only regressions. Required package count stays 15.
 The existing Go/race and full migration rollback/reapply jobs include migration 24
 and all new tests automatically; no provider secrets or new CI job are needed.
+
+Issue #83 extends the existing required report integration package with complaint
+statistics, current resolution/reopen/legacy handling, submission boundaries,
+source/image/notification preservation and existing complaint/photo scope checks.
+The route-specific shared parser regression checks also cover attendance and leave.
+All 15 packages remain mandatory. Existing coverage/race checks include these tests
+automatically; there is no new migration, provider credential or CI job.

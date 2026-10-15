@@ -22,3 +22,10 @@ type LeaveRepository interface {
 type LeaveReports interface {
 	Requests(context.Context, string, dto.LeaveQuery) (domain.LeavePage, error)
 }
+
+type ComplaintRepository interface {
+	Records(context.Context, string, dto.ComplaintFilter) (domain.ComplaintPage, error)
+}
+type ComplaintReports interface {
+	Records(context.Context, string, dto.ComplaintQuery) (domain.ComplaintPage, error)
+}

@@ -11,9 +11,8 @@ import (
 	"github.com/Hostel-Hive/hostelhive-backend/internal/shared/response"
 )
 
-// Each route declares its extra filter; status is not accepted on attendance
-// routes and direction is not accepted on leave reports.
-func reportQuery(w http.ResponseWriter, r *http.Request, filter string) (string, url.Values, int, int, bool) {
+// Each route explicitly declares its extra filters; other report filters stay invalid.
+func reportQuery(w http.ResponseWriter, r *http.Request, filters ...string) (string, url.Values, int, int, bool) {
 	a, ok := middleware.AccountFromContext(r.Context())
 	if !ok {
 		response.Error(w, 401, "unauthorized")
@@ -55,7 +54,14 @@ func reportQuery(w http.ResponseWriter, r *http.Request, filter string) (string,
 				offset = n
 			}
 		default:
-			if key != filter {
+			allowed := false
+			for _, filter := range filters {
+				if key == filter {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
 				return fail()
 			}
 		}

@@ -198,21 +198,26 @@ notification/
 report/
   domain/
     attendance_report.go
+    complaint_report.go
     leave_report.go
   dto/
     attendance_report_queries.go
+    complaint_report_queries.go
     leave_report_queries.go
   handler/
     attendance_report_handler.go
+    complaint_report_handler.go
     leave_report_handler.go
     report_query_handler.go
     report_response_handler.go
   repository/
     attendance_report_repository.go
+    complaint_report_repository.go
     leave_report_repository.go
     report_authorization_repository.go
   service/
     attendance_report_service.go
+    complaint_report_service.go
     leave_report_service.go
     report_dependencies.go
     report_period_validation.go
@@ -300,3 +305,8 @@ Issue #78 introduces report/domain/attendance_report.go, dto/attendance_report_q
 Issue #81 adds descriptive leave_report files within report and shares period
 validation, HTTP query/response handling and repository authorization with attendance.
 There is no new module and no cross-module concrete repository import.
+
+Issue #83 adds named complaint_report domain/DTO/handler/service/repository files
+inside report. The shared query parser accepts explicit per-route filter lists;
+attendance and leave query contracts remain unchanged. Existing complaint table
+and audit indexes are reused without a migration or concrete cross-module imports.
