@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- #81: add Admin/Warden leave request reports by local submission date, Student and current status, with full-period status totals and preserved decision/history details. Add migration 24 report index and regression coverage; leave and attendance workflows remain unchanged.
+
 - #78: add protected attendance movement/daily reports with local-date filters, recorded-only statistics, zero-activity days and preserved legacy history. Add migration 23's partial report index and required report integration coverage.
 
 - #76: atomically match and consume approved late-access permissions within30 minutes of a recorded scan; record unapproved incidents, preserve IN/OUT movement and notify Admin/Warden.

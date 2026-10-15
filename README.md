@@ -1082,3 +1082,11 @@ Attendance permission checks: [single-use grants and incidents](docs/attendance-
 ## Attendance history reports - issue #78
 
 Admin/Warden can query recorded movements and daily scan totals by hostel-local date range, Student and direction. Apply migration 23 and restart. See [attendance history reports](docs/attendance-history-reports.md) for filters, response semantics and verification. Reports preserve archived history and unspecified legacy permission results; they do not infer historical occupancy. PDF/Excel exports remain separate.
+
+## Leave request reports - issue #81
+
+Active Admin/Warden can report on leave requests by local submission-date range,
+Student and current status. Full-period pending/approved/rejected totals accompany
+paginated request and decision details, including archived/inactive history.
+Apply migration 24 and restart. See [API and verification](docs/leave-request-reports.md).
+Reports preserve leave decisions and scan-based attendance; exports remain separate.

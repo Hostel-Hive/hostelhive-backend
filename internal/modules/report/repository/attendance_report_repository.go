@@ -6,36 +6,13 @@ import (
 
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/dto"
-	"github.com/jackc/pgx/v5"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Attendance struct{ pool *pgxpool.Pool }
 
 func NewAttendance(pool *pgxpool.Pool) *Attendance { return &Attendance{pool} }
-
-// Recheck current authority under the same users lock used by account changes.
-// No profile/activity filter: historical movements survive archival/deactivation.
-func (s *Attendance) begin(ctx context.Context, actor string) (pgx.Tx, error) {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, domain.ErrUnavailable
-	}
-	if _, err = tx.Exec(ctx, "LOCK TABLE hostelhive.users IN SHARE MODE"); err != nil {
-		_ = tx.Rollback(ctx)
-		return nil, domain.ErrUnavailable
-	}
-	var allowed bool
-	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM hostelhive.users WHERE firebase_uid=$1 AND is_active AND role IN ('admin','warden'))`, actor).Scan(&allowed); err != nil {
-		_ = tx.Rollback(ctx)
-		return nil, domain.ErrUnavailable
-	}
-	if !allowed {
-		_ = tx.Rollback(ctx)
-		return nil, domain.ErrForbidden
-	}
-	return tx, nil
-}
 
 const matching = `WITH matching AS MATERIALIZED (
  SELECT e.event_id::text,e.device_id::text,e.student_id::text,e.direction,e.occurred_at,
@@ -60,7 +37,7 @@ func metadata(f dto.AttendanceFilter) domain.Metadata {
 }
 func (s *Attendance) Movements(ctx context.Context, actor string, f dto.AttendanceFilter) (domain.MovementPage, error) {
 	p := domain.MovementPage{Metadata: metadata(f), Items: []domain.Movement{}}
-	tx, err := s.begin(ctx, actor)
+	tx, err := beginReport(ctx, s.pool, actor)
 	if err != nil {
 		return p, err
 	}
@@ -85,7 +62,7 @@ func (s *Attendance) Movements(ctx context.Context, actor string, f dto.Attendan
 }
 func (s *Attendance) Daily(ctx context.Context, actor string, f dto.AttendanceFilter) (domain.DailyPage, error) {
 	p := domain.DailyPage{Metadata: metadata(f), Items: []domain.Day{}}
-	tx, err := s.begin(ctx, actor)
+	tx, err := beginReport(ctx, s.pool, actor)
 	if err != nil {
 		return p, err
 	}

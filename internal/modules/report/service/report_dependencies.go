@@ -15,3 +15,10 @@ type AttendanceReports interface {
 	Movements(context.Context, string, dto.AttendanceQuery) (domain.MovementPage, error)
 	Daily(context.Context, string, dto.AttendanceQuery) (domain.DailyPage, error)
 }
+
+type LeaveRepository interface {
+	Requests(context.Context, string, dto.LeaveFilter) (domain.LeavePage, error)
+}
+type LeaveReports interface {
+	Requests(context.Context, string, dto.LeaveQuery) (domain.LeavePage, error)
+}

@@ -15,3 +15,7 @@ func RegisterAttendance(a *handler.AttendanceAPI, mux *http.ServeMux, authentica
 	mux.Handle("GET /api/v1/reports/attendance", readers(a.Movements))
 	mux.Handle("GET /api/v1/reports/attendance/daily", readers(a.Daily))
 }
+
+func RegisterLeaves(a *handler.LeaveAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/v1/reports/leaves", authenticate(middleware.RequireRoles(identity.RoleAdmin, identity.RoleWarden)(http.HandlerFunc(a.Requests))))
+}
