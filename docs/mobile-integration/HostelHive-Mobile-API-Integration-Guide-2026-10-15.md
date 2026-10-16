@@ -3,11 +3,11 @@
 | Document detail | Value |
 | --- | --- |
 | Audience | Flutter mobile application developer |
-| Reviewed | 15 October 2026, Asia/Colombo |
-| Contract version | Feature-branch snapshot 1.3 |
+| Reviewed | 16 October 2026, Asia/Colombo |
+| Contract version | Feature-branch snapshot 1.4 |
 | Backend | Hostel-Hive/hostelhive-backend |
-| Inspected branch | codex/91-current-student-profile |
-| Base revision | f16d45a plus issue #91 changes |
+| Inspected branch | codex/93-student-attendance-history |
+| Base revision | 3c72d9b plus issue #93 changes |
 
 This guide describes the backend that exists today. It is not a proposal to
 implement the endpoint names from the earlier mobile mock repository. Examples
@@ -33,7 +33,7 @@ and deployed end-to-end behavior have not been audited in this repository.
 | 3 | Home dashboard | Profile, accommodation, presence and unread count available | Sections4.3 and10 | Combine the owned profile with the inbox unread count. Show UNKNOWN honestly; refresh after returning to the app. |
 | 4 | Student profile and accommodation details | Available in #91 | Section4.3 | Use /me/student-profile and its authenticated image endpoint. Handle null accommodation/image and missing/archived profile errors. No Student editing endpoint is added. |
 | 5 | Student QR display | Available | Section4.2 | Fetch /me/qr with Bearer auth and render PNG bytes. Require an eligible profile; handle errors and clear private images on account switch. |
-| 6 | Own attendance history | Missing Student-facing API | Sections13 and18 | Keep the screen unavailable until an ownership-scoped history API is agreed/implemented. Existing attendance readers are staff-only. |
+| 6 | Own attendance history | Available in #93 | Section4.4 | Use /me/attendance/events for recorded IN/OUT movements. Apply local-date/direction filters and pagination; use movement_id for list identity. Staff readers remain protected. |
 | 7 | Extended leave requests and history | Available for agreed request/decision model | Section5 | Create/list/detail through /leaves, preserve request UUID on retry and display decision_note. No quota or cancellation support; approval does not change presence. |
 | 8 | Early-exit/late-entry requests and history | Available for one movement per request | Section6 | Use /late-access-requests with IN/OUT, expected_at and reason. Display decision and optional consumption metadata. No round-trip payload or cancellation. |
 | 9 | Going Home declaration | Missing | Sections13 and18 | Do not substitute an approved date-range leave or set attendance locally. Agree a scan-compatible normal-hours declaration lifecycle before implementation. |
@@ -142,8 +142,8 @@ as a replacement for a UUID field.
 - Objects are returned directly; there is no universal data/success wrapper.
 - Parse unknown response fields tolerantly. Send ONLY documented request fields;
   unknown write fields and unsupported/repeated query parameters are rejected.
-- Use RFC3339 timestamps with an explicit timezone: 2027-01-15T09:00:00+05:30 or
-  2027-01-15T03:30:00Z. Do not send date-only or timezone-free strings.
+- For timestamp fields, use RFC3339 with an explicit timezone: 2027-01-15T09:00:00+05:30 or
+  2027-01-15T03:30:00Z. Do not send date-only or timezone-free strings for timestamp fields. The history endpoint in section4.4 instead accepts calendar-date filters as YYYY-MM-DD.
 - Parse timestamps into DateTime values; compare instants rather than formatted
   strings. The backend may return another offset for the same instant.
 - The default hostel policy timezone is Asia/Colombo. Flutter device timezone is
@@ -417,6 +417,89 @@ attached photo, not proof that storage is currently reachable. Handle image 404
 if a staff member removes it between the two requests. No profile-image bytes
 are embedded in JSON. The route accepts no other Student identifier and does
 not grant access to staff-only profile, allocation or attendance readers.
+
+### 4.4 Own recorded attendance history (#93)
+
+```http
+GET /api/v1/me/attendance/events?from=2026-10-01&to=2026-10-16&direction=IN&limit=20&offset=0
+Authorization: Bearer FIREBASE_ID_TOKEN
+```
+
+Active Students with an unarchived profile only. Ownership is derived from the
+verified login. Do not send student_id or user_id. GET body must be empty.
+This is a read-only history of accepted, recorded movements. Cooldown and
+already-IN/already-OUT attempts are excluded. Repeated recorded movements, if
+present in legacy data, are preserved as distinct records rather than inferred
+or removed by the reader. Approval, permission consumption and current presence
+are not changed by reading this endpoint.
+
+| Query | Rules |
+| --- | --- |
+| from and to | Optional together; strict YYYY-MM-DD, both inclusive hostel-local dates. Start must not follow end. Maximum 366 calendar days; supported years 0001 through 9998. If neither is supplied, page through all own recorded history. |
+| direction | Optional, case-sensitive IN or OUT. Omit to include both. |
+| limit | Optional integer, default 20; minimum 1, maximum 100. |
+| offset | Optional integer, default 0; minimum 0, maximum 1000000. |
+
+Empty, repeated, unknown or malformed query parameters return 400. An isolated
+from or to is invalid. Client timezone parameters are not accepted; use the
+configured hostel timezone returned in the page (normally Asia/Colombo).
+The server translates the inclusive date range to local start-of-day through
+start-of-day AFTER to, using an exclusive upper bound. For example, 2026-10-15
+in Asia/Colombo covers 2026-10-14T18:30:00Z inclusive through
+2026-10-15T18:30:00Z exclusive. Calendar boundaries respect timezone/DST rules.
+
+Success 200, direct JSON:
+
+```json
+{
+  "items": [
+    {
+      "movement_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "event_id": "11111111-1111-4111-8111-111111111111",
+      "direction": "IN",
+      "occurred_at": "2026-10-15T09:00:00+05:30"
+    }
+  ],
+  "total": 1,
+  "limit": 20,
+  "offset": 0,
+  "has_more": false,
+  "timezone": "Asia/Colombo",
+  "from": "2026-10-01",
+  "to": "2026-10-16"
+}
+```
+
+items is always an array, including [] when empty. total counts all matching
+recorded movements, not just the current page. No matches, or an offset beyond
+the last page, return 200 with an empty items array and has_more false; total
+still describes all matching rows. from/to are null when dates are omitted.
+
+movement_id is a stable opaque 64-character lowercase hexadecimal identifier.
+Use it as the Flutter list/deduplication key. event_id is the scanner event UUID;
+it is unique within a scanner, so event_id alone must not be treated as a globally
+unique list key. No scanner/device identity or credentials, payload hashes,
+processing outcomes, access results, permission or incident references are returned.
+
+occurred_at is an RFC3339 timestamp; parse the instant and display it in the
+hostel timezone. Results sort by occurred_at descending, then the internal
+composite event key descending to resolve ties. Each page's count and items use
+one read-only repeatable-read database snapshot. Offset pages are stable while
+the dataset is unchanged. New scans between separate page requests can shift
+positions; refresh/reset pagination and merge by movement_id when appropriate.
+
+| Result | Meaning |
+| --- | --- |
+| 400 invalid_input | Invalid/unsupported filters, duplicate keys or non-empty GET body |
+| 401 unauthorized | Missing, invalid or expired authentication |
+| 403 forbidden | Inactive or non-Student account; middleware may deny revoked Firebase tokens with 401 |
+| 404 not_found | Student profile missing or archived |
+| 503 attendance_unavailable | Database read failed; retry with bounded backoff |
+
+Handle 401 with the existing single-refresh policy. Empty history is not UNKNOWN
+presence and must not be used to set IN or OUT. Read current presence from
+/me/student-profile instead. Staff-only attendance and report routes remain
+protected; this ticket adds no Student export, scan submission or editing API.
 
 ## 5. Extended leave requests
 
@@ -1151,6 +1234,7 @@ the braces. Staff approval actions in sections5/6 are deliberately absent here.
 | Method | Actual path | Success | Response |
 | --- | --- | --- | --- |
 | GET | /api/v1/me | 200 | Account JSON |
+| GET | /api/v1/me/attendance/events | 200 | Own recorded movement page |
 | GET | /api/v1/me/student-profile | 200 | Owned Student profile, accommodation and presence |
 | GET | /api/v1/me/student-profile/image | 200 | Own JPEG/PNG bytes |
 | GET | /api/v1/me/qr | 200 | PNG bytes |
@@ -1208,8 +1292,8 @@ These are compatibility decisions, not permission to invent new backend routes.
 | POST /inbox/{id}/read | POST /api/v1/notifications/{notificationID}/read | Empty body; decode returned Notification |
 | POST /inbox/read-all | None | No bulk-read endpoint |
 
-Student-owned attendance history remains absent. Own profile and photo retrieval
-are supplied by section4.3. Do not call staff-only Student/allocation/attendance
+Own profile and photo retrieval are supplied by section4.3; recorded attendance
+history is supplied by section4.4. Do not call staff-only Student/allocation/attendance
 routes or fill real screens from permanent mocks.
 A missing feature should be visibly unavailable until its contract is agreed.
 
@@ -1327,7 +1411,7 @@ Backend local automated evidence is described in section19.
 | Push receipt | Fresh leave/late-access decision reaches registered Student phone; actual receipt observed |
 | Push lifecycle | Foreground/background/cold start, token refresh and logout/account switch tested |
 | Push scope | Complaint/ordinary announcement remain inbox-only; staff incidents are not Student push |
-| Missing features | No fake quota, cancellation, Going Home, attendance history or bulk-read success shown |
+| Missing features | No fake quota, cancellation, Going Home or bulk-read success shown |
 
 Use two dedicated Student accounts for ownership tests and an Admin/Warden test
 account only for staff-side coordination. Keep those credentials out of source,
@@ -1374,7 +1458,7 @@ hardcoding Admin credentials or storing passwords in PostgreSQL/the mobile app.
 | Combined pass feed | No unified backend route | Separate type-aware lists now, or agree reliable aggregate pagination |
 | Notification detail GET | No dedicated route | Use source detail now, or agree aggregate behavior |
 | Mark all read | Missing | Add explicit recipient-scoped bulk contract if required |
-| Student-owned attendance history | Missing | Add ownership-scoped read API if retained in mobile scope |
+| Student-owned attendance history | Implemented in #93; confirm deployment | Use /me/attendance/events, section4.4 |
 | Complaint title/severity/five photos | Not supported | Align Flutter to approved category/description/three-photo model, or approve changed contract |
 | Shared staging URL | Not verified in this handoff | Backend/infra owner provides running revision and reachable environment |
 | Live mobile FCM receipt | Pending | Complete Flutter/device setup and observe actual delivery |
@@ -1387,7 +1471,7 @@ a mocked endpoint. Do not label a future API as available in a production reposi
 ## 19. Evidence, source files and maintenance
 
 Source of truth for this snapshot: backend route files, DTOs, domain models,
-handlers, services and repositories reviewed on 15 October 2026. No backend code or
+handlers, services and repositories reviewed through 16 October 2026. No backend code or
 cloud settings were changed to write this guide. Source paths below are relative
 to the backend repository, not links to an already deployed API.
 
@@ -1395,6 +1479,7 @@ to the backend repository, not links to an already deployed API.
 | --- | --- |
 | Auth/account | internal/shared/middleware/authentication.go; internal/modules/identity/identity_routes.go; handler/current_account_handler.go; domain/user_account.go |
 | Own profile | student/domain/student_own_profile.go; handler/student_own_profile_handler.go; repository/student_own_profile_repository.go |
+| Own attendance history | attendance/domain/student_attendance_history.go; handler/student_attendance_history_handler.go; repository/student_attendance_history_repository.go |
 | QR | internal/modules/student/student_routes.go; handler/student_qr_handler.go; service/student_qr_service.go |
 | Leave | internal/modules/leave/leave_routes.go; dto/leave_requests.go; domain/leave_request.go; handler/leave_handler.go |
 | Late access | internal/modules/lateaccess/late_access_routes.go; dto/late_access_requests.go; domain/late_access_request.go; handler/late_access_handler.go |
@@ -1407,10 +1492,10 @@ to the backend repository, not links to an already deployed API.
 For paths starting with handler/domain/service/dto in a row, resolve them under
 that row's module directory. Read the backend docs/*.md feature guide for staff-side
 manual tests and deployment prerequisites. Earlier ticket docs may say a later
-feature was future work; this guide incorporates subsequent implementation through #91.
+feature was future work; this guide incorporates subsequent implementation through #93.
 
-Existing local evidence: the 15 October full backend run passed 80 package results,
-all 15 required database packages without skips, and reported 85.2% statement coverage.
+Existing local evidence: the 16 October #93 full backend run passed 80 package results,
+all 15 required database packages without skips, and reported 85.3% statement coverage.
 Those numbers are not mobile-feature completeness, live Firebase/R2/FCM delivery,
 remote CI or deployed behavior. This handoff added documentation only; no new live
 Student accounts or real phone test results are claimed.

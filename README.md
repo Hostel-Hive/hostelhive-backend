@@ -1122,8 +1122,12 @@ unapproved attendance incidents. Apply migration25; delivery defaults off with
 `FCM_ENABLED=false`. See [device API, mobile setup and verification](docs/mobile-push-notifications.md).
 Live phone delivery requires mobile configuration and is not yet verified.
 
-Flutter integration: [mobile API guide and 12-feature checklist](docs/mobile-integration/HostelHive-Mobile-API-Integration-Guide-2026-10-15.md), with a standalone HTML copy and 27-request Postman collection in the same folder. Current backend contracts and missing mobile workflows are explicitly separated.
+Flutter integration: [mobile API guide and 12-feature checklist](docs/mobile-integration/HostelHive-Mobile-API-Integration-Guide-2026-10-15.md), with a standalone HTML copy and 28-request Postman collection in the same folder. Current backend contracts and missing mobile workflows are explicitly separated.
 
 ### Student mobile profile (#91)
 
 Active Students can read `GET /api/v1/me/student-profile` for their own profile, guardians, accommodation and scan-based presence, and `GET /api/v1/me/student-profile/image` for their own attached photo. No migration or additional configuration is needed for JSON; images use the existing private R2 configuration. See [the mobile integration contract, section4.3](docs/mobile-integration/HostelHive-Mobile-API-Integration-Guide-2026-10-15.md#43-own-student-profile-accommodation-and-presence-91).
+
+### Student attendance history (#93)
+
+`GET /api/v1/me/attendance/events` gives active Students their own recorded movements, with optional paired local-date filters (`from`/`to`), `direction=IN|OUT`, `limit` and `offset`. Suppressed scans and internal processing fields are excluded. No migration or new configuration is required. See [Student attendance history](docs/student-attendance-history.md) and mobile guide section4.4.

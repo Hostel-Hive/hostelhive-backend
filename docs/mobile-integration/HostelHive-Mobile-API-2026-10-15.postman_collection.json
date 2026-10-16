@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "HostelHive Student Mobile API - reviewed 2026-10-15",
-    "description": "Verified current backend contracts. Read the accompanying guide first. Use dedicated test records and a confirmed running API. No credentials/scripts included. Issue89 requires its current code and migration25; real phone validation pending. Mutations execute only when you choose Send. Do not export real local tokens.",
+    "name": "HostelHive Student Mobile API - updated 2026-10-16",
+    "description": "Verified current backend contracts. Read the accompanying guide first. Use dedicated test records and a confirmed running API. No credentials/scripts included. Issue89 requires its current code and migration25; real phone validation pending. Mutations execute only when you choose Send. Do not export real local tokens. Issue #93 adds owned recorded attendance history; see guide section4.4. Confirm feature-branch deployment.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -607,6 +607,26 @@
             ],
             "url": "{{api_base_url}}/me/push-devices/{{push_device_id}}",
             "description": "204 empty body; call before Firebase sign-out. No recall of already accepted provider messages."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "09 Own attendance history",
+      "item": [
+        {
+          "name": "Own recorded attendance history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/me/attendance/events?limit=20&offset=0",
+            "description": "Active Student with unarchived profile only. No body or owner ID. Optional from/to must both be YYYY-MM-DD with inclusive hostel-local dates, max366 days. Optional direction IN/OUT. Recorded events only. movement_id is the stable list key; event_id alone is not globally unique. Date filters omitted here to include existing history."
           },
           "response": []
         }
