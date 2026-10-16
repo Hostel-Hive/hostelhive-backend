@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- #93: add Student-owned recorded attendance history with hostel-local calendar-date/direction filters, snapshot-consistent totals and bounded pagination, opaque stable movement keys and current account/profile eligibility checks. Preserve existing attendance/permission records and staff access; update mobile handoff and PostgreSQL tests. No migration.
+
 - #91: add Student-owned profile, guardians, current accommodation and scan-based presence reads, plus authenticated own profile-image retrieval. Preserve null/UNKNOWN states, existing staff permissions and source records; update mobile handoff and tests. No migration.
 
 - #89: add optional FCM push for leave/late-access decisions and unapproved attendance incidents. Add owned device registration, durable bounded retries, token rotation/logout and current-permission checks, generic private payloads and migration25 preservation tests. Phone setup and live delivery verification remain pending.

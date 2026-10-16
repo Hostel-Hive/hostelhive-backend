@@ -148,6 +148,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	report.RegisterLeaves(reporthandler.NewLeaves(reportservice.NewLeaves(reportrepo.NewLeaves(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	report.RegisterAttendance(reporthandler.NewAttendance(reportservice.NewAttendance(reportrepo.NewAttendance(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	attendance.RegisterDashboard(attendancehandler.NewDashboardAPI(attendanceservice.NewDashboard(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
+	attendance.RegisterStudentHistory(attendancehandler.NewStudentHistoryAPI(attendanceservice.NewStudentHistory(attendanceStore, cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	inventory.Register(ihandler.New(iservice.New(irepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	staff.Register(staffhandler.New(staffservice.New(staffrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	studentStore := srepo.NewStore(pool)

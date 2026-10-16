@@ -51,3 +51,7 @@ func RegisterIncidents(a *handler.IncidentAPI, mux *http.ServeMux, authenticate 
 	mux.Handle("GET /api/v1/attendance/incidents", readers(a.List))
 	mux.Handle("GET /api/v1/attendance/incidents/{incidentID}", readers(a.Get))
 }
+
+func RegisterStudentHistory(a *handler.StudentHistoryAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/v1/me/attendance/events", authenticate(middleware.RequireRoles(domain.RoleStudent)(http.HandlerFunc(a.Events))))
+}

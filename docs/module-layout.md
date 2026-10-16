@@ -52,6 +52,7 @@ announcement/
 attendance/
   domain/
     attendance_dashboard.go
+    student_attendance_history.go
     attendance_errors.go
     attendance_incident.go
     attendance_realtime.go
@@ -60,10 +61,12 @@ attendance/
   dto/
     attendance_dashboard_requests.go
     attendance_incident_queries.go
+    student_attendance_history_queries.go
     attendance_scan_requests.go
     scanner_device_requests.go
   handler/
     attendance_dashboard_handler.go
+    student_attendance_history_handler.go
     attendance_incident_handler.go
     attendance_realtime_handler.go
     attendance_scan_handler.go
@@ -71,6 +74,7 @@ attendance/
     scanner_device_handler.go
   repository/
     attendance_dashboard_repository.go
+    student_attendance_history_repository.go
     attendance_incident_repository.go
     attendance_permission_repository.go
     attendance_realtime_repository.go
@@ -78,6 +82,7 @@ attendance/
     scanner_device_repository.go
   service/
     attendance_dashboard_service.go
+    student_attendance_history_service.go
     attendance_dependencies.go
     attendance_incident_service.go
     attendance_realtime_service.go
