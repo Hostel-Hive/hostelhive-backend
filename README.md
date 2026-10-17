@@ -27,6 +27,7 @@ internal/modules/staff/       Staff profile management and own-profile self-serv
 internal/modules/inventory/   Block, room and bed listings and Admin management
 internal/modules/allocation/  Bed assignment, transfer, revocation and history
 internal/modules/attendance/  Scanner identity, explicit entry/exit and presence
+internal/modules/report/      Read-only attendance, leave and complaint reports
 internal/workers/             User-revocation retries and student-image cleanup
 tests/integration/            Disposable PostgreSQL integration suites
 tests/migration/              SQL constraint verification
@@ -1077,3 +1078,56 @@ Hostel announcements: [policy, setup and verification](docs/hostel-announcements
 Late access: [early-exit and late-entry requests](docs/late-access-requests.md) (#74).
 
 Attendance permission checks: [single-use grants and incidents](docs/attendance-permission-checks.md) (#76).
+
+## Attendance history reports - issue #78
+
+Admin/Warden can query recorded movements and daily scan totals by hostel-local date range, Student and direction. Apply migration 23 and restart. See [attendance history reports](docs/attendance-history-reports.md) for filters, response semantics and verification. Reports preserve archived history and unspecified legacy permission results; they do not infer historical occupancy. PDF/Excel exports remain separate.
+
+## Leave request reports - issue #81
+
+Active Admin/Warden can report on leave requests by local submission-date range,
+Student and current status. Full-period pending/approved/rejected totals accompany
+paginated request and decision details, including archived/inactive history.
+Apply migration 24 and restart. See [API and verification](docs/leave-request-reports.md).
+Reports preserve leave decisions and scan-based attendance; exports remain separate.
+
+## Complaint reports - issue #83
+
+Active Admin/Warden can report on complaints by local submission-date range,
+Student, category and current status, with full-period status/category totals and
+recorded current resolution details. Reopened complaints expose no stale current
+resolution. Archived/inactive history and private-photo permissions are preserved.
+No new migration beyond schema24; rebuild and restart. See [API and verification](docs/complaint-reports.md).
+
+## Excel report exports - issue #85
+
+Admin/Warden can download attendance movements/daily totals, leave and complaint
+reports as .xlsx files with Summary and Data sheets. Existing filters/permissions
+and history are preserved. Exports include all matching rows up to5000, reject
+pagination and oversized results, and store user text as literal cells. No new
+migration beyond schema24; rebuild/restart. See [API, limits and verification](docs/excel-report-exports.md).
+
+### PDF report exports (#87)
+
+Admin/Warden can download printable attendance, daily attendance, leave and
+complaint PDFs. See [PDF export setup, limits and verification](docs/pdf-report-exports.md).
+PDF routes append `/export/pdf` to the existing report path; Excel routes remain
+`/export`. No migration or new production setting is required. PDF text support
+and native Sinhala/Tamil limitations are documented in the guide.
+
+## Mobile push notifications (#89)
+
+Optional Firebase Cloud Messaging alerts cover leave/late-access decisions and
+unapproved attendance incidents. Apply migration25; delivery defaults off with
+`FCM_ENABLED=false`. See [device API, mobile setup and verification](docs/mobile-push-notifications.md).
+Live phone delivery requires mobile configuration and is not yet verified.
+
+Flutter integration: [mobile API guide and 12-feature checklist](docs/mobile-integration/HostelHive-Mobile-API-Integration-Guide-2026-10-15.md), with a standalone HTML copy and 28-request Postman collection in the same folder. Current backend contracts and missing mobile workflows are explicitly separated.
+
+### Student mobile profile (#91)
+
+Active Students can read `GET /api/v1/me/student-profile` for their own profile, guardians, accommodation and scan-based presence, and `GET /api/v1/me/student-profile/image` for their own attached photo. No migration or additional configuration is needed for JSON; images use the existing private R2 configuration. See [the mobile integration contract, section4.3](docs/mobile-integration/HostelHive-Mobile-API-Integration-Guide-2026-10-15.md#43-own-student-profile-accommodation-and-presence-91).
+
+### Student attendance history (#93)
+
+`GET /api/v1/me/attendance/events` gives active Students their own recorded movements, with optional paired local-date filters (`from`/`to`), `direction=IN|OUT`, `limit` and `offset`. Suppressed scans and internal processing fields are excluded. No migration or new configuration is required. See [Student attendance history](docs/student-attendance-history.md) and mobile guide section4.4.

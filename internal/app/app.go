@@ -45,6 +45,10 @@ import (
 	notificationhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification/handler"
 	notificationrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification/repository"
 	notificationservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/notification/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/report"
+	reporthandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/handler"
+	reportrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/repository"
+	reportservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/report/service"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff"
 	staffhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff/handler"
 	staffrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/staff/repository"
@@ -55,7 +59,9 @@ import (
 	sservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/student/service"
 	platformfirebase "github.com/Hostel-Hive/hostelhive-backend/internal/platform/firebase"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/objectstorage"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/pdfreport"
 	database "github.com/Hostel-Hive/hostelhive-backend/internal/platform/postgres"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/spreadsheet"
 	authentication "github.com/Hostel-Hive/hostelhive-backend/internal/shared/middleware"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/workers"
 )
@@ -89,6 +95,20 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
 	announcement.Register(announcementhandler.New(announcementservice.New(announcementrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	notificationStore := notificationrepo.New(pool)
+	notification.RegisterPush(notificationhandler.NewPush(notificationservice.NewPush(notificationStore), cfg.AccountManagementTimeout), handler, protected)
+	if cfg.FCMEnabled {
+		sender, err := platformfirebase.NewFCMSender(ctx, cfg.FirebaseProjectID)
+		if err != nil {
+			return err
+		}
+		pushCtx, stopPush := context.WithCancel(ctx)
+		pushDone := make(chan struct{})
+		go func() {
+			defer close(pushDone)
+			workers.RunPushDelivery(pushCtx, notificationservice.NewPushDispatcher(notificationStore, sender), logger)
+		}()
+		defer func() { stopPush(); <-pushDone }()
+	}
 	notification.Register(notificationhandler.New(notificationservice.New(notificationStore), cfg.AccountManagementTimeout), handler, protected)
 	notificationCtx, stopNotifications := context.WithCancel(ctx)
 	notificationDone := make(chan struct{})
@@ -122,7 +142,13 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	attendance.Register(deviceAPI, handler, protected)
 	attendance.RegisterScans(attendancehandler.NewScanAPI(attendanceservice.NewScans(attendanceStore, cfg.AttendanceCooldown), cfg.AccountManagementTimeout), deviceAPI, handler, protected)
 	attendance.RegisterIncidents(attendancehandler.NewIncidentAPI(attendanceservice.NewIncidents(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
+	report.RegisterExports(reporthandler.NewExports(reportservice.NewExports(reportrepo.NewAttendance(pool), reportrepo.NewLeaves(pool), reportrepo.NewComplaints(pool), spreadsheet.NewReportWorkbooks(), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
+	report.RegisterPDFExports(reporthandler.NewPDFExports(reportservice.NewPDFExports(reportrepo.NewAttendance(pool), reportrepo.NewLeaves(pool), reportrepo.NewComplaints(pool), pdfreport.NewReports(), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
+	report.RegisterComplaints(reporthandler.NewComplaints(reportservice.NewComplaints(reportrepo.NewComplaints(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
+	report.RegisterLeaves(reporthandler.NewLeaves(reportservice.NewLeaves(reportrepo.NewLeaves(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
+	report.RegisterAttendance(reporthandler.NewAttendance(reportservice.NewAttendance(reportrepo.NewAttendance(pool), cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	attendance.RegisterDashboard(attendancehandler.NewDashboardAPI(attendanceservice.NewDashboard(attendanceStore), cfg.AccountManagementTimeout), handler, protected)
+	attendance.RegisterStudentHistory(attendancehandler.NewStudentHistoryAPI(attendanceservice.NewStudentHistory(attendanceStore, cfg.HostelLocation), cfg.AccountManagementTimeout), handler, protected)
 	inventory.Register(ihandler.New(iservice.New(irepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	staff.Register(staffhandler.New(staffservice.New(staffrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	studentStore := srepo.NewStore(pool)
@@ -148,6 +174,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		}()
 		defer func() { stopCleanup(); <-cleanupDone; <-complaintCleanupDone }()
 	}
+	student.RegisterOwnProfile(shandler.NewOwnProfileAPI(sservice.NewOwnProfiles(studentStore), images, cfg.StudentProfileTimeout), handler, protected)
 	student.RegisterImages(shandler.NewImageAPI(images, cfg.StudentProfileTimeout), handler, protected)
 	complaint.RegisterImages(complainthandler.NewImageAPI(complaintservice.NewImages(complaintStore, complaintObjects), cfg.StudentProfileTimeout), handler, protected)
 	srv := &http.Server{

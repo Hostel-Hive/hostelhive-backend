@@ -41,3 +41,12 @@ func RegisterQR(a *handler.QRAPI, mux *http.ServeMux, authenticate func(http.Han
 	mux.Handle("GET /api/v1/me/qr", authenticate(authentication.RequireRoles(domain.RoleStudent)(http.HandlerFunc(a.Own))))
 	mux.Handle("GET /api/v1/students/{studentID}/qr", authenticate(authentication.RequireRoles(domain.RoleAdmin, domain.RoleWarden)(http.HandlerFunc(a.Get))))
 }
+
+// RegisterOwnProfile derives the target exclusively from the authenticated account.
+func RegisterOwnProfile(a *handler.OwnProfileAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	protect := func(h http.HandlerFunc) http.Handler {
+		return authenticate(authentication.RequireRoles(domain.RoleStudent)(h))
+	}
+	mux.Handle("GET /api/v1/me/student-profile", protect(a.Get))
+	mux.Handle("GET /api/v1/me/student-profile/image", protect(a.Image))
+}

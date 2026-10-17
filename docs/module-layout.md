@@ -1,12 +1,12 @@
 # Module layout and file naming
 
-Reviewed 2026-10-14. Modules follow the existing modular monolith. One cohesive
+Reviewed 2026-10-15. Modules follow the existing modular monolith. One cohesive
 file per folder is valid; file counts and size alone do not determine quality.
 
 | Layer | Responsibility |
 |---|---|
 | domain | Business records, states, filters and errors |
-| dto | Write request payloads |
+| dto | Transport payloads and report/filter queries |
 | handler | HTTP parsing, response mapping and middleware |
 | service | Use cases, validation and named dependency contracts |
 | repository | SQL, authority checks, locks and transactions |
@@ -52,6 +52,7 @@ announcement/
 attendance/
   domain/
     attendance_dashboard.go
+    student_attendance_history.go
     attendance_errors.go
     attendance_incident.go
     attendance_realtime.go
@@ -60,10 +61,12 @@ attendance/
   dto/
     attendance_dashboard_requests.go
     attendance_incident_queries.go
+    student_attendance_history_queries.go
     attendance_scan_requests.go
     scanner_device_requests.go
   handler/
     attendance_dashboard_handler.go
+    student_attendance_history_handler.go
     attendance_incident_handler.go
     attendance_realtime_handler.go
     attendance_scan_handler.go
@@ -71,6 +74,7 @@ attendance/
     scanner_device_handler.go
   repository/
     attendance_dashboard_repository.go
+    student_attendance_history_repository.go
     attendance_incident_repository.go
     attendance_permission_repository.go
     attendance_realtime_repository.go
@@ -78,6 +82,7 @@ attendance/
     scanner_device_repository.go
   service/
     attendance_dashboard_service.go
+    student_attendance_history_service.go
     attendance_dependencies.go
     attendance_incident_service.go
     attendance_realtime_service.go
@@ -195,6 +200,37 @@ notification/
     notification_dependencies.go
     notification_inbox_service.go
   notification_routes.go
+report/
+  domain/
+    attendance_report.go
+    complaint_report.go
+    report_export.go
+    leave_report.go
+  dto/
+    attendance_report_queries.go
+    complaint_report_queries.go
+    report_export_query.go
+    leave_report_queries.go
+  handler/
+    attendance_report_handler.go
+    complaint_report_handler.go
+    report_export_handler.go
+    leave_report_handler.go
+    report_query_handler.go
+    report_response_handler.go
+  repository/
+    attendance_report_repository.go
+    complaint_report_repository.go
+    leave_report_repository.go
+    report_authorization_repository.go
+  service/
+    attendance_report_service.go
+    complaint_report_service.go
+    report_export_service.go
+    leave_report_service.go
+    report_dependencies.go
+    report_period_validation.go
+  report_routes.go
 staff/
   domain/
     staff_errors.go
@@ -219,22 +255,26 @@ student/
     student_image.go
     student_import.go
     student_profile.go
+    student_own_profile.go
   dto/
     student_profile_requests.go
   handler/
     student_csv_import_handler.go
     student_image_handler.go
     student_profile_handler.go
+    student_own_profile_handler.go
     student_qr_handler.go
   repository/
     student_image_repository.go
     student_profile_repository.go
+    student_own_profile_repository.go
     student_qr_repository.go
   service/
     student_csv_import_service.go
     student_dependencies.go
     student_image_service.go
     student_profile_service.go
+    student_own_profile_service.go
     student_profile_validation.go
     student_qr_service.go
   student_routes.go
@@ -272,3 +312,37 @@ Issue #72 adds the announcement module with global publication/read/aggregate re
 Issue #74 adds the lateaccess module for early-exit/late-entry permission requests. Its repository keeps request/decision and notification intent atomic; attendance remains a separate scan-driven module.
 
 Issue #76 extends attendance with named incident query/service/handler/repository files and a permission repository for the atomic scan transaction. Late-access request history exposes consumed movement metadata; no new module is added.
+
+Issue #78 introduces report/domain/attendance_report.go, dto/attendance_report_queries.go, handler/attendance_report_handler.go, service/attendance_report_service.go and report_dependencies.go, repository/attendance_report_repository.go and report_routes.go. Reports read existing source tables without cross-module repository imports or empty future report implementations.
+
+Issue #81 adds descriptive leave_report files within report and shares period
+validation, HTTP query/response handling and repository authorization with attendance.
+There is no new module and no cross-module concrete repository import.
+
+Issue #83 adds named complaint_report domain/DTO/handler/service/repository files
+inside report. The shared query parser accepts explicit per-route filter lists;
+attendance and leave query contracts remain unchanged. Existing complaint table
+and audit indexes are reused without a migration or concrete cross-module imports.
+
+Issue #85 adds report export domain/DTO, report_export_handler/service (shared with PDF in #87) and
+platform/spreadsheet/report_workbook.go. The adapter owns Excelize; service ports
+and existing report repositories preserve source SQL and permission boundaries.
+
+## Printable report exports (#87)
+
+- internal/platform/pdfreport/report_pdf_document.go: embedded fonts, printable
+  report tables, long-record continuation and bounded PDF generation.
+- internal/modules/report/handler/report_pdf_export_handler.go: PDF constructor
+  using shared download validation, error handling and response headers.
+- Report service writer ports keep PDF/Excel SDKs out of the module core.
+
+Shared files report_export_handler.go and report_export_service.go cover both formats; report_export_integration_test.go verifies both formats against PostgreSQL.
+
+## Mobile push (#89)
+
+Notification adds named notification_push domain/DTO/service files,
+notification_push_devices handler/repository files and a notification_push_delivery
+repository. Service ports isolate Firebase; platform/firebase/fcm_push_sender.go owns the
+SDK and workers/notification_push_delivery.go owns polling/shutdown orchestration.
+Existing source workflows retain their durable inbox outbox; migration25 queues
+eligible per-device jobs when inbox rows are inserted. No new module is introduced.

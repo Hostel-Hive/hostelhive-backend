@@ -41,6 +41,7 @@ The worker retries pending jobs and stops before the app closes the database poo
 | `internal/modules/allocation` | Transactional bed assignment, transfer, revocation and audited history |
 | `internal/modules/inventory` | Admin/Warden listings and Admin-only inventory creation/renaming |
 | `internal/modules/attendance` | Scanner identity, explicit entry/exit events, retry protection and student presence |
+| `internal/modules/report` | Read-only attendance history and daily movement statistics |
 | `internal/platform/objectstorage` | Private Cloudflare R2 image adapter |
 | `internal/workers` | Durable user-revocation and student-image cleanup orchestration |
 
@@ -123,3 +124,42 @@ The worker releases publication locks before network writes, retries durable
 intents and reconciles periodically. Backend-owned, expiring staff grants and
 default-deny rules protect direct client reads; explicit expiry/revocation writes
 cancel subscriptions. Cross-service revocation remains eventually consistent.
+
+Issue #78 adds a report module with dedicated transport queries, calendar validation and read-only repositories. Each report uses one SQL statement snapshot for rows, totals and summary, and rechecks current staff authority inside its transaction. It never imports another module''s concrete repository or modifies source attendance.
+
+Issue #81 extends report with leave-request queries. Attendance and leave reports
+share strict query parsing, calendar validation, error mapping and transactional
+staff authorization. Leave reports read submission dates/current decisions without
+calling leave workflow writes; source history and scan-based presence are preserved.
+
+Issue #83 extends report with complaint summaries and current resolution audit
+metadata. Complaint rows are counted before a bounded page-level audit lookup,
+preventing update-history joins from inflating totals. One statement supplies rows,
+summary and resolution. Source complaint/image/notification modules are not imported
+by production report code. Shared HTTP queries accept only route-declared filters.
+
+Issue #85 adds Excel export use cases behind ExcelWorkbookWriter. Core report
+services reuse existing query interfaces and validation, fetch one bounded source
+snapshot and pass explicit text/numeric cells to the platform/spreadsheet adapter.
+The handler admits at most two simultaneous exports and buffers generation before
+writing attachment headers. No export files, cross-module repositories or new
+schema tables are introduced. Spreadsheet SDK imports are blocked in core layers.
+
+## PDF report adapter (#87)
+
+Report exports share a format-neutral ExportDocument and ExportDocumentWriter
+port. The PDF constructor uses the existing source mapping with a1000-row cap;
+internal/platform/pdfreport embeds fonts and handles bounded, paginated A4 layout.
+No module core imports the PDF renderer/font SDK. PDF and Excel routes retain
+separate two-slot admission pools. See pdf-report-exports.md for resource limits,
+source consistency and the explicit complex-script text-display limitation.
+
+## Mobile push delivery (#89)
+
+The notification module exposes owned registration APIs and push queue/sender ports.
+The Firebase platform adapter implements sending and provider error translation;
+a separate worker dispatches durable per-device jobs. Local enqueue is atomic with
+inbox insertion, while external calls occur only in dispatch transactions bounded
+by deadlines and per-user/device locks. Current inbox eligibility and registration
+generations are checked before sending. FCM acceptance is separate from inbox reads
+and phone receipt. See [push contract and mobile handoff](mobile-push-notifications.md).

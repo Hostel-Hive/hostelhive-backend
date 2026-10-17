@@ -41,7 +41,7 @@ func TestModuleDependencyBoundaries(t *testing.T) {
 			}
 			local := strings.TrimPrefix(dependency, prefix)
 			concrete := strings.HasPrefix(local, "platform/") || strings.Contains(local, "/repository") || strings.HasPrefix(local, "app") || strings.HasPrefix(local, "workers")
-			sdk := strings.HasPrefix(dependency, "firebase.google.com/") || strings.HasPrefix(dependency, "github.com/jackc/") || strings.HasPrefix(dependency, "github.com/aws/")
+			sdk := strings.HasPrefix(dependency, "firebase.google.com/") || strings.HasPrefix(dependency, "github.com/jackc/") || strings.HasPrefix(dependency, "github.com/aws/") || strings.HasPrefix(dependency, "github.com/xuri/excelize/") || strings.HasPrefix(dependency, "github.com/signintech/gopdf") || strings.HasPrefix(dependency, "golang.org/x/image/")
 			if (layer == "handler" || layer == "service" || layer == "domain" || layer == "dto") && (concrete || sdk) {
 				t.Errorf("%s imports concrete dependency %s", relative, dependency)
 			}

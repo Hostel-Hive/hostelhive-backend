@@ -15,6 +15,7 @@ type Config struct {
 	HostelLocation                         *time.Location
 	HostelExitOpening, HostelEntryDeadline int
 	RTDBEnabled                            bool
+	FCMEnabled                             bool
 	FirebaseDatabaseURL                    string
 	R2Enabled                              bool
 	R2AccountID                            string
@@ -118,5 +119,10 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 	if err := cfg.loadRealtime(value); err != nil {
 		return Config{}, err
 	}
+	enabled, err := strconv.ParseBool(value("FCM_ENABLED", "false"))
+	if err != nil {
+		return Config{}, fmt.Errorf("FCM_ENABLED must be true or false")
+	}
+	cfg.FCMEnabled = enabled
 	return cfg, nil
 }

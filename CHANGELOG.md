@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- #93: add Student-owned recorded attendance history with hostel-local calendar-date/direction filters, snapshot-consistent totals and bounded pagination, opaque stable movement keys and current account/profile eligibility checks. Preserve existing attendance/permission records and staff access; update mobile handoff and PostgreSQL tests. No migration.
+
+- #91: add Student-owned profile, guardians, current accommodation and scan-based presence reads, plus authenticated own profile-image retrieval. Preserve null/UNKNOWN states, existing staff permissions and source records; update mobile handoff and tests. No migration.
+
+- #89: add optional FCM push for leave/late-access decisions and unapproved attendance incidents. Add owned device registration, durable bounded retries, token rotation/logout and current-permission checks, generic private payloads and migration25 preservation tests. Phone setup and live delivery verification remain pending.
+
+- #87: add Admin/Warden PDF exports for attendance, daily totals, leaves and complaints. Reuse source snapshots/filters, repeat printable headings, wrap/continue long records and include summaries/page numbers. Bound exports to 1000 rows, 200 pages and 16 MiB; add independent decoding, database and visual verification. Document complex-script code point display. No new migration.
+
+- #85: add Admin/Warden Excel exports for attendance movements/daily totals, leave and complaint reports. Include snapshot-consistent full results up to 5000 rows, metadata/totals, literal text safety and bounded concurrent downloads. Pin Excelize v2.11.0; add adapter, integration and workbook validation coverage. No new migration.
+
+- #83: add Admin/Warden complaint reports with submission-date, Student, category and current-status filters; full-period status/category totals and recorded resolution details. Preserve reopened/legacy semantics, private images and source workflows; no new migration.
+
+- #81: add Admin/Warden leave request reports by local submission date, Student and current status, with full-period status totals and preserved decision/history details. Add migration 24 report index and regression coverage; leave and attendance workflows remain unchanged.
+
+- #78: add protected attendance movement/daily reports with local-date filters, recorded-only statistics, zero-activity days and preserved legacy history. Add migration 23's partial report index and required report integration coverage.
+
 - #76: atomically match and consume approved late-access permissions within30 minutes of a recorded scan; record unapproved incidents, preserve IN/OUT movement and notify Admin/Warden.
 
 - #74: Student early-exit/late-entry requests, Admin/Warden decisions, durable inbox alerts and configurable hostel time rules; attendance stays scan-based.

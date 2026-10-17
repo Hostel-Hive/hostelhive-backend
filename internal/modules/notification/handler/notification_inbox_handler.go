@@ -51,6 +51,8 @@ func reply(w http.ResponseWriter, v any, e error) {
 			status, code = 400, "invalid_input"
 		case errors.Is(e, domain.ErrForbidden):
 			status, code = 403, "forbidden"
+		case errors.Is(e, domain.ErrPushConflict):
+			status, code = 409, "push_device_conflict"
 		case errors.Is(e, domain.ErrNotFound):
 			status, code = 404, "not_found"
 		}
