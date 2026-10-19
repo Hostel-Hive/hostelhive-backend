@@ -42,12 +42,12 @@ try {
     try {
     Run-InvitationMigration @('goto','25')
     Run-InvitationSQL 'student_invitation_upgrade_before.sql'
-    Run-InvitationMigration @('up')
+    Run-InvitationMigration @('goto','26')
     Run-InvitationSQL 'student_invitation_upgrade_after.sql'
     Run-InvitationSQL 'student_invitation_rollback_before.sql'
     Run-InvitationMigration @('down','1')
     Run-InvitationSQL 'student_invitation_rollback_after.sql'
-    Run-InvitationMigration @('up')
+    Run-InvitationMigration @('goto','26')
     Run-InvitationSQL 'student_invitation_rollback_after.sql'
     Run-InvitationSQL 'student_invitation_upgrade_cleanup.sql'
     Write-Host 'PASS: legacy data preserved; pending accounts denied after rollback/reapply; fixtures cleaned.'

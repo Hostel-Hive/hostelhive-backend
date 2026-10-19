@@ -1145,3 +1145,12 @@ creation through legacy `/users`. See [setup and API contract](docs/student-invi
 [requirements amendment](docs/student-account-onboarding.md) and
 [issue95](docs/tickets/student-invitations-and-account-setup.md). Real mailbox and
 Flutter end-to-end verification remain pending.
+
+### Going Home declarations (#100)
+
+`POST /api/v1/going-home` records an authenticated Student's own declaration
+without Warden approval or a return date. New declarations require known IN
+presence; OUT/UNKNOWN return409. Preserve the request UUID on retries. The next
+recorded OUT scan marks the declaration departed; the declaration itself never
+changes presence or waives access permissions. Apply migration27. See
+[the API and lifecycle contract](docs/going-home-declarations.md).

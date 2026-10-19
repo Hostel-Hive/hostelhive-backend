@@ -16,3 +16,7 @@ func Register(a *handler.API, mux *http.ServeMux, authenticate func(http.Handler
 	mux.Handle("GET /api/v1/leaves/{leaveID}", protect(a.Get, identity.RoleStudent, identity.RoleAdmin, identity.RoleWarden))
 	mux.Handle("POST /api/v1/leaves/{leaveID}/decision", protect(a.Decide, identity.RoleAdmin, identity.RoleWarden))
 }
+
+func RegisterGoingHome(a *handler.GoingHomeAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("POST /api/v1/going-home", authenticate(middleware.RequireRoles(identity.RoleStudent)(http.HandlerFunc(a.Declare))))
+}
