@@ -1122,7 +1122,7 @@ unapproved attendance incidents. Apply migration25; delivery defaults off with
 `FCM_ENABLED=false`. See [device API, mobile setup and verification](docs/mobile-push-notifications.md).
 Live phone delivery requires mobile configuration and is not yet verified.
 
-Flutter integration: [mobile API guide and 12-feature checklist](docs/mobile-integration/HostelHive-Mobile-API-Integration-Guide-2026-10-15.md), with a standalone HTML copy and 28-request Postman collection in the same folder. Current backend contracts and missing mobile workflows are explicitly separated.
+Flutter integration: [mobile API guide and 12-feature checklist](docs/mobile-integration/HostelHive-Mobile-API-Integration-Guide-2026-10-15.md), with a standalone HTML copy and 29-request Postman collection in the same folder. Current backend contracts and missing mobile workflows are explicitly separated.
 
 ### Student mobile profile (#91)
 
@@ -1131,3 +1131,17 @@ Active Students can read `GET /api/v1/me/student-profile` for their own profile,
 ### Student attendance history (#93)
 
 `GET /api/v1/me/attendance/events` gives active Students their own recorded movements, with optional paired local-date filters (`from`/`to`), `direction=IN|OUT`, `limit` and `offset`. Suppressed scans and internal processing fields are excluded. No migration or new configuration is required. See [Student attendance history](docs/student-attendance-history.md) and mobile guide section4.4.
+
+### Student invitations and initial setup (#95)
+
+Migration26 adds Admin-only university-email account/profile registration, a
+separate bulk CSV, private Firebase setup emails, retry/resend audit and verified
+Student setup completion. Enable `STUDENT_INVITATIONS_ENABLED=true` and configure
+`STUDENT_EMAIL_DOMAINS` after applying migrations. Pending Students can call only
+`GET /api/v1/me` and `POST /api/v1/me/setup/complete` until setup is verified.
+University SSO and university passwords are excluded. Existing accounts and the
+#38 profile-only CSV remain compatible; enabled invitations replace Student
+creation through legacy `/users`. See [setup and API contract](docs/student-invitations.md),
+[requirements amendment](docs/student-account-onboarding.md) and
+[issue95](docs/tickets/student-invitations-and-account-setup.md). Real mailbox and
+Flutter end-to-end verification remain pending.

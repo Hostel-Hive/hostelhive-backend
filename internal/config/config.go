@@ -12,6 +12,8 @@ import (
 )
 
 type Config struct {
+	StudentInvitationsEnabled              bool
+	StudentEmailDomains                    []string
 	HostelLocation                         *time.Location
 	HostelExitOpening, HostelEntryDeadline int
 	RTDBEnabled                            bool
@@ -122,6 +124,9 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 	enabled, err := strconv.ParseBool(value("FCM_ENABLED", "false"))
 	if err != nil {
 		return Config{}, fmt.Errorf("FCM_ENABLED must be true or false")
+	}
+	if err := cfg.loadStudentInvitations(value); err != nil {
+		return Config{}, err
 	}
 	cfg.FCMEnabled = enabled
 	return cfg, nil

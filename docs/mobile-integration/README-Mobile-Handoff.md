@@ -5,7 +5,7 @@ Updated: 16 October 2026.
 ## Start here
 
 1. Open HostelHive-Mobile-API-Integration-Guide-2026-10-15.html in a browser.
-   It contains a clickable contents list,28 actual endpoints, schemas/examples,
+   It contains a clickable contents list,29 actual endpoints, schemas/examples,
    authentication, retries, image rules, phone lifecycle and integration checks.
 2. Start with the 12-feature checklist, then read sections1,2 and13 before adapting the Flutter repositories. The earlier
    proposed /auth, /passes and /inbox paths are not the actual Go API contract.
@@ -21,7 +21,7 @@ Updated: 16 October 2026.
 
 - HTML guide: browser-readable handoff, printable if desired.
 - Markdown guide: editable developer documentation.
-- Postman collection:28 requests, no automatic execution scripts or real credentials.
+- Postman collection:29 requests, no automatic execution scripts or real credentials.
 - This README.
 
 ## Important availability limits
@@ -29,8 +29,19 @@ Updated: 16 October 2026.
 The guide describes the current backend working tree, not proof of deployment.
 Issue89 push code is locally implemented on the feature branch in this snapshot; confirm
 its server availability, migration25 and FCM configuration with the backend owner.
-Live phone delivery is not yet verified. Issue #91 adds owned Student profile, accommodation, presence and image reads; see section4.3 and confirm deployment. Issue #93 adds owned recorded attendance history; see section4.4. Compulsory first-login state, Going Home, quota, cancellation and bulk mark-read remain explicit gaps.
+Live phone delivery is not yet verified. Issue #91 adds owned Student profile, accommodation, presence and image reads; see section4.3 and confirm deployment. Issue #93 adds owned recorded attendance history; see section4.4. Issue95 adds invitation setup state and completion; real email/Flutter acceptance remains pending. Going Home, quota, cancellation and bulk mark-read remain explicit gaps.
 Do not show successful mock behavior as if those APIs already exist.
 
 No backend code, database records or Firebase settings were changed to create
 this handoff. The package contains documentation and request definitions only.
+
+## Student onboarding (#95)
+
+University email is the login identifier with a separate HostelHive password; no
+university SSO or university-password collection. Admin invitations let Students
+choose their password on the Firebase-hosted page. Read guide section3.5 for fresh
+sign-in, /me setup_required and empty POST /me/setup/complete. Pending setup blocks
+all other protected calls, including push. The Postman collection now contains29
+Student requests. Admin APIs/CSV are documented in ../student-invitations.md.
+Apply migration26 and confirm server configuration/deployment. Automated backend
+checks do not certify live email receipt or Flutter integration.

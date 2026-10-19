@@ -48,3 +48,21 @@ Issue #40 adds offline-tested interactive password/session verification helpers,
 not local credential management. Existing revoked-token and inactive-account
 checks remain. Automated tests do not prove real email delivery, provider policy,
 or live revocation; record those results before closing the verification ticket.
+
+## Student invitations and setup - issue95
+
+Admin-approved university email identifies a new Student. Firebase manages the
+separate HostelHive password chosen privately by the Student; university SSO and
+university-issued passwords are excluded. This replaces the proposed temporary
+password/forced-change workflow. Migration26 and an opt-in server feature flag
+provide individual/bulk registration, private hosted setup emails, safe retries,
+Admin resend and provider-verified completion. Incomplete accounts cannot use
+normal protected APIs. Existing accounts/passwords and staff provisioning remain
+compatible. Enabled invitations reject Student creation/replay through the legacy
+password-taking `/users` endpoint with409 student_invitation_required; the existing
+profile-only CSV remains unchanged. No credential/action-code store is added.
+
+See [contract/configuration](student-invitations.md),
+[approved SRS/SDS clarification](student-account-onboarding.md) and
+[issue95](tickets/student-invitations-and-account-setup.md). Real email delivery
+and Flutter acceptance require separate live verification.

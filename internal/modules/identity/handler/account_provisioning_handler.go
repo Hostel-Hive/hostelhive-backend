@@ -19,7 +19,7 @@ type Provisioner interface {
 	Provision(context.Context, string, dto.Input, string) (dto.Result, error)
 }
 
-func Handler(provisioner Provisioner, timeout time.Duration) http.Handler {
+func Handler(provisioner Provisioner, timeout time.Duration, invitationsOnly ...bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Defense in depth if this handler is registered without the route wrapper.
 		account, ok := authentication.AccountFromContext(r.Context())
@@ -46,6 +46,10 @@ func Handler(provisioner Provisioner, timeout time.Duration) http.Handler {
 		}
 		if err := decoder.Decode(&struct{}{}); err != io.EOF {
 			response.Error(w, 400, "invalid_input")
+			return
+		}
+		if len(invitationsOnly) > 0 && invitationsOnly[0] && input.Role == domain.RoleStudent {
+			response.Error(w, 409, "student_invitation_required")
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)

@@ -1,6 +1,6 @@
 # Module layout and file naming
 
-Reviewed 2026-10-15. Modules follow the existing modular monolith. One cohesive
+Reviewed 2026-10-16. Modules follow the existing modular monolith. One cohesive
 file per folder is valid; file counts and size alone do not determine quality.
 
 | Layer | Responsibility |
@@ -115,25 +115,32 @@ identity/
     account_provisioning.go
     account_role.go
     identity_errors.go
+    student_invitation.go
     user_account.go
   dto/
     account_management_requests.go
     account_provisioning_requests.go
+    student_invitation_requests.go
   handler/
     account_management_handler.go
     account_provisioning_handler.go
     current_account_handler.go
+    student_invitation_handler.go
   repository/
     account_activation_repository.go
     account_lookup_repository.go
     account_management_repository.go
     account_provisioning_repository.go
+    student_invitation_repository.go
+    student_invitation_delivery_repository.go
   service/
     account_activation_service.go
     account_management_service.go
     account_provisioning_service.go
     idempotency_key_validation.go
     identity_dependencies.go
+    student_invitation_service.go
+    student_invitation_csv_service.go
   identity_routes.go
 inventory/
   domain/
@@ -346,3 +353,7 @@ repository. Service ports isolate Firebase; platform/firebase/fcm_push_sender.go
 SDK and workers/notification_push_delivery.go owns polling/shutdown orchestration.
 Existing source workflows retain their durable inbox outbox; migration25 queues
 eligible per-device jobs when inbox rows are inserted. No new module is introduced.
+
+Issue95 also adds platform/firebase/student_invitation_provider.go,
+config/student_invitation_config.go and workers/student_invitation_delivery.go
+under internal, with matching focused tests.
