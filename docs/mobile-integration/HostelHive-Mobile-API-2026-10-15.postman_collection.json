@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "HostelHive Student Mobile API - updated 2026-10-16",
-    "description": "Verified current backend contracts. Read the accompanying guide first. Use dedicated test records and a confirmed running API. No credentials/scripts included. Issue89 requires its current code and migration25; real phone validation pending. Mutations execute only when you choose Send. Do not export real local tokens. Issue #93 adds owned recorded attendance history; see guide section4.4. Confirm feature-branch deployment. Issue #95 adds setup_required and empty POST /me/setup/complete. Requires migration26 and invitation enablement. Complete the private Firebase-hosted email setup and fresh password sign-in first. No actual email receipt verified.",
+    "name": "HostelHive Student Mobile API - updated 2026-10-19",
+    "description": "Verified current backend contracts. Read the accompanying guide first. Use dedicated test records and a confirmed running API. No credentials/scripts included. Issue89 requires its current code and migration25; real phone validation pending. Mutations execute only when you choose Send. Do not export real local tokens. Issue #93 adds owned recorded attendance history; see guide section4.4. Confirm feature-branch deployment. Issue #95 adds setup_required and empty POST /me/setup/complete. Requires migration26 and invitation enablement. Complete the private Firebase-hosted email setup and fresh password sign-in first. No actual email receipt verified. Issue100 Going Home requires migration27 and known IN presence; declarations never change attendance.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -87,6 +87,11 @@
     },
     {
       "key": "fcm_registration_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "going_home_request_id",
       "value": "",
       "type": "string"
     }
@@ -293,6 +298,39 @@
             ],
             "url": "{{api_base_url}}/late-access-requests/{{late_access_id}}",
             "description": "200 Request; optional consumed_* fields appear after recorded use."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Going Home declarations - issue100",
+      "item": [
+        {
+          "name": "Declare Going Home",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/going-home",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{going_home_request_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Set a nonzero UUID once per declaration; preserve it on retry. Active eligible Student, completed setup and known IN required. 201 declaration,200 replay;409 already_outside/presence_unknown/going_home_pending. Does not set OUT or waive permissions. No return date or approval."
           },
           "response": []
         }

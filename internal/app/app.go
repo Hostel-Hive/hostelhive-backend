@@ -138,6 +138,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	complaint.Register(complainthandler.New(complaintservice.New(complaintStore), cfg.AccountManagementTimeout), handler, protected)
 	lateaccess.Register(lateaccesshandler.New(lateaccessservice.New(lateaccessrepo.New(pool, lateaccessdomain.Policy{Location: cfg.HostelLocation, ExitOpening: cfg.HostelExitOpening, EntryDeadline: cfg.HostelEntryDeadline})), cfg.AccountManagementTimeout), handler, protected)
 	leave.Register(leavehandler.New(leaveservice.New(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
+	leave.RegisterGoingHome(leavehandler.NewGoingHome(leaveservice.NewGoingHome(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	allocation.Register(allocationhandler.New(allocationservice.New(allocationrepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	attendanceStore := attendancerepo.NewDevicesWithPolicy(pool, lateaccessdomain.Policy{Location: cfg.HostelLocation, ExitOpening: cfg.HostelExitOpening, EntryDeadline: cfg.HostelEntryDeadline})
 	var realtimePublisher attendanceservice.RealtimePublisher
