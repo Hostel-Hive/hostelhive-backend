@@ -148,3 +148,20 @@ func TestProvisioningRejectsDuplicateIdempotencyHeaders(t *testing.T) {
 		t.Fatal(w.Code)
 	}
 }
+
+func TestInvitationModeRejectsLegacyStudentProvisioning(t *testing.T) {
+	called := false
+	provisioner := provisionFunc(func(context.Context, string, dto.Input, string) (dto.Result, error) {
+		called = true
+		return dto.Result{}, nil
+	})
+	handler := authentication.Middleware(verifyStub{}, accountStub{domain.RoleAdmin, true}, time.Second)(Handler(provisioner, time.Second, true))
+	r := httptest.NewRequest("POST", "/api/v1/users", strings.NewReader(inputJSON))
+	r.Header.Set("Authorization", "Bearer token")
+	r.Header.Set("Idempotency-Key", "http-test-95")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, r)
+	if w.Code != 409 || called {
+		t.Fatal("legacy Student setup bypass")
+	}
+}

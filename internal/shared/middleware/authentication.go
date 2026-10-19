@@ -63,6 +63,10 @@ func Middleware(verifier Verifier, accounts Accounts, timeout time.Duration) fun
 				response.Error(w, http.StatusForbidden, "forbidden")
 				return
 			}
+			if account.SetupRequired && !((r.Method == http.MethodGet && r.URL.Path == "/api/v1/me") || (r.Method == http.MethodPost && r.URL.Path == "/api/v1/me/setup/complete")) {
+				response.Error(w, http.StatusForbidden, "setup_required")
+				return
+			}
 			// The authentication deadline ends before business-handler work begins.
 			cancel()
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), accountKey{}, account)))

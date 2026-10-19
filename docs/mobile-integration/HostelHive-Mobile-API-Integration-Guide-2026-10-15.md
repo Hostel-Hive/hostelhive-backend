@@ -4,10 +4,10 @@
 | --- | --- |
 | Audience | Flutter mobile application developer |
 | Reviewed | 16 October 2026, Asia/Colombo |
-| Contract version | Feature-branch snapshot 1.4 |
+| Contract version | Feature-branch snapshot 1.6 (issue95 Student invitations/setup) |
 | Backend | Hostel-Hive/hostelhive-backend |
-| Inspected branch | codex/93-student-attendance-history |
-| Base revision | 3c72d9b plus issue #93 changes |
+| Inspected branch | feature/95-student-invitations |
+| Base revision | e95cc3c plus issue95 working-tree implementation; deployment unverified |
 
 This guide describes the backend that exists today. It is not a proposal to
 implement the endpoint names from the earlier mobile mock repository. Examples
@@ -29,7 +29,7 @@ and deployed end-to-end behavior have not been audited in this repository.
 | # | Mobile feature area | Backend status | Where this guide explains it | What the mobile developer must do / what remains |
 | --- | --- | --- | --- | --- |
 | 1 | Login and session handling | Available through Firebase and /me | Sections2,3 and4.1 | Use email sign-in, obtain current Firebase ID token, call /me and verify Student role. Restore/refresh safely. Student-ID login is not implemented. |
-| 2 | Password reset/change | Firebase flows available; compulsory first-login flow missing | Sections3.4 and18 | Implement provider reset/change/reauthentication and generic UI messages. No must_change_password field or backend first-login enforcement exists. |
+| 2 | Password reset/change and initial setup | Backend implemented in #95; live email/Flutter pending | Sections3.4,4.1 and18 | Use Firebase-hosted invitation setup, fresh password sign-in, /me setup_required and POST /me/setup/complete. Existing accounts need no reset. Separate HostelHive password; no university SSO. |
 | 3 | Home dashboard | Profile, accommodation, presence and unread count available | Sections4.3 and10 | Combine the owned profile with the inbox unread count. Show UNKNOWN honestly; refresh after returning to the app. |
 | 4 | Student profile and accommodation details | Available in #91 | Section4.3 | Use /me/student-profile and its authenticated image endpoint. Handle null accommodation/image and missing/archived profile errors. No Student editing endpoint is added. |
 | 5 | Student QR display | Available | Section4.2 | Fetch /me/qr with Bearer auth and render PNG bytes. Require an eligible profile; handle errors and clear private images on account switch. |
@@ -53,7 +53,7 @@ and deployed end-to-end behavior have not been audited in this repository.
 - Backend implemented/mobile pending means client setup and real integration are
   still required; it does not mean another Go endpoint must be invented.
 
-The proposed 18-day quota, pass cancellation, Student-ID login, first-login flag
+The proposed 18-day quota, pass cancellation, Student-ID login
 and bulk mark-read must be resolved explicitly. Their presence in a teammate's
 mock contract does not automatically make each one an approved SRS requirement.
 Section18 distinguishes those requests from implemented behavior. For the complete
@@ -194,7 +194,7 @@ plain text; do not assume every non-2xx response is JSON.
 | 204 | Success with no body; do not JSON-decode |
 | 400 | Fix input/query; no automatic retry loop |
 | 401 | Obtain a fresh Firebase ID token once; if still denied, require sign-in |
-| 403 | Account/role/permission failure; refresh is not a permission workaround |
+| 403 | Account/role/permission failure; setup_required routes an invited Student to section3.5; refresh is not a permission workaround |
 | 404 | Not found OR deliberately inaccessible to this owner; use a safe message |
 | 409 | Business conflict, request-ID mismatch, stale version or eligibility failure; inspect error code and refresh appropriate state |
 | 413 | Request exceeds body/image limit |
@@ -276,10 +276,56 @@ reusing saved API tokens. Firebase errors are SDK exceptions, not Go error JSON.
 Do not report a failed reset request as successful network delivery. Never log
 passwords, reset codes, bearer/refresh tokens or FCM routing tokens.
 
-**First-login limitation:** there is no backend must_change_password flag or
-first-login completion endpoint/enforcement. A Flutter-only flag cannot enforce
-server access. Keep that UI pending an agreed onboarding contract; do not fabricate
-this field or activate a locally deactivated account through password change.
+### 3.5 Admin-approved initial setup (#95)
+
+Admin registers an approved university email and profile, individually or through
+`/student-invitations/import`. The worker sends a private Firebase-hosted password
+setup/reset email. These are Admin operations, not mobile self-registration.
+The Student opens the email and chooses their own separate HostelHive password.
+Admin does not know it. Do not request a university-issued password or implement SSO.
+Use the hosted Firebase action page; no Go API accepts the new password or returns
+an Admin-copyable action link. General later password recovery remains Firebase.
+
+After choosing the password:
+
+1. Sign in through Firebase Email/Password and obtain the current ID token.
+2. Call `/me`. If `setup_required` is true, stop normal feature loading, including
+   profile, QR, inbox and push registration. They return403 setup_required.
+3. Send `POST /api/v1/me/setup/complete` with the Bearer token, no query and no body
+   (not `{}`). Success200 contains setup_required:false and setup_completed_at.
+4. Refresh `/me`, then proceed with the current-role/profile checks and API calls.
+
+Example success (fictional timestamp):
+
+```json
+{"setup_required":false,"setup_completed_at":"2026-10-16T10:00:00Z"}
+```
+
+The backend checks the reserved UID, approved email, current eligibility, unrevoked
+password sign-in and Firebase password-update metadata newer than the committed
+bootstrap baseline. Password sign-in/reauthentication must be within five minutes
+and at/after that password update. A forced token refresh alone does not update
+Firebase auth_time. On409 setup_not_verified, complete the hosted setup or freshly
+sign in/reauthenticate with the chosen password and retry once. Never set a local
+completion flag to bypass this response. Do not loop password resets automatically.
+On503 preserve pending state and offer a bounded retry/contact Admin. Inactive or
+archived accounts cannot complete setup; password setup does not reactivate them.
+
+Completion is idempotent and preserves the first completion timestamp. A legacy
+eligible Student with no invitation gets false/null; existing accounts are not
+forced through this flow. In `/me`, false setup_required is omitted; absent means
+false. The completion response always includes the boolean.
+
+Provider email acceptance is not proof of receipt. Firebase handles expired/used
+action-code errors on the hosted page. Offer contact/resend through the authorized
+Admin; do not promise a code lifetime or resend invalidation. Real email receipt,
+action-code handling and Flutter integration remain unverified in this snapshot.
+
+Backend prerequisites: migration26, STUDENT_INVITATIONS_ENABLED=true, approved
+STUDENT_EMAIL_DOMAINS and Firebase Authentication/IAM email configuration. With the
+flag off, pending accounts stay blocked and setup completion returns503. No server
+credentials belong in Flutter. See [the full Admin contract](../student-invitations.md)
+for registration, bulk outcomes, cooldown, retries and operational rollback.
 
 Reference: [Firebase Flutter user management](https://firebase.google.com/docs/auth/flutter/manage-users).
 
@@ -309,6 +355,7 @@ Auth: any active provisioned application account. Body/query: none. Success 200:
 | is_active | boolean | Current local account state |
 | full_name | optional string | Current profile-derived name; may be omitted |
 | designation | optional string | Staff designation where applicable; normally absent for Students |
+| setup_required | optional boolean | True means invitation setup is unfinished; absent means false. Follow section3.5 before loading other APIs. |
 
 These fields are account metadata only. Use section4.3 for full Student details.
 Staff-only /students and /allocations routes remain unavailable to Students.
@@ -1237,6 +1284,7 @@ the braces. Staff approval actions in sections5/6 are deliberately absent here.
 | GET | /api/v1/me/attendance/events | 200 | Own recorded movement page |
 | GET | /api/v1/me/student-profile | 200 | Owned Student profile, accommodation and presence |
 | GET | /api/v1/me/student-profile/image | 200 | Own JPEG/PNG bytes |
+| POST | /api/v1/me/setup/complete | 200 | SetupResult; empty body; section3.5 |
 | GET | /api/v1/me/qr | 200 | PNG bytes |
 | POST | /api/v1/leaves | 201 | Leave Request |
 | GET | /api/v1/leaves | 200 | Request page |
@@ -1273,7 +1321,7 @@ These are compatibility decisions, not permission to invent new backend routes.
 | Proposed mobile method/path | Use today | Remaining work |
 | --- | --- | --- |
 | AuthRepository POST /auth/login | Firebase SDK sign-in then GET /api/v1/me | Email-only; Student-ID resolution and combined token/student payload absent |
-| POST /auth/change-password | Firebase password change | No enforced first-login state or must_change_password field |
+| POST /auth/change-password | Firebase password change; initial setup uses hosted invitation and POST /me/setup/complete | No Go password-taking endpoint; see section3.5 |
 | POST /auth/forgot-password | Firebase reset email | Do not expect Go 204 |
 | POST /auth/reset-password | Firebase action-code reset | No Go reset endpoint |
 | POST /auth/logout | Firebase sign-out plus push cleanup | No backend revoke-session/logout API |
@@ -1306,7 +1354,7 @@ Flutter architecture. Adapt existing repositories behind their interfaces.
 | --- | --- |
 | AuthRepository | Firebase sign-in/reset/change/sign-out and current auth state |
 | AuthenticatedApiClient | Environment base URL, Bearer token, timeout, safe error decoding, one refresh/retry, account scoping |
-| AccountRepository | /me and current account role/status |
+| AccountRepository | /me, pending setup and /me/setup/complete; current account role/status |
 | QrRepository | Authenticated /me/qr byte download |
 | LeaveRepository | Extended leave create/list/detail |
 | LateAccessRepository | Single-movement permission create/list/detail |
@@ -1355,7 +1403,7 @@ Never label a timeout as definitely failed if the server might have committed.
 ## 15. Using the accompanying Postman collection
 
 File: HostelHive-Mobile-API-2026-10-15.postman_collection.json.
-The collection contains 25 implemented Student-facing requests, grouped by feature;
+The collection contains 29 implemented Student-facing requests, grouped by feature;
 it does not add the missing proposed routes or perform Firebase password login.
 
 1. Import the JSON collection in Postman.
@@ -1450,8 +1498,8 @@ hardcoding Admin credentials or storing passwords in PostgreSQL/the mobile app.
 | Item | Current status | Required next action |
 | --- | --- | --- |
 | Full Student profile/home aggregate | Implemented in #91; deployment must be confirmed | Use /me/student-profile and authenticated /image; section4.3 |
-| First-login enforcement | Missing | Agree onboarding lifecycle; backend state/enforcement if compulsory |
-| Student-ID login | Missing | Confirm email-only or design safe identifier resolution |
+| Student invitation and initial password setup | Backend implemented #95; live email/Flutter pending | Admin-approved university email, hosted Firebase setup, fresh password sign-in and /me/setup/complete; section3.5. No SSO. |
+| Student-ID login | Not implemented | Selected onboarding uses university email; an alternative Student-ID login requires a separate scope decision |
 | 18-day yearly quota| Missing; not currently enforced | Agree year, entitlement, day counting, overlap/cancellation effects before implementation |
 | Going Home declaration | Missing | Agree scan-compatible normal-hours declaration/history/return rules |
 | Cancel pending pass | Missing | Agree eligible states, audit, races and notification effects for both request types |
@@ -1494,11 +1542,13 @@ that row's module directory. Read the backend docs/*.md feature guide for staff-
 manual tests and deployment prerequisites. Earlier ticket docs may say a later
 feature was future work; this guide incorporates subsequent implementation through #93.
 
-Existing local evidence: the 16 October #93 full backend run passed 80 package results,
-all 15 required database packages without skips, and reported 85.3% statement coverage.
-Those numbers are not mobile-feature completeness, live Firebase/R2/FCM delivery,
-remote CI or deployed behavior. This handoff added documentation only; no new live
-Student accounts or real phone test results are claimed.
+Local issue95 verification on16 October passed80 package results, all15 required
+database packages without test skips, and reported84.8% statement coverage. The
+populated invitation upgrade/rollback and all26 migration rollback/reapply checks
+also passed, including the new helper under Windows PowerShell5.1. These numbers
+are not feature completeness, live Firebase/R2/FCM behavior, remote CI or deployed
+acceptance. Firebase adapter tests use fakes; real setup email and Flutter remain
+pending. No live invitation accounts or emails were created by those checks.
 
 Before changing a route/payload/status/limit, update this guide, the collection and
 both repositories' mapping together. Confirm the running server revision, migrations
