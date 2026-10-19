@@ -25,6 +25,7 @@ import (
 	complainthandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/handler"
 	complaintrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/repository"
 	complaintservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity"
 	identityhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/handler"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/repository"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/service"
@@ -92,7 +93,23 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		workers.RunUserRevocations(workerCtx, managementStore, revoker, cfg.AccountManagementTimeout, 30*time.Second)
 	}()
 	defer func() { stopWorker(); <-workerDone }()
-	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
+	handler := newAPIHandler(pool.Ping, cfg.DatabaseCheckTimeout, protected, identityhandler.Handler(userService, cfg.ProvisioningTimeout, cfg.StudentInvitationsEnabled), identityhandler.NewAPI(service.NewAccounts(managementStore, revoker), service.NewActivation(managementStore, platformfirebase.NewFirebaseReactivator(firebaseClient)), cfg.AccountManagementTimeout))
+	invitationStore := repository.NewInvitationStore(pool)
+	var invitationProvider service.InvitationProvider
+	if cfg.StudentInvitationsEnabled {
+		invitationProvider, err = platformfirebase.NewStudentInvitationProvider(ctx, cfg.FirebaseProjectID)
+		if err != nil {
+			return err
+		}
+	}
+	invitations := service.NewInvitations(invitationStore, invitationProvider, cfg.StudentEmailDomains, cfg.StudentInvitationsEnabled)
+	identity.RegisterInvitations(identityhandler.NewInvitationAPI(invitations, cfg.StudentProfileTimeout), handler, protected)
+	if cfg.StudentInvitationsEnabled {
+		invitationCtx, stopInvitations := context.WithCancel(ctx)
+		invitationDone := make(chan struct{})
+		go func() { defer close(invitationDone); workers.RunStudentInvitations(invitationCtx, invitations, logger) }()
+		defer func() { stopInvitations(); <-invitationDone }()
+	}
 	announcement.Register(announcementhandler.New(announcementservice.New(announcementrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	notificationStore := notificationrepo.New(pool)
 	notification.RegisterPush(notificationhandler.NewPush(notificationservice.NewPush(notificationStore), cfg.AccountManagementTimeout), handler, protected)

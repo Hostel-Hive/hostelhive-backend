@@ -25,3 +25,16 @@ func Register(mux *http.ServeMux, authenticate func(http.Handler) http.Handler, 
 func RegisterMe(mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
 	mux.Handle("GET /api/v1/me", authenticate(http.HandlerFunc(handler.Me)))
 }
+
+func RegisterInvitations(a *handler.InvitationAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	protect := func(h http.HandlerFunc) http.Handler {
+		return authenticate(authentication.RequireRoles(domain.RoleAdmin)(h))
+	}
+	mux.Handle("POST /api/v1/student-invitations", protect(a.Register))
+	mux.Handle("GET /api/v1/student-invitations", protect(a.List))
+	mux.Handle("GET /api/v1/student-invitations/{invitationID}", protect(a.Get))
+	mux.Handle("POST /api/v1/student-invitations/{invitationID}/resend", protect(a.Resend))
+	mux.Handle("POST /api/v1/student-invitations/import", protect(a.Import))
+	mux.Handle("GET /api/v1/student-invitations/import/template", protect(a.Template))
+	mux.Handle("POST /api/v1/me/setup/complete", authenticate(authentication.RequireRoles(domain.RoleStudent)(http.HandlerFunc(a.Complete))))
+}

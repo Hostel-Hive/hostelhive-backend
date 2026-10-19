@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- #95: add opt-in Admin university-email Student invitations and separate account/profile CSV, private Firebase-hosted setup emails, durable bounded retries/resend audit and provider-verified setup gating. Preserve legacy accounts and profile-only import; add migration26 with fail-closed rollback, CI fixtures and mobile handoff. Real email and Flutter acceptance remain pending.
+
 - #93: add Student-owned recorded attendance history with hostel-local calendar-date/direction filters, snapshot-consistent totals and bounded pagination, opaque stable movement keys and current account/profile eligibility checks. Preserve existing attendance/permission records and staff access; update mobile handoff and PostgreSQL tests. No migration.
 
 - #91: add Student-owned profile, guardians, current accommodation and scan-based presence reads, plus authenticated own profile-image retrieval. Preserve null/UNKNOWN states, existing staff permissions and source records; update mobile handoff and tests. No migration.

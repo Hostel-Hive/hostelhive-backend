@@ -252,3 +252,13 @@ git branch -d feature/38-student-csv-import
 If safe deletion refuses after a squash merge, verify the contents before
 deciding what to do; do not blindly force-delete. Merge to main at an agreed
 release/milestone, not automatically for this feature.
+
+## Separate university-email invitation import (#95)
+
+This existing #38 endpoint and its user_id-based CSV remain profile-only. New
+Admin account/profile registration uses `POST /api/v1/student-invitations/import`
+with university email and a separate eight-column template. It queues private
+Firebase setup email and returns per-row outcomes; passwords/roles/setup flags
+are never CSV fields. See [the invitation API and bulk contract](student-invitations.md).
+Do not interchange the templates or assume a200 bulk response means every row
+succeeded or any email was received.

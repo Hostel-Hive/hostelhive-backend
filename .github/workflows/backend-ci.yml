@@ -131,6 +131,21 @@ jobs:
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/mobile_push_upgrade_before.sql
           migrate -path migrations -database "$migration_url" up
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/mobile_push_upgrade_after.sql
+      - name: Student invitation upgrade preserves legacy access and rollback fails closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+          migrate -path migrations -database "$migration_url" goto 25
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_upgrade_before.sql
+          migrate -path migrations -database "$migration_url" up
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_upgrade_after.sql
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_rollback_before.sql
+          migrate -path migrations -database "$migration_url" down 1
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_rollback_after.sql
+          migrate -path migrations -database "$migration_url" up
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_rollback_after.sql
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_upgrade_cleanup.sql
       - name: Race tests with application-wide coverage (database packages serial)
         shell: bash
         run: |

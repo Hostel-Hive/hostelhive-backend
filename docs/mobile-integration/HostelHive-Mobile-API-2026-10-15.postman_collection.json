@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "HostelHive Student Mobile API - updated 2026-10-16",
-    "description": "Verified current backend contracts. Read the accompanying guide first. Use dedicated test records and a confirmed running API. No credentials/scripts included. Issue89 requires its current code and migration25; real phone validation pending. Mutations execute only when you choose Send. Do not export real local tokens. Issue #93 adds owned recorded attendance history; see guide section4.4. Confirm feature-branch deployment.",
+    "description": "Verified current backend contracts. Read the accompanying guide first. Use dedicated test records and a confirmed running API. No credentials/scripts included. Issue89 requires its current code and migration25; real phone validation pending. Mutations execute only when you choose Send. Do not export real local tokens. Issue #93 adds owned recorded attendance history; see guide section4.4. Confirm feature-branch deployment. Issue #95 adds setup_required and empty POST /me/setup/complete. Requires migration26 and invitation enablement. Complete the private Firebase-hosted email setup and fresh password sign-in first. No actual email receipt verified.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -106,7 +106,22 @@
               }
             ],
             "url": "{{api_base_url}}/me",
-            "description": "Account metadata only. Does not return full Student, allocation or presence fields."
+            "description": "Account metadata only. Does not return full Student, allocation or presence fields. If setup_required is true, complete issue95 setup before loading other features. Absent means false."
+          },
+          "response": []
+        },
+        {
+          "name": "Complete own invitation setup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{api_base_url}}/me/setup/complete",
+            "description": "Issue95. Empty body/query. Student token from a password sign-in within five minutes after hosted email setup. 200 SetupResult,409 setup_not_verified,503 unavailable. Repeat preserves first timestamp. No password/action code sent to Go."
           },
           "response": []
         },
