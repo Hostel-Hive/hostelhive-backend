@@ -53,6 +53,30 @@ The modular layout follows the HostelHive folder-structure reference, adapted fo
 
 ## Start locally
 
+For Windows development, configure once:
+
+```powershell
+Copy-Item .env.example .env.local
+notepad .env.local
+```
+
+Set your database URL, Firebase project ID and `GOOGLE_APPLICATION_CREDENTIALS`
+path to the service-account JSON outside the repository. `.env.local` is ignored
+by Git. Do not overwrite an existing local configuration when updating the code.
+Start Docker Desktop and create the PostgreSQL container once as described below.
+Then use one command for daily startup:
+
+```powershell
+.\scripts\dev.ps1
+```
+
+The launcher loads `.env.local`, checks required settings and the credential-file
+path, starts the existing `hostelhive-postgres` container, waits for PostgreSQL,
+and runs `go run ./cmd/server`. Open `http://127.0.0.1:18080/docs/` with the example
+port. Ctrl+C stops the backend; the database container stays running.
+See [local development configuration](docs/local-development.md) for configuration
+precedence, migration and hosted-database options. Direct Go startup remains:
+
 Start the local database as described below, apply all pending migrations, then configure DATABASE_URL and Firebase credentials in the backend terminal. From the repository directory:
 
 ```powershell
@@ -258,7 +282,7 @@ https://github.com/Hostel-Hive/Design-and-Development-Project/blob/main/document
 
 ## Configuration
 
-The application reads **process environment variables**, not `.env` files automatically. `.env.example` is documentation for manual configuration or future Docker Compose integration. Never commit real credentials.
+The Go application reads **process environment variables**, not `.env` files automatically. The Windows `scripts/dev.ps1` launcher explicitly loads the ignored `.env.local` before starting Go. `.env.example` is its committed template; deployed services continue to use platform environment settings. Never commit real credentials.
 
 | Variable | Default | Valid values |
 |---|---|---|

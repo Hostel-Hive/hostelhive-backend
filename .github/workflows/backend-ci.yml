@@ -222,3 +222,6 @@ jobs:
       - name: Offline Firebase password helpers on Windows PowerShell 5.1
         shell: powershell
         run: ./scripts/test-firebase-password-tools.ps1
+      - name: Offline local development launcher on Windows PowerShell 5.1
+        shell: powershell
+        run: ./scripts/test-dev.ps1
