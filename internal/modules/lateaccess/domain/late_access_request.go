@@ -15,6 +15,8 @@ var (
 )
 
 type Request struct {
+	CancelledAt      *time.Time `json:"cancelled_at"`
+	CancelledBy      *string    `json:"cancelled_by"`
 	ConsumedAt       *time.Time `json:"consumed_at,omitempty"`
 	ConsumedDeviceID *string    `json:"consumed_device_id,omitempty"`
 	ConsumedEventID  *string    `json:"consumed_event_id,omitempty"`

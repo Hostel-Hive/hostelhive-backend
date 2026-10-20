@@ -3,6 +3,8 @@ package domain
 import "time"
 
 type LeaveRequest struct {
+	CancelledAt  *time.Time `json:"cancelled_at"`
+	CancelledBy  *string    `json:"cancelled_by"`
 	LeaveID      string     `json:"leave_id"`
 	RequestID    string     `json:"request_id"`
 	StudentID    string     `json:"student_id"`
@@ -17,9 +19,10 @@ type LeaveRequest struct {
 	DecisionNote string     `json:"decision_note"`
 }
 type LeaveTotals struct {
-	Pending  int64 `json:"pending"`
-	Approved int64 `json:"approved"`
-	Rejected int64 `json:"rejected"`
+	Cancelled int64 `json:"cancelled"`
+	Pending   int64 `json:"pending"`
+	Approved  int64 `json:"approved"`
+	Rejected  int64 `json:"rejected"`
 }
 type LeavePage struct {
 	From      string         `json:"from"`

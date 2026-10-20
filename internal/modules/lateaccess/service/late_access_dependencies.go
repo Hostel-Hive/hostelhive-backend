@@ -7,6 +7,7 @@ import (
 )
 
 type Repository interface {
+	Cancel(context.Context, string, string) (domain.Request, error)
 	Submit(context.Context, string, dto.Submit) (domain.Request, error)
 	Decide(context.Context, string, string, dto.Decision) (domain.Request, error)
 	Get(context.Context, string, string) (domain.Request, error)

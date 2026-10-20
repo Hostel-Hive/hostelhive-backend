@@ -69,7 +69,7 @@ func sampleDocument(kind string) domain.ExportDocument {
 	headers := map[string][]string{
 		"attendance": {"Event ID", "Device ID", "Student ID", "Direction", "Occurred At", "Access Result", "Late Access ID", "Incident ID"},
 		"daily":      {"Date", "Entries", "Exits", "Distinct Students"},
-		"leaves":     {"Leave ID", "Request ID", "Student ID", "Submitted By", "Starts At", "Ends At", "Reason", "Status", "Created At", "Decided At", "Decided By", "Decision Note"},
+		"leaves":     {"Leave ID", "Request ID", "Student ID", "Submitted By", "Starts At", "Ends At", "Reason", "Status", "Created At", "Decided At", "Decided By", "Decision Note", "Cancelled At", "Cancelled By"},
 		"complaints": {"Complaint ID", "Request ID", "Student ID", "Submitted By", "Category", "Description", "Status", "Version", "Created At", "Updated At", "Resolution Recorded", "Resolution Update ID", "Resolved At", "Resolved By", "Resolution Note"},
 	}[kind]
 	rows := [][]domain.ExportCell{}
@@ -212,5 +212,27 @@ func TestPDFThousandShortRecordsFitPageBudget(t *testing.T) {
 	data, err := NewReports().Build(context.Background(), doc)
 	if err != nil || len(data) == 0 {
 		t.Fatal("short records failed within the row budget", err)
+	}
+}
+
+func TestCancelledLeavePDFIncludesAudit(t *testing.T) {
+	doc := sampleDocument("leaves")
+	doc.Rows = doc.Rows[:1]
+	doc.Rows[0][7].Text = "cancelled"
+	for _, i := range []int{9, 10, 11} {
+		doc.Rows[0][i].Text = ""
+	}
+	doc.Rows[0][12].Text = "2026-10-20T12:00:00+05:30"
+	doc.Rows[0][13].Text = "cancelled-student-account"
+	doc.Summary = append(doc.Summary, domain.ExportMetric{Name: "Cancelled", Value: 1})
+	data, err := NewReports().Build(context.Background(), doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, text := decodePDF(t, data)
+	for _, v := range []string{"Status / Audit", "Cancelled At", "Cancelled By", "cancelled-student-account", "2026-10-20T12:00:00+05:30", "cancelled"} {
+		if !strings.Contains(compactPDF(text), compactPDF(v)) {
+			t.Fatal("missing cancellation audit", v, text)
+		}
 	}
 }

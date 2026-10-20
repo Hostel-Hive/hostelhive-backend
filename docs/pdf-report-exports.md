@@ -17,7 +17,7 @@ Active Admin and Warden accounts can GET:
 Required: from=YYYY-MM-DD&to=YYYY-MM-DD, inclusive dates in HOSTEL_TIMEZONE
 (default Asia/Colombo), at most 366 calendar dates. Student ID is a canonical
 lowercase nonzero profile UUID. Directions are IN/OUT. Leave statuses are
-pending/approved/rejected; complaint statuses pending/in_progress/resolved;
+pending/approved/rejected/cancelled; complaint statuses pending/in_progress/resolved;
 complaint categories maintenance/disciplinary. Values are case-sensitive.
 
 No limit, offset or format parameter is accepted. Even offset=0 is invalid.
