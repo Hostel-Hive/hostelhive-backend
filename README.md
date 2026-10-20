@@ -8,6 +8,8 @@ Pending leave/late-access cancellation: [API contract and integration rules](doc
 
 Yearly Student leave allowance: [API contract and counting policy](docs/yearly-leave-allowance.md).
 
+Combined Student leave/late-access history: [API contract and Flutter integration](docs/combined-student-pass-history.md).
+
 ## Prerequisites
 
 - Go 1.27 or later: https://go.dev/dl/
