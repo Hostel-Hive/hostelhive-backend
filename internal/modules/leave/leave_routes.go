@@ -25,3 +25,7 @@ func RegisterGoingHome(a *handler.GoingHomeAPI, mux *http.ServeMux, authenticate
 func RegisterAllowance(a *handler.AllowanceAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
 	mux.Handle("GET /api/v1/me/leave-allowance", authenticate(middleware.RequireRoles(identity.RoleStudent)(http.HandlerFunc(a.Get))))
 }
+
+func RegisterPassHistory(a *handler.PassHistoryAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/v1/me/passes", authenticate(middleware.RequireRoles(identity.RoleStudent)(http.HandlerFunc(a.List))))
+}
