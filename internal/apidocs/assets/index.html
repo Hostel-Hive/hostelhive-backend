@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HostelHive Backend API — Swagger UI</title>
+    <link rel="stylesheet" href="/docs/swagger-ui.css" />
+    <link rel="stylesheet" href="/docs/roles.css" />
+  </head>
+  <body>
+    <section class="hh-role-toolbar" aria-label="API role filter">
+      <label for="role-filter">Show APIs available to</label>
+      <select id="role-filter" aria-describedby="role-filter-help">
+        <option value="all">All roles</option>
+        <option value="admin">Admin</option>
+        <option value="warden">Warden</option>
+        <option value="sub_warden">Sub-Warden</option>
+        <option value="security_staff">Security</option>
+        <option value="student">Student</option>
+        <option value="scanner">Scanner</option>
+        <option value="public">Public (no login)</option>
+      </select>
+      <p id="role-filter-help">Role badges show who can call each API. The filter includes shared endpoints and works with the module/path search. It does not change your login or permissions. Check GET /api/v1/me for your current role.</p>
+    </section>
+    <div id="swagger-ui"></div>
+    <footer>
+      <a href="/docs/LICENSE">Swagger UI license</a> ·
+      <a href="/docs/NOTICE">Upstream notice</a> ·
+      <a href="/docs/swagger-ui-bundle.js.LICENSE.txt">Dependency licenses</a>
+    </footer>
+    <script src="/docs/swagger-ui-bundle.js"></script>
+    <script src="/docs/initializer.js"></script>
+  </body>
+</html>
