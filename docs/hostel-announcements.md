@@ -1,6 +1,6 @@
 # Hostel announcements — issue #72
 
-Admin/Warden publish global, immutable plain-text announcements. Active Students
+Admin/Warden publish global or faculty-targeted, immutable plain-text announcements. Active Students
 with unarchived profiles list/view published notices and receive inbox alerts.
 The existing mixed inbox, unread count, mark-read and delivery worker are reused.
 Staff have aggregate delivery/read counts. No new provider credentials required.
@@ -15,15 +15,17 @@ publication, global feed/detail, normal-priority inbox alerts and aggregate read
 receipts. Mobile frontend integration and external push delivery remain separate.
 Do not claim the complete mobile/push use case is finished by backend inbox tests.
 
-- Audience is all_students only, omitted audience defaults to that value. No
-  block/room-specific or individual targeting in this release.
+- Audience defaults to all_students. Migration29 also supports audience=faculty
+  with a required faculty name. See [faculty targeting](faculty-announcements.md)
+  for the current publication, visibility and transfer contract. No block/room
+  or individual targeting is supported.
 - Title 1–160 and content 1–5000 Unicode characters after trimming. Plain text;
   multiline content allowed, control characters rejected. Title is single-line.
 - Priority is normal; urgent/escalated delivery is not introduced in this ticket.
 - Publication is immediate. No drafts, schedule, edit, delete or unpublish API.
   Correct a published message by publishing a new notice with a new request ID.
 - Admin/Warden publish and view all notices/summary. Current eligible Students
-  read the global feed/detail. Sub-Warden/Security cannot access announcement APIs.
+  read global notices and notices for their current faculty. Sub-Warden/Security cannot access announcement APIs.
   They are not announcement notification recipients; Sub-Warden's existing
   complaint inbox access remains unchanged.
 - Student recipients are snapshotted at publication: active student-role accounts
@@ -42,11 +44,13 @@ Do not claim the complete mobile/push use case is finished by backend inbox test
 | Endpoint | Role/purpose |
 |---|---|
 | POST /api/v1/announcements | Admin/Warden publish |
-| GET /api/v1/announcements?limit=20&offset=0 | Global eligible reader feed |
-| GET /api/v1/announcements/{announcementID} | Global eligible reader detail |
+| GET /api/v1/announcements?limit=20&offset=0 | Reader-scoped global/faculty feed |
+| GET /api/v1/announcements/{announcementID} | Reader-scoped announcement detail |
 | GET /api/v1/announcements/{announcementID}/delivery-summary | Admin/Warden aggregate receipts |
 
 POST JSON: request_id UUID, title, content, optional audience='all_students'.
+For a faculty notice use audience='faculty' and faculty='Science' (an existing
+Student faculty). The remaining manual commands below verify the global workflow.
 Publisher identity/date are derived from server authentication/clock. First POST
 returns 201 with {announcement:{...},replayed:false}; exact canonical retry by
 same publisher returns 200/replayed:true with the original ID/date. Changed reuse

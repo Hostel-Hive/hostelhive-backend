@@ -41,7 +41,7 @@ func JSON() []byte {
 		{"Leave", "leave", "Leave decisions, cancellation, Going Home declarations, informational yearly allowance and combined pass history. Only recorded scans change physical presence."},
 		{"Late Access", "lateaccess", "One movement per request: direction, expected_at and reason. Default local restrictions: exit before06:00, entry from20:00 through before06:00. No departure/return interval or destination fields."},
 		{"Complaints", "complaint", "Maintenance/disciplinary complaints, versioned updates and private photos. Student-owned; Sub-Warden limited to maintenance. Title and severity are not implemented."},
-		{"Announcements", "announcement", "Admin/Warden publications and Student audience delivery/read summaries."},
+		{"Announcements", "announcement", "Admin/Warden all-Student or faculty publications, scoped Student feeds and historical delivery/read summaries."},
 		{"Notifications", "notification", "Owned inbox, unread state and FCM device registration. Responses contain title/source references, not message previews or a mark-all-read operation."},
 		{"Reports", "report", "Read-only attendance, daily, leave and complaint reports, Excel and PDF exports. Admin/Warden only."},
 	} {

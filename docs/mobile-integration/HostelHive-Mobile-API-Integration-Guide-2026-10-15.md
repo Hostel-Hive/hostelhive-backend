@@ -1,5 +1,11 @@
 # HostelHive Mobile API Integration Guide
 
+> Faculty announcement update (20 October 2026, migration29): Students see global
+> notices plus notices for their current faculty. Inbox/read access uses the same
+> scope. Admin/Warden can publish with `audience: faculty` and a `faculty` value;
+> this supersedes the older all-Students-only contract below. See
+> [faculty announcements](../faculty-announcements.md) and current Swagger `/docs/`.
+
 > Pass workflow update (#101-#103, 20 October 2026): use
 > `GET /api/v1/me/passes` for globally paginated leave/late-access history,
 > the source-specific pending cancellation endpoints, and
