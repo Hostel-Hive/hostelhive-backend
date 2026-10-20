@@ -11,6 +11,7 @@ func Register(a *handler.API, mux *http.ServeMux, authenticate func(http.Handler
 	protect := func(h http.HandlerFunc, roles ...string) http.Handler {
 		return authenticate(middleware.RequireRoles(roles...)(h))
 	}
+	mux.Handle("POST /api/v1/late-access-requests/{lateAccessID}/cancel", protect(a.Cancel, identity.RoleStudent))
 	mux.Handle("POST /api/v1/late-access-requests", protect(a.Submit, identity.RoleStudent))
 	mux.Handle("GET /api/v1/late-access-requests", protect(a.List, identity.RoleStudent, identity.RoleAdmin, identity.RoleWarden))
 	mux.Handle("GET /api/v1/late-access-requests/{lateAccessID}", protect(a.Get, identity.RoleStudent, identity.RoleAdmin, identity.RoleWarden))

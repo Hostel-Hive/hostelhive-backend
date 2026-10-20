@@ -14,7 +14,7 @@ type Store struct{ pool *pgxpool.Pool }
 
 func New(p *pgxpool.Pool) *Store { return &Store{p} }
 
-const columns = `leave_id::text,request_id::text,student_id::text,submitted_by::text,starts_at,ends_at,reason,status,created_at,decided_at,decided_by::text,decision_note`
+const columns = `leave_id::text,request_id::text,student_id::text,submitted_by::text,starts_at,ends_at,reason,status,created_at,decided_at,decided_by::text,decision_note,cancelled_at,cancelled_by::text`
 
 func dbError(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -28,7 +28,7 @@ func dbError(err error) error {
 }
 func scan(row pgx.Row) (domain.Request, error) {
 	var v domain.Request
-	err := row.Scan(&v.LeaveID, &v.RequestID, &v.StudentID, &v.SubmittedBy, &v.StartsAt, &v.EndsAt, &v.Reason, &v.Status, &v.CreatedAt, &v.DecidedAt, &v.DecidedBy, &v.DecisionNote)
+	err := row.Scan(&v.LeaveID, &v.RequestID, &v.StudentID, &v.SubmittedBy, &v.StartsAt, &v.EndsAt, &v.Reason, &v.Status, &v.CreatedAt, &v.DecidedAt, &v.DecidedBy, &v.DecisionNote, &v.CancelledAt, &v.CancelledBy)
 	if err != nil {
 		return v, dbError(err)
 	}

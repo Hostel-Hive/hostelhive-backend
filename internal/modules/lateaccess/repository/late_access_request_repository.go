@@ -119,7 +119,7 @@ func (s *Store) List(ctx context.Context, uid string, f domain.Filter) (domain.P
 		var id, rid, sid, submitted, reason, status, note *string
 		var direction *string
 		var expected, created *time.Time
-		err = rows.Scan(&p.Total, &id, &rid, &sid, &submitted, &direction, &expected, &reason, &status, &created, &v.DecidedAt, &v.DecidedBy, &note, &v.ConsumedAt, &v.ConsumedDeviceID, &v.ConsumedEventID)
+		err = rows.Scan(&p.Total, &id, &rid, &sid, &submitted, &direction, &expected, &reason, &status, &created, &v.DecidedAt, &v.DecidedBy, &note, &v.ConsumedAt, &v.ConsumedDeviceID, &v.ConsumedEventID, &v.CancelledAt, &v.CancelledBy)
 		if err != nil {
 			rows.Close()
 			return p, dbError(err)

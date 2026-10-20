@@ -15,6 +15,8 @@ var (
 )
 
 type Request struct {
+	CancelledAt  *time.Time `json:"cancelled_at"`
+	CancelledBy  *string    `json:"cancelled_by"`
 	LeaveID      string     `json:"leave_id"`
 	RequestID    string     `json:"request_id"`
 	StudentID    string     `json:"student_id"`

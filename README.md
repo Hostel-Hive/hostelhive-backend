@@ -4,6 +4,8 @@ Go backend for HostelHive. Maintainer: Tasheen. Repository: https://github.com/H
 
 This foundation implements environment configuration validation, a bounded HTTP server lifecycle, structured startup/error logging and graceful shutdown. Operational endpoints provide health and PostgreSQL readiness checks. GET /api/v1/me verifies Firebase authentication and returns the current local account.
 
+Pending leave/late-access cancellation: [API contract and integration rules](docs/pass-cancellation.md).
+
 ## Prerequisites
 
 - Go 1.27 or later: https://go.dev/dl/

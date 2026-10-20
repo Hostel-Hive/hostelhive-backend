@@ -17,7 +17,7 @@ Active Admin/Warden only, using existing Firebase/local account authorization:
 Every route requires inclusive hostel-local from/to dates, exactly YYYY-MM-DD,
 with at most 366 selected calendar dates. Student ID is an optional canonical
 lowercase nonzero profile UUID. Direction is IN/OUT; leave status is
-pending/approved/rejected; complaint status is pending/in_progress/resolved;
+pending/approved/rejected/cancelled; complaint status is pending/in_progress/resolved;
 category is maintenance/disciplinary. Values are case-sensitive.
 
 The same calendar conversion, source filters, ordering and current staff authority

@@ -28,7 +28,7 @@ func TestLeaveReportFiltersAndDelegation(t *testing.T) {
 	store := &leaveCapture{}
 	s := NewLeaves(store, loc)
 	q := dto.LeaveQuery{From: "2026-10-14", To: "2026-10-15", StudentID: "41757a7c-0897-48e0-ba1c-26a74ce447cd", Limit: 1, Offset: 2}
-	for _, status := range []string{"", "pending", "approved", "rejected"} {
+	for _, status := range []string{"", "pending", "approved", "rejected", "cancelled"} {
 		q.Status = status
 		page, err := s.Requests(context.Background(), "warden", q)
 		if err != nil || page.Total != 7 || store.actor != "warden" || store.filter.LeaveQuery != q || store.filter.Timezone != "Asia/Colombo" || store.filter.Start.UTC().Format(time.RFC3339) != "2026-10-13T18:30:00Z" || store.filter.End.UTC().Format(time.RFC3339) != "2026-10-15T18:30:00Z" {

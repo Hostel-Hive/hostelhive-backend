@@ -18,7 +18,7 @@ func NewLeaves(store LeaveRepository, location *time.Location) *Leaves {
 }
 func (s *Leaves) filter(q dto.LeaveQuery) (dto.LeaveFilter, error) {
 	f := dto.LeaveFilter{LeaveQuery: q}
-	if q.Status != "" && q.Status != "pending" && q.Status != "approved" && q.Status != "rejected" {
+	if q.Status != "" && q.Status != "pending" && q.Status != "approved" && q.Status != "rejected" && q.Status != "cancelled" {
 		return f, domain.ErrInvalid
 	}
 	p, err := validatePeriod(q.From, q.To, q.StudentID, q.Limit, q.Offset, s.location)

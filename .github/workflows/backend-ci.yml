@@ -65,7 +65,7 @@ jobs:
           python3 scripts/check-go-format.py
           python3 scripts/test_coverage_report.py
           go mod verify
-          go vet ./...
+          go vet ./cmd/... ./internal/... ./tests/...
           go build -o bin/hostelhive-server ./cmd/server
       - name: Install pinned migration CLI
         shell: bash
@@ -160,12 +160,27 @@ jobs:
           migrate -path migrations -database "$migration_url" goto 27
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/going_home_upgrade_after.sql
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/going_home_upgrade_cleanup.sql
+      - name: Cancellation upgrade preserves decisions, consumption and inbox history
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+          migrate -path migrations -database "$migration_url" goto 27
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_upgrade_before.sql
+          migrate -path migrations -database "$migration_url" goto 28
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_upgrade_after.sql
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_constraints.sql
+          migrate -path migrations -database "$migration_url" down 1
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_rollback_after.sql
+          migrate -path migrations -database "$migration_url" goto 28
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_upgrade_after.sql
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_upgrade_cleanup.sql
       - name: Race tests with application-wide coverage (database packages serial)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          go test -p 1 -count=1 -race -timeout=120s -json -covermode=atomic -coverpkg=./cmd/...,./internal/... -coverprofile=artifacts/coverage.out ./... | tee artifacts/tests.jsonl
+          go test -p 1 -count=1 -race -timeout=120s -json -covermode=atomic -coverpkg=./cmd/...,./internal/... -coverprofile=artifacts/coverage.out ./cmd/... ./internal/... ./tests/... | tee artifacts/tests.jsonl
           python3 scripts/coverage-report.py --profile artifacts/coverage.out --events artifacts/tests.jsonl --output artifacts/coverage.md --require-integration
           go tool cover -html=artifacts/coverage.out -o artifacts/coverage.html
           cat artifacts/coverage.md >> "$GITHUB_STEP_SUMMARY"

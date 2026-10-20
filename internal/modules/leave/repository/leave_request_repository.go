@@ -118,7 +118,7 @@ func (s *Store) List(ctx context.Context, uid string, f domain.Filter) (domain.P
 		var v domain.Request
 		var id, rid, sid, submitted, reason, status, note *string
 		var start, end, created *time.Time
-		err = rows.Scan(&p.Total, &id, &rid, &sid, &submitted, &start, &end, &reason, &status, &created, &v.DecidedAt, &v.DecidedBy, &note)
+		err = rows.Scan(&p.Total, &id, &rid, &sid, &submitted, &start, &end, &reason, &status, &created, &v.DecidedAt, &v.DecidedBy, &note, &v.CancelledAt, &v.CancelledBy)
 		if err != nil {
 			rows.Close()
 			return p, dbError(err)

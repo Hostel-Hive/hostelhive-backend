@@ -15,7 +15,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Go formatting check failed.' }
     & go mod verify
     if ($LASTEXITCODE -ne 0) { throw 'Module verification failed.' }
-    & go vet ./...
+    & go vet ./cmd/... ./internal/... ./tests/...
     if ($LASTEXITCODE -ne 0) { throw 'Static checks failed.' }
     & go build -o bin/hostelhive-server-check.exe ./cmd/server
     if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
@@ -38,7 +38,7 @@ try {
     & ./scripts/migrate.ps1 up
     $env:TEST_DATABASE_URL = $env:DATABASE_URL
     New-Item -ItemType Directory -Force artifacts | Out-Null
-    $goArgs = @('test','-p','1','-count=1','-timeout=120s','-json','-covermode=atomic','-coverpkg=./cmd/...,./internal/...','-coverprofile=artifacts/coverage.out','./...')
+    $goArgs = @('test','-p','1','-count=1','-timeout=120s','-json','-covermode=atomic','-coverpkg=./cmd/...,./internal/...','-coverprofile=artifacts/coverage.out','./cmd/...','./internal/...','./tests/...')
     if ($Race) { $goArgs = @('test','-race') + $goArgs[1..($goArgs.Length-1)] }
     & go @goArgs | Out-File -Encoding utf8 artifacts/tests.jsonl
     if ($LASTEXITCODE -ne 0) { throw 'Backend tests failed; inspect artifacts/tests.jsonl.' }

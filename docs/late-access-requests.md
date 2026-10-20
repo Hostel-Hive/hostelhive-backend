@@ -225,3 +225,9 @@ interactive commands refresh normal rejected logins once, preserve identity and
 stop each numbered block on failure; they are not a single-run live test script.
 ## Extension in #76
 [Attendance permission checks](attendance-permission-checks.md) now consume an approved request once for a recorded matching direction within30 minutes either side of expected_at. Existing detail/list exposes consumed_at,consumed_device_id,consumed_event_id; the original approved decision remains history. Unapproved incidents never prevent actual attendance recording.
+
+## Pending request cancellation (#101)
+
+Migration28 adds owner-only cancellation and the terminal `cancelled` status.
+See [the cancellation contract](pass-cancellation.md) for routes, audit, retries,
+permissions and race handling. Earlier ticket-scope exclusions above are historical.

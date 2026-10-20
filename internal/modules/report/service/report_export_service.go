@@ -119,11 +119,11 @@ func (s *Exports) Export(ctx context.Context, actor string, kind domain.ReportKi
 		}
 		total = p.Total
 		doc.Title = "Student leave requests"
-		doc.Headers = []string{"Leave ID", "Request ID", "Student ID", "Submitted By", "Starts At", "Ends At", "Reason", "Status", "Created At", "Decided At", "Decided By", "Decision Note"}
+		doc.Headers = []string{"Leave ID", "Request ID", "Student ID", "Submitted By", "Starts At", "Ends At", "Reason", "Status", "Created At", "Decided At", "Decided By", "Decision Note", "Cancelled At", "Cancelled By"}
 		for _, v := range p.Items {
-			doc.Rows = append(doc.Rows, textRow(v.LeaveID, v.RequestID, v.StudentID, v.SubmittedBy, s.timestamp(v.StartsAt), s.timestamp(v.EndsAt), v.Reason, v.Status, s.timestamp(v.CreatedAt), s.optionalTime(v.DecidedAt), stringValue(v.DecidedBy), v.DecisionNote))
+			doc.Rows = append(doc.Rows, textRow(v.LeaveID, v.RequestID, v.StudentID, v.SubmittedBy, s.timestamp(v.StartsAt), s.timestamp(v.EndsAt), v.Reason, v.Status, s.timestamp(v.CreatedAt), s.optionalTime(v.DecidedAt), stringValue(v.DecidedBy), v.DecisionNote, s.optionalTime(v.CancelledAt), stringValue(v.CancelledBy)))
 		}
-		doc.Summary = []domain.ExportMetric{{Name: "Pending", Value: p.Summary.Pending}, {Name: "Approved", Value: p.Summary.Approved}, {Name: "Rejected", Value: p.Summary.Rejected}}
+		doc.Summary = []domain.ExportMetric{{Name: "Pending", Value: p.Summary.Pending}, {Name: "Approved", Value: p.Summary.Approved}, {Name: "Rejected", Value: p.Summary.Rejected}, {Name: "Cancelled", Value: p.Summary.Cancelled}}
 		doc.Metadata = append(doc.Metadata, [2]string{"Status", allFilter(q.Status)}, [2]string{"Date Basis", "Request submission time"}, [2]string{"Status Basis", "Current request status at query snapshot"})
 	case domain.ComplaintReport:
 		if q.Direction != "" {
