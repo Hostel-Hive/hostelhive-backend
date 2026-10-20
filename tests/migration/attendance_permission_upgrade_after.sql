@@ -6,7 +6,9 @@ BEGIN
   CASE b.kind
   WHEN 'notification' THEN SELECT to_jsonb(n) INTO actual FROM hostelhive.notifications n WHERE n.notification_id::text=b.record_id;
   WHEN 'outbox' THEN SELECT to_jsonb(o) INTO actual FROM hostelhive.notification_outbox o WHERE o.event_id::text||':'||o.recipient_id::text=b.record_id;
-  WHEN 'approval' THEN SELECT to_jsonb(l)-'consumed_at'-'consumed_device_id'-'consumed_event_id' INTO actual FROM hostelhive.late_access_requests l WHERE l.late_access_id::text=b.record_id;
+  -- The CI upgrade reaches latest, including migration28's nullable audit fields.
+  -- Compare every schema21 field; check newly added metadata separately below.
+  WHEN 'approval' THEN SELECT to_jsonb(l)-'consumed_at'-'consumed_device_id'-'consumed_event_id'-'cancelled_at'-'cancelled_by' INTO actual FROM hostelhive.late_access_requests l WHERE l.late_access_id::text=b.record_id;
   WHEN 'scan' THEN SELECT to_jsonb(e)-'access_result'-'late_access_id' INTO actual FROM hostelhive.attendance_events e WHERE e.device_id::text||':'||e.event_id::text=b.record_id;
   WHEN 'presence' THEN SELECT to_jsonb(p) INTO actual FROM hostelhive.student_presence p WHERE p.student_id::text=b.record_id;
   ELSE RAISE EXCEPTION 'Unknown preservation evidence';
@@ -15,6 +17,7 @@ BEGIN
  END LOOP;
  IF EXISTS(SELECT 1 FROM hostelhive.attendance_events WHERE access_result IS NOT NULL AND student_id IN(SELECT student_id FROM hostelhive.students WHERE index_no='UPGRADE-76')) THEN RAISE EXCEPTION 'Historical scans reclassified'; END IF;
  IF EXISTS(SELECT 1 FROM hostelhive.late_access_requests WHERE consumed_at IS NOT NULL AND student_id IN(SELECT student_id FROM hostelhive.students WHERE index_no='UPGRADE-76')) THEN RAISE EXCEPTION 'Historical approval consumed'; END IF;
+ IF EXISTS(SELECT 1 FROM hostelhive.late_access_requests WHERE (cancelled_at IS NOT NULL OR cancelled_by IS NOT NULL) AND student_id IN(SELECT student_id FROM hostelhive.students WHERE index_no='UPGRADE-76')) THEN RAISE EXCEPTION 'Historical approval cancelled'; END IF;
 END;
 $$;
 DELETE FROM hostelhive.student_presence WHERE student_id IN(SELECT student_id FROM hostelhive.students WHERE index_no='UPGRADE-76');
