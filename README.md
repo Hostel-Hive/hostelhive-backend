@@ -53,6 +53,9 @@ The modular layout follows the HostelHive folder-structure reference, adapted fo
 
 ## Start locally
 
+Faculty-targeted notices are supported alongside global announcements; see
+[faculty announcement API and migration29](docs/faculty-announcements.md).
+
 For Windows development, configure once:
 
 ```powershell

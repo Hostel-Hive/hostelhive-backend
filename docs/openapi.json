@@ -321,6 +321,13 @@
           "content": {
             "type": "string"
           },
+          "faculty": {
+            "description": "Normalized target faculty; null for all_students.",
+            "example": "Computing",
+            "maxLength": 120,
+            "nullable": true,
+            "type": "string"
+          },
           "priority": {
             "type": "string"
           },
@@ -342,6 +349,7 @@
           "announcement_id",
           "audience",
           "content",
+          "faculty",
           "priority",
           "published_at",
           "published_by",
@@ -406,6 +414,11 @@
                 "content": {
                   "type": "string"
                 },
+                "faculty": {
+                  "example": "Computing",
+                  "nullable": true,
+                  "type": "string"
+                },
                 "priority": {
                   "type": "string"
                 },
@@ -427,6 +440,7 @@
                 "announcement_id",
                 "audience",
                 "content",
+                "faculty",
                 "priority",
                 "published_at",
                 "published_by",
@@ -473,6 +487,11 @@
               "content": {
                 "type": "string"
               },
+              "faculty": {
+                "example": "Computing",
+                "nullable": true,
+                "type": "string"
+              },
               "priority": {
                 "type": "string"
               },
@@ -494,6 +513,7 @@
               "announcement_id",
               "audience",
               "content",
+              "faculty",
               "priority",
               "published_at",
               "published_by",
@@ -4024,7 +4044,8 @@
           "audience": {
             "default": "all_students",
             "enum": [
-              "all_students"
+              "all_students",
+              "faculty"
             ],
             "type": "string"
           },
@@ -4032,6 +4053,12 @@
             "example": "The common room will close at 8 PM.",
             "maxLength": 5000,
             "minLength": 1,
+            "type": "string"
+          },
+          "faculty": {
+            "description": "Required and nonblank for audience=faculty; omit for all_students. Matches an existing unarchived Student faculty, ignoring case and surrounding whitespace; stored lowercase. Unknown faculty returns400.",
+            "example": "Science",
+            "maxLength": 120,
             "type": "string"
           },
           "request_id": {
@@ -6060,7 +6087,7 @@
     },
     "/api/v1/announcements": {
       "get": {
-        "description": "Access: admin,warden,student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\npublished_at DESC then announcement_id DESC. Historical feed visibility does not fabricate delivery/read receipts.",
+        "description": "Access: admin,warden,student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\npublished_at DESC then announcement_id DESC. Admin/Warden see all; active Students with unarchived profiles see all_students plus their CURRENT faculty. Total and pagination use the same scope. Historical feed visibility does not fabricate delivery/read receipts.",
         "operationId": "announcements_get_api_v1_announcements",
         "parameters": [
           {
@@ -6151,7 +6178,7 @@
             "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
           }
         },
-        "summary": "List announcement feed",
+        "summary": "List eligible announcement feed",
         "tags": [
           "Announcements"
         ],
@@ -6162,11 +6189,32 @@
         ]
       },
       "post": {
-        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nAudience defaults to all_students; no custom recipients or priority input. Publication snapshots eligible recipients and queues durable inbox delivery. Exact retry does not republish.",
+        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nAudience defaults to all_students. For audience=faculty, include faculty (1-120 characters); it must match an existing unarchived Student faculty, case-insensitively. Faculty is trimmed/lowercased. No custom recipients or priority input. Publication snapshots active Student recipients in the target and queues durable inbox delivery. Exact retry does not republish or resnapshot. Omit faculty for all_students.",
         "operationId": "announcements_post_api_v1_announcements",
         "requestBody": {
           "content": {
             "application/json": {
+              "examples": {
+                "all_students": {
+                  "summary": "All Students",
+                  "value": {
+                    "audience": "all_students",
+                    "content": "All residents: please attend the hostel meeting.",
+                    "request_id": "10000000-0000-4000-8000-000000000001",
+                    "title": "Hostel meeting"
+                  }
+                },
+                "faculty": {
+                  "summary": "One faculty (replace Science with an existing faculty)",
+                  "value": {
+                    "audience": "faculty",
+                    "content": "Science faculty residents: please attend the meeting.",
+                    "faculty": "Science",
+                    "request_id": "10000000-0000-4000-8000-000000000002",
+                    "title": "Faculty meeting"
+                  }
+                }
+              },
               "schema": {
                 "$ref": "#/components/schemas/PublishAnnouncement"
               }
@@ -6246,7 +6294,7 @@
                 }
               }
             },
-            "description": "announcement_conflict: request_id reused with changed payload."
+            "description": "announcement_conflict: request_id reused with changed payload or target."
           },
           "413": {
             "content": {
@@ -6288,7 +6336,7 @@
             "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
           }
         },
-        "summary": "Publish Student announcement",
+        "summary": "Publish all-Student or faculty announcement",
         "tags": [
           "Announcements"
         ],
@@ -6300,7 +6348,7 @@
     },
     "/api/v1/announcements/{announcementID}": {
       "get": {
-        "description": "Access: admin,warden,student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nReading detail does not mark an inbox item read.",
+        "description": "Access: admin,warden,student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nOther-faculty Students receive404. Current faculty and profile eligibility also apply to inbox list/count/mark-read. Reading detail does not mark an inbox item read. Faculty changes never generate retroactive alerts; original delivery/read totals remain historical.",
         "operationId": "announcements_get_api_v1_announcements_announcementID",
         "parameters": [
           {
@@ -6391,7 +6439,7 @@
             "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
           }
         },
-        "summary": "Get announcement content",
+        "summary": "Get eligible announcement content",
         "tags": [
           "Announcements"
         ],
@@ -18803,7 +18851,7 @@
       "x-module": "complaint"
     },
     {
-      "description": "Admin/Warden publications and Student audience delivery/read summaries.",
+      "description": "Admin/Warden all-Student or faculty publications, scoped Student feeds and historical delivery/read summaries.",
       "name": "Announcements",
       "x-module": "announcement"
     },

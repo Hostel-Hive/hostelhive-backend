@@ -18,6 +18,7 @@ type Announcement struct {
 	Title          string    `json:"title"`
 	Content        string    `json:"content"`
 	Audience       string    `json:"audience"`
+	Faculty        *string   `json:"faculty"`
 	Priority       string    `json:"priority"`
 	PublishedBy    string    `json:"published_by"`
 	PublishedAt    time.Time `json:"published_at"`
