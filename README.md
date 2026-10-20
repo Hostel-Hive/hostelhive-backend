@@ -6,6 +6,8 @@ This foundation implements environment configuration validation, a bounded HTTP 
 
 Pending leave/late-access cancellation: [API contract and integration rules](docs/pass-cancellation.md).
 
+Yearly Student leave allowance: [API contract and counting policy](docs/yearly-leave-allowance.md).
+
 ## Prerequisites
 
 - Go 1.27 or later: https://go.dev/dl/
