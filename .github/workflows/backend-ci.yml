@@ -67,6 +67,7 @@ jobs:
           go mod verify
           go vet ./cmd/... ./internal/... ./tests/...
           go build -o bin/hostelhive-server ./cmd/server
+          go run ./cmd/openapi -check docs/openapi.json
       - name: Install pinned migration CLI
         shell: bash
         run: |
@@ -192,6 +193,24 @@ jobs:
           path: artifacts/
           if-no-files-found: warn
           retention-days: 14
+  openapi:
+    name: OpenAPI specification validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: tools/openapi/package-lock.json
+      - name: Validate portable contract against OpenAPI 3
+        working-directory: tools/openapi
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run validate
   powershell:
     name: Windows PowerShell helper contracts
     runs-on: windows-2025

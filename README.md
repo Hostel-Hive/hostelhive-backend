@@ -10,6 +10,10 @@ Yearly Student leave allowance: [API contract and counting policy](docs/yearly-l
 
 Combined Student leave/late-access history: [API contract and Flutter integration](docs/combined-student-pass-history.md).
 
+Complete backend API: [Swagger UI setup and module tags](docs/swagger-openapi.md),
+available at `/docs/` with the portable specification at `/openapi.json`
+and [docs/openapi.json](docs/openapi.json).
+
 ## Prerequisites
 
 - Go 1.27 or later: https://go.dev/dl/

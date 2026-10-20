@@ -6,12 +6,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Hostel-Hive/hostelhive-backend/internal/apidocs"
+
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity"
 	identityhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/handler"
 )
 
 func newHandler(ping func(context.Context) error, timeout time.Duration, protected ...func(http.Handler) http.Handler) *http.ServeMux {
 	mux := http.NewServeMux()
+	apidocs.Register(mux)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
