@@ -1,5 +1,9 @@
 # Early exit and late entry - issue #74
 
+> Policy #118 supersedes the old OUT-after20:00 exemption below: both IN and OUT
+> before06:00 or at/after20:00 need Admin/Warden approval. See
+> [current movement policy](hostel-movement-policy.md). Historical records stay intact.
+
 Students request permission for a specific movement; Admin/Warden decide it.
 The authenticated Student owns the request. Neither approval nor rejection changes
 attendance, presence or Firebase RTDB counts. Only actual scans establish presence.

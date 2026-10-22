@@ -1954,6 +1954,11 @@
             "type": "string"
           },
           "incident_type": {
+            "enum": [
+              "early_exit",
+              "late_exit",
+              "late_entry"
+            ],
             "type": "string"
           },
           "occurred_at": {
@@ -6733,13 +6738,14 @@
             }
           },
           {
-            "description": "Incident type.",
+            "description": "Incident type. Late exit is OUT at/after the closing time; pre-opening OUT is early_exit.",
             "in": "query",
             "name": "incident_type",
             "required": false,
             "schema": {
               "enum": [
                 "early_exit",
+                "late_exit",
                 "late_entry"
               ],
               "type": "string"
@@ -9758,7 +9764,7 @@
     },
     "/api/v1/going-home": {
       "post": {
-        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nKnown IN presence required for a new declaration. Body has request_id only. No return time or approval. This records intention; it does not set OUT or waive restricted-hour permissions. The next recorded OUT scan marks departed.",
+        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nKnown IN presence required for a new declaration. Body has request_id only. No return time or approval. This records intention; it does not set OUT or waive restricted-hour permissions. The next recorded OUT scan marks departed.\n\nDigital signing-book entry: the app displays 'I am going home now'. Identity and declaration time are recorded by the backend. No destination, expected return, leave approval or allowance. Never substitutes for early/late movement approval.",
         "operationId": "leave_post_api_v1_going_home",
         "requestBody": {
           "content": {
@@ -10035,7 +10041,7 @@
         ]
       },
       "post": {
-        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nGenerate a request_id once and retain it on exact retry; first creation AND replay return201. Future travel time required. Owner comes from authentication; no student_id/decision fields. Submission and approval never change scanned presence. Body maximum16KiB. Error on unavailable service: late_access_unavailable.",
+        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nGenerate a request_id once and retain it on exact retry; first creation AND replay return201. Future travel time required. Owner comes from authentication; no student_id/decision fields. Submission and approval never change scanned presence. Body maximum16KiB. Error on unavailable service: late_access_unavailable.\n\nPolicy #118: permission is needed for BOTH IN and OUT before opening or at/after closing (defaults06:00 and20:00, Asia/Colombo). Normal-hour requests are rejected. Overnight OUT after closing is supported; this remains one movement, not a trip interval.",
         "operationId": "lateAccess_post_api_v1_late_access_requests",
         "requestBody": {
           "content": {
@@ -10687,43 +10693,10 @@
         ]
       },
       "post": {
-        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nGenerate a request_id once and retain it on exact retry; first creation AND replay return201. Future travel time required. Owner comes from authentication; no student_id/decision fields. Submission and approval never change scanned presence. Body maximum16KiB. Error on unavailable service: leave_unavailable.",
+        "deprecated": true,
+        "description": "Retired under hostel policy #118. Existing authentication and role checks still apply. Authorized callers receive 410 leave_workflow_retired without source reads or writes, even on exact retries. No approval or yearly allowance applies to ordinary trips. Use Going Home as an optional signing-book declaration and late-access requests for restricted-hour movements. Historical leave list/detail, reports, inbox and combined pass history remain available. No migration rewrites historical decisions.",
         "operationId": "leave_post_api_v1_leaves",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubmitLeave"
-              }
-            }
-          },
-          "description": "JSON only; unknown fields are rejected. See schema constraints and operation rules.",
-          "required": true
-        },
         "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LeaveRequest"
-                }
-              }
-            },
-            "description": "Successful operation"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "invalid_input"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
-          },
           "401": {
             "content": {
               "application/json": {
@@ -10750,44 +10723,18 @@
             },
             "description": "forbidden or setup_required: current role/account/setup does not permit access."
           },
-          "409": {
+          "410": {
             "content": {
               "application/json": {
                 "example": {
-                  "error": "conflict"
+                  "error": "leave_workflow_retired"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 }
               }
             },
-            "description": "Conflicting active request, changed request_id payload or active_student_required."
-          },
-          "413": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "payload_too_large"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Payload or export exceeds the documented limit."
-          },
-          "415": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "unsupported_media_type"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Unsupported Content-Type; send the documented raw media type."
+            "description": "leave_workflow_retired: ordinary leave approvals and allowance are retired."
           },
           "503": {
             "content": {
@@ -10803,7 +10750,7 @@
             "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
           }
         },
-        "summary": "Submit own Leave request",
+        "summary": "Retired ordinary leave workflow (410 Gone)",
         "tags": [
           "Leave"
         ],
@@ -10931,7 +10878,8 @@
     },
     "/api/v1/leaves/{leaveID}/cancel": {
       "post": {
-        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nOmit body completely, even {}. Owner-only pending withdrawal; cancelled records remain in history. Exact retry preserves FIRST cancelled_at/cancelled_by. Does not create a decision, notification or attendance change. Another Student's record returns404 regardless of state.",
+        "deprecated": true,
+        "description": "Retired under hostel policy #118. Existing authentication and role checks still apply. Authorized callers receive 410 leave_workflow_retired without source reads or writes, even on exact retries. No approval or yearly allowance applies to ordinary trips. Use Going Home as an optional signing-book declaration and late-access requests for restricted-hour movements. Historical leave list/detail, reports, inbox and combined pass history remain available. No migration rewrites historical decisions.",
         "operationId": "leave_post_api_v1_leaves_leaveID_cancel",
         "parameters": [
           {
@@ -10946,29 +10894,6 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LeaveRequest"
-                }
-              }
-            },
-            "description": "Successful operation"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "invalid_input"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
-          },
           "401": {
             "content": {
               "application/json": {
@@ -10995,31 +10920,18 @@
             },
             "description": "forbidden or setup_required: current role/account/setup does not permit access."
           },
-          "404": {
+          "410": {
             "content": {
               "application/json": {
                 "example": {
-                  "error": "not_found"
+                  "error": "leave_workflow_retired"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 }
               }
             },
-            "description": "not_found (including concealed inaccessible records where applicable)"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "conflict"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Already approved/rejected or active_student_required; approved/consumed requests cannot be cancelled."
+            "description": "leave_workflow_retired: ordinary leave approvals and allowance are retired."
           },
           "503": {
             "content": {
@@ -11035,7 +10947,7 @@
             "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
           }
         },
-        "summary": "Cancel own pending Leave request",
+        "summary": "Retired ordinary leave workflow (410 Gone)",
         "tags": [
           "Leave"
         ],
@@ -11046,7 +10958,8 @@
     },
     "/api/v1/leaves/{leaveID}/decision": {
       "post": {
-        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nOnly pending requests may transition. Exact decision replay by the original actor preserves timestamp. Rejection requires a nonblank note. Cancellation/approval races have one winner. For late access, permission applies to one movement within +/-30 minutes of expected_at and is consumed by a matching scan.",
+        "deprecated": true,
+        "description": "Retired under hostel policy #118. Existing authentication and role checks still apply. Authorized callers receive 410 leave_workflow_retired without source reads or writes, even on exact retries. No approval or yearly allowance applies to ordinary trips. Use Going Home as an optional signing-book declaration and late-access requests for restricted-hour movements. Historical leave list/detail, reports, inbox and combined pass history remain available. No migration rewrites historical decisions.",
         "operationId": "leave_post_api_v1_leaves_leaveID_decision",
         "parameters": [
           {
@@ -11060,41 +10973,7 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LeaveDecision"
-              }
-            }
-          },
-          "description": "JSON only; unknown fields are rejected. See schema constraints and operation rules.",
-          "required": true
-        },
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LeaveRequest"
-                }
-              }
-            },
-            "description": "Successful operation"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "invalid_input"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
-          },
           "401": {
             "content": {
               "application/json": {
@@ -11121,57 +11000,18 @@
             },
             "description": "forbidden or setup_required: current role/account/setup does not permit access."
           },
-          "404": {
+          "410": {
             "content": {
               "application/json": {
                 "example": {
-                  "error": "not_found"
+                  "error": "leave_workflow_retired"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 }
               }
             },
-            "description": "not_found (including concealed inaccessible records where applicable)"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "conflict"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "State/time conflict or ineligible Student for approval."
-          },
-          "413": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "payload_too_large"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Payload or export exceeds the documented limit."
-          },
-          "415": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "unsupported_media_type"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Unsupported Content-Type; send the documented raw media type."
+            "description": "leave_workflow_retired: ordinary leave approvals and allowance are retired."
           },
           "503": {
             "content": {
@@ -11187,7 +11027,7 @@
             "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
           }
         },
-        "summary": "Approve or reject Leave request",
+        "summary": "Retired ordinary leave workflow (410 Gone)",
         "tags": [
           "Leave"
         ],
@@ -11429,46 +11269,10 @@
     },
     "/api/v1/me/leave-allowance": {
       "get": {
-        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nInformational18-day allowance, never blocks requests. Only currently approved leave counts. Each Colombo date touched by [starts_at,ends_at) counts once; union overlaps, split across calendar years, include future approved leave. Midnight-exclusive ends do not charge the next date. Pending/rejected/cancelled, late access and Going Home do not count. remaining_days=max(18-used_days,0); exceeded_days=max(used_days-18,0). No selectors or body.",
+        "deprecated": true,
+        "description": "Retired under hostel policy #118. Existing authentication and role checks still apply. Authorized callers receive 410 leave_workflow_retired without source reads or writes, even on exact retries. No approval or yearly allowance applies to ordinary trips. Use Going Home as an optional signing-book declaration and late-access requests for restricted-hour movements. Historical leave list/detail, reports, inbox and combined pass history remain available. No migration rewrites historical decisions.",
         "operationId": "leave_get_api_v1_me_leave_allowance",
-        "parameters": [
-          {
-            "description": "Optional FOUR-digit year (0001..9998); defaults to current Asia/Colombo year.",
-            "in": "query",
-            "name": "year",
-            "required": false,
-            "schema": {
-              "example": 2026,
-              "maximum": 9998,
-              "minimum": 1,
-              "type": "integer"
-            }
-          }
-        ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LeaveAllowance"
-                }
-              }
-            },
-            "description": "Successful operation"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "example": {
-                  "error": "invalid_input"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
-          },
           "401": {
             "content": {
               "application/json": {
@@ -11495,18 +11299,18 @@
             },
             "description": "forbidden or setup_required: current role/account/setup does not permit access."
           },
-          "409": {
+          "410": {
             "content": {
               "application/json": {
                 "example": {
-                  "error": "conflict"
+                  "error": "leave_workflow_retired"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 }
               }
             },
-            "description": "active_student_required."
+            "description": "leave_workflow_retired: ordinary leave approvals and allowance are retired."
           },
           "503": {
             "content": {
@@ -11522,7 +11326,7 @@
             "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
           }
         },
-        "summary": "Get own yearly leave allowance summary",
+        "summary": "Retired ordinary leave workflow (410 Gone)",
         "tags": [
           "Leave"
         ],
@@ -11533,7 +11337,7 @@
     },
     "/api/v1/me/passes": {
       "get": {
-        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nOrder: created_at DESC, type ASC (C/ASCII), source_id DESC. Use (type,source_id) for list identity; source_id addresses existing detail/cancel endpoints. Type-specific fields are null when inapplicable. Total and items share one snapshot, including empty pages. Separate requests can shift offsets after writes. Includes cancelled and consumed approvals; excludes Going Home. Reads do not modify sources or attendance. No student_id/user_id selectors.",
+        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nOrder: created_at DESC, type ASC (C/ASCII), source_id DESC. Use (type,source_id) for list identity; source_id addresses existing detail/cancel endpoints. Type-specific fields are null when inapplicable. Total and items share one snapshot, including empty pages. Separate requests can shift offsets after writes. Includes cancelled and consumed approvals; excludes Going Home. Reads do not modify sources or attendance. No student_id/user_id selectors.\n\nLeave items are historical and read-only under policy #118; do not offer leave cancellation or decision actions. Late-access requests remain active and may be cancelled while pending.",
         "operationId": "leave_get_api_v1_me_passes",
         "parameters": [
           {
@@ -18836,12 +18640,12 @@
       "x-module": "attendance"
     },
     {
-      "description": "Leave decisions, cancellation, Going Home declarations, informational yearly allowance and combined pass history. Only recorded scans change physical presence.",
+      "description": "Going Home signing-book declarations and historical leave/pass reads. Ordinary leave submission, decisions, cancellation and yearly allowance are retired with410; historical records are preserved. Only recorded scans change physical presence.",
       "name": "Leave",
       "x-module": "leave"
     },
     {
-      "description": "One movement per request: direction, expected_at and reason. Default local restrictions: exit before06:00, entry from20:00 through before06:00. No departure/return interval or destination fields.",
+      "description": "One movement per request: direction, expected_at and reason. Both IN and OUT require Admin/Warden approval before06:00 or at/after20:00, Asia/Colombo by default. No departure/return interval or destination fields.",
       "name": "Late Access",
       "x-module": "lateaccess"
     },

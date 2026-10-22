@@ -162,7 +162,8 @@ func TestPendingPassCancellation(t *testing.T) {
 	snapshot := func(t *testing.T) string {
 		return scalar(t, `SELECT jsonb_build_object('presence',(SELECT to_jsonb(p) FROM hostelhive.student_presence p WHERE student_id=$1),'events',(SELECT jsonb_agg(to_jsonb(e) ORDER BY event_id) FROM hostelhive.attendance_events e WHERE student_id=$1),'publication',(SELECT to_jsonb(p) FROM hostelhive.attendance_publication p),'alerts',(SELECT jsonb_agg(to_jsonb(e) ORDER BY event_id) FROM hostelhive.notification_events e),'outbox',(SELECT jsonb_agg(to_jsonb(o) ORDER BY event_id,recipient_id) FROM hostelhive.notification_outbox o))::text`, sid)
 	}
-	for _, base := range []string{"/api/v1/leaves", "/api/v1/late-access-requests"} {
+	// Ordinary leave writes are retired; the active cancellation workflow is late access.
+	for _, base := range []string{"/api/v1/late-access-requests"} {
 		t.Run(base, func(t *testing.T) {
 			n := 0
 			makeBody := func(at time.Time) string {
@@ -347,7 +348,12 @@ func TestPendingPassCancellation(t *testing.T) {
 	if final.ConsumedAt == nil || final.CancelledAt != nil || final.Status != "approved" {
 		t.Fatal(final)
 	}
-	// Report totals include the new state, including archived history and empty pages.
+	// Seed legacy cancelled leave directly: the public leave write routes are
+	// retired, but reports and rollback must still preserve historical records.
+	legacyRequestID := uuid.NewString()
+	exec(t, `INSERT INTO hostelhive.leave_requests(request_id,student_id,submitted_by,starts_at,ends_at,reason) VALUES($1,$2,$3,clock_timestamp()+interval '1 day',clock_timestamp()+interval '2 days','Historical cancellation')`, legacyRequestID, sid, users["student"])
+	exec(t, `UPDATE hostelhive.leave_requests SET status='cancelled',cancelled_at=clock_timestamp(),cancelled_by=submitted_by WHERE student_id=$1 AND request_id=$2`, sid, legacyRequestID)
+	// Report totals include archived history and empty pages.
 	exec(t, `UPDATE hostelhive.students SET deleted_at=clock_timestamp(),deleted_by=$2 WHERE student_id=$1`, sid, users["admin"])
 	reports := rservice.NewLeaves(rrepo.NewLeaves(pool), time.UTC)
 	today := time.Now().UTC().Format("2006-01-02")

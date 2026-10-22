@@ -1,5 +1,9 @@
 # HostelHive mobile integration handoff
 
+> Policy #118: use [the current movement contract](../hostel-movement-policy.md).
+> Older packaged HTML/Postman/PDF handoffs describe superseded leave approval and
+> allowance behavior; use the current Markdown guide and generated Swagger instead.
+
 Updated: 19 October 2026.
 
 ## Start here

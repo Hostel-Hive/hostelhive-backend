@@ -488,6 +488,67 @@ func TestAttendancePermissionChecks(t *testing.T) {
 	if e != nil || len(history.Items) < 1 {
 		t.Fatal(history, e)
 	}
+	// #118: nighttime exits need permission and have a distinct incident label.
+	nightUTC := time.Now().UTC()
+	nightSeconds := nightUTC.Hour()*3600 + nightUTC.Minute()*60 + nightUTC.Second()
+	nightPolicy := accessd.Policy{Location: time.FixedZone("test-night-hostel", 23*3600-nightSeconds), ExitOpening: 360, EntryDeadline: 1200}
+	nightStore := repo.NewDevicesWithPolicy(pool, nightPolicy)
+	nightScans := svc.NewScans(nightStore, time.Nanosecond)
+	nightRecord := func(dev d.Device, s subject, id string) d.Event {
+		t.Helper()
+		v, err := nightScans.Record(ctx, dev, dto.Scan{EventID: id, QR: s.qr})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	lateExitSubject := newSubject()
+	nightRecord(entry, lateExitSubject, uuid.NewString())
+	lateExit := nightRecord(exit, lateExitSubject, uuid.NewString())
+	if lateExit.AccessResult != "unapproved" || lateExit.IncidentID == nil || scalar(`SELECT status FROM hostelhive.student_presence WHERE student_id=$1`, lateExitSubject.sid) != "OUT" {
+		t.Fatal("late exit did not preserve physical presence and incident", lateExit)
+	}
+	if detail, err := incidents.Incident(ctx, prefix+"admin", *lateExit.IncidentID); err != nil || detail.IncidentType != "late_exit" {
+		t.Fatal(detail, err)
+	}
+	if retry := nightRecord(exit, lateExitSubject, lateExit.EventID); retry.IncidentID == nil || *retry.IncidentID != *lateExit.IncidentID {
+		t.Fatal("late exit replay changed incident", retry)
+	}
+	if page, err := incidents.Incidents(ctx, prefix+"admin", dto.IncidentFilter{IncidentType: "late_exit", Limit: 100}); err != nil || page.Total != 1 {
+		t.Fatal(page, err)
+	}
+	if _, err := notifications.Deliver(ctx); err != nil {
+		t.Fatal(err)
+	}
+	page, err := inbox.List(ctx, prefix+"admin", ndto.Filter{Limit: 100})
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundLateExit := false
+	for _, n := range page.Items {
+		if n.AttendanceIncidentID == *lateExit.IncidentID {
+			foundLateExit = true
+			if n.Title != "Late exit without permission" {
+				t.Fatal(n)
+			}
+		}
+	}
+	if !foundLateExit {
+		t.Fatal("late exit inbox alert missing")
+	}
+	nightApprovedSubject := newSubject()
+	nightRecord(entry, nightApprovedSubject, uuid.NewString())
+	nightApprovalID := request(nightApprovedSubject, "OUT", "approved", 0)
+	nightApprovedExit := nightRecord(exit, nightApprovedSubject, uuid.NewString())
+	if nightApprovedExit.AccessResult != "approved" || nightApprovedExit.LateAccessID == nil || *nightApprovedExit.LateAccessID != nightApprovalID || nightApprovedExit.IncidentID != nil {
+		t.Fatal(nightApprovedExit)
+	}
+	if replay := nightRecord(exit, nightApprovedSubject, nightApprovedExit.EventID); replay.AccessResult != "approved" {
+		t.Fatal(replay)
+	}
+	if scalar(`SELECT count(*)::text FROM hostelhive.late_access_requests WHERE late_access_id=$1 AND consumed_at IS NOT NULL`, nightApprovalID) != "1" {
+		t.Fatal("late exit approval not consumed exactly once")
+	}
 	// Archival/deactivation retains staff incident history; current role revokes access.
 	exec(`UPDATE hostelhive.students SET deleted_at=clock_timestamp(),deleted_by=$2 WHERE student_id=$1`, unapprovedSubject.sid, admin)
 	if _, e = incidents.Incident(ctx, prefix+"admin", *unapproved.IncidentID); e != nil {

@@ -1,5 +1,10 @@
 # HostelHive Backend
 
+Current movement policy (#118): [API changes, migration30 and rollout](docs/hostel-movement-policy.md).
+Both entry and exit require approval outside06:00 inclusive to20:00 exclusive.
+Going Home remains a no-approval signing-book declaration. Ordinary leave writes
+and yearly allowance return410; historical reads/reports remain available.
+
 Go backend for HostelHive. Maintainer: Tasheen. Repository: https://github.com/Hostel-Hive/hostelhive-backend.
 
 This foundation implements environment configuration validation, a bounded HTTP server lifecycle, structured startup/error logging and graceful shutdown. Operational endpoints provide health and PostgreSQL readiness checks. GET /api/v1/me verifies Firebase authentication and returns the current local account.

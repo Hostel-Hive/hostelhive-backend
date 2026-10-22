@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	identity "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/domain"
-	feature "github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/dto"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/handler"
@@ -50,12 +49,14 @@ type cancelAccounts struct{ account identity.Account }
 func (f cancelAccounts) FindByFirebaseUID(context.Context, string) (identity.Account, error) {
 	return f.account, nil
 }
-func TestCancelHTTP(t *testing.T) {
+func TestLegacyCancelHandler(t *testing.T) {
 	f := &cancelStore{}
 	account := identity.Account{FirebaseUID: "student", Role: "student", IsActive: true}
 	invoke := func(path, body, token string) *httptest.ResponseRecorder {
 		mux := http.NewServeMux()
-		feature.Register(handler.New(service.New(f), time.Second), mux, middleware.Middleware(cancelVerifier{}, cancelAccounts{account}, time.Second))
+		// Historical handler contract only; production routing returns410 (#118).
+		auth := middleware.Middleware(cancelVerifier{}, cancelAccounts{account}, time.Second)
+		mux.Handle("POST /api/v1/leaves/{leaveID}/cancel", auth(middleware.RequireRoles("student")(http.HandlerFunc(handler.New(service.New(f), time.Second).Cancel))))
 		r := httptest.NewRequest("POST", path, strings.NewReader(body))
 		if token != "" {
 			r.Header.Set("Authorization", "Bearer "+token)
