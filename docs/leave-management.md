@@ -1,5 +1,10 @@
 # Leave requests - issue #62
 
+> Retired by #118: submission, decision and cancellation routes return410 after
+> authentication/role checks. Leave list/detail and reports are historical reads.
+> No return date or approval is required for a trip home. See
+> [current policy](hostel-movement-policy.md); the original implementation is below.
+
 Students request extended leave; Admin/Warden approve or reject it. PostgreSQL
 stores permanent request/decision history. Approval does not update presence or
 Firebase counts: entry/exit scans remain the source of recorded presence.

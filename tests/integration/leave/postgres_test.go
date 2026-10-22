@@ -272,7 +272,7 @@ func TestLeaveWorkflow(t *testing.T) {
 	}
 	apiIn := input(192)
 	b, _ := json.Marshal(apiIn)
-	call(uid, "POST", "/api/v1/leaves", string(b), 201)
+	call(uid, "POST", "/api/v1/leaves", string(b), 410)
 	call(uid, "GET", "/api/v1/leaves?status=approved&limit=1", "", 200)
 	call(wuid, "GET", "/api/v1/leaves?student_id="+sid, "", 200)
 	call(auid, "GET", "/api/v1/leaves/"+v.LeaveID, "", 200)
@@ -284,7 +284,7 @@ func TestLeaveWorkflow(t *testing.T) {
 		t.Fatal(e)
 	}
 	apiID := apiPage.Items[0].LeaveID
-	call(wuid, "POST", "/api/v1/leaves/"+apiID+"/decision", `{"status":"approved"}`, 200)
+	call(wuid, "POST", "/api/v1/leaves/"+apiID+"/decision", `{"status":"approved"}`, 410)
 	call("", "GET", "/api/v1/leaves", "", 401)
 	for _, role := range []string{"security", "sub"} {
 		call(prefix+role, "GET", "/api/v1/leaves", "", 403)
@@ -293,9 +293,9 @@ func TestLeaveWorkflow(t *testing.T) {
 		call(uid, "GET", "/api/v1/leaves?"+q, "", 400)
 	}
 	for _, body := range []string{`{}`, string(b) + ` {}`, `{"student_id":"forged"}`, `{"reason":null}`} {
-		call(uid, "POST", "/api/v1/leaves", body, 400)
+		call(uid, "POST", "/api/v1/leaves", body, 410)
 	}
-	call(uid, "POST", "/api/v1/leaves", strings.Repeat(" ", 17000)+`{}`, 413)
+	call(uid, "POST", "/api/v1/leaves", strings.Repeat(" ", 17000)+`{}`, 410)
 	call(uid, "GET", "/api/v1/leaves", `{}`, 400)
 	call(uid, "GET", "/api/v1/leaves/bad", "", 400)
 	call(uid, "GET", "/api/v1/leaves/00000000-0000-4000-8000-000000000001", "", 404)

@@ -82,7 +82,7 @@ const projection = `n.notification_id::text,e.source_type,COALESCE(c.complaint_i
  WHEN 'leave_decided' THEN 'Your leave request is '||e.status
  WHEN 'late_access_submitted' THEN 'New late-access request'
  WHEN 'late_access_decided' THEN 'Your late-access request is '||e.status
- WHEN 'attendance_incident' THEN CASE ai.incident_type WHEN 'early_exit' THEN 'Early exit without permission' ELSE 'Late entry without permission' END
+ WHEN 'attendance_incident' THEN CASE ai.incident_type WHEN 'early_exit' THEN 'Early exit without permission' WHEN 'late_exit' THEN 'Late exit without permission' ELSE 'Late entry without permission' END
  WHEN 'announcement_published' THEN a.title END AS title,
  e.occurred_at,n.created_at,n.read_at`
 

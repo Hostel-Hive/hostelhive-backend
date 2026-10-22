@@ -11,7 +11,6 @@ import (
 	"time"
 
 	identity "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/domain"
-	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/handler"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/shared/middleware"
@@ -37,7 +36,9 @@ func TestAllowanceHTTP(t *testing.T) {
 	account := identity.Account{FirebaseUID: "student", Role: "student", IsActive: true}
 	invoke := func(method, path, body, token string) *httptest.ResponseRecorder {
 		mux := http.NewServeMux()
-		leave.RegisterAllowance(handler.NewAllowance(f, time.Second), mux, middleware.Middleware(goingHomeVerifier{}, goingHomeAccounts{account}, time.Second))
+		// Retained historical calculator, not the retired public route.
+		auth := middleware.Middleware(goingHomeVerifier{}, goingHomeAccounts{account}, time.Second)
+		mux.Handle("GET /api/v1/me/leave-allowance", auth(middleware.RequireRoles("student")(http.HandlerFunc(handler.NewAllowance(f, time.Second).Get))))
 		r := httptest.NewRequest(method, path, strings.NewReader(body))
 		if token != "" {
 			r.Header.Set("Authorization", "Bearer "+token)

@@ -115,6 +115,7 @@ func (d *document) models() {
 	d.constrain("RegisterPushDevice", "platform", object{"enum": []string{"android", "ios"}, "example": "android"})
 	d.constrain("RegisterPushDevice", "token", object{"minLength": 20, "maxLength": 4096, "pattern": "^[A-Za-z0-9:_-]+$"})
 	d.constrain("LeaveAllowance", "total_days", object{"enum": []int{18}})
+	d.constrain("Incident", "incident_type", enumeration("early_exit", "late_exit", "late_entry"))
 	d.constrain("Probe", "status", object{"enum": []string{"ok", "ready", "not_ready"}, "example": "ok"})
 	for name, fields := range map[string]map[string]int{
 		"BlockDetails": {"name": 120}, "RoomDetails": {"room_no": 32}, "CreateRoom": {"room_no": 32},

@@ -1,5 +1,10 @@
 # Going Home declarations - issue100
 
+> Confirmed by #118 as the digital signing book: display "I am going home now";
+> submit only request_id. No approval or expected return date; scans determine
+> departure. It does not waive restricted-hour approval. See
+> [current movement policy](hostel-movement-policy.md).
+
 Implemented on feature/100-going-home-declarations. Confirm the deployed revision
 and apply migration27 before using this endpoint. This document does not certify
 Flutter integration or real scanner hardware acceptance.

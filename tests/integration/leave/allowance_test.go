@@ -13,7 +13,6 @@ import (
 	"time"
 
 	identityrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/repository"
-	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/dto"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/leave/handler"
@@ -129,7 +128,10 @@ func TestYearlyLeaveAllowance(t *testing.T) {
 	exec(`INSERT INTO hostelhive.student_presence(student_id,status,updated_at,device_id,event_id) SELECT student_id,'IN',occurred_at,device_id,event_id FROM hostelhive.attendance_events WHERE device_id=$1 AND event_id=$2`, device, event)
 	store := repository.New(pool)
 	mux := http.NewServeMux()
-	leave.RegisterAllowance(handler.NewAllowance(service.NewAllowance(store), 5*time.Second), mux, middleware.Middleware(cancelVerifier{}, identityrepo.NewPostgresAccounts(pool), 5*time.Second))
+	// Exercise the retained historical calculation in isolation. The production
+	// route now returns410 and is covered by TestRetiredLeaveRoutes.
+	auth := middleware.Middleware(cancelVerifier{}, identityrepo.NewPostgresAccounts(pool), 5*time.Second)
+	mux.Handle("GET /api/v1/me/leave-allowance", auth(http.HandlerFunc(handler.NewAllowance(service.NewAllowance(store), 5*time.Second).Get)))
 	call := func(query, body, name string, want int) domain.AllowanceSummary {
 		t.Helper()
 		r := httptest.NewRequest("GET", "/api/v1/me/leave-allowance"+query, strings.NewReader(body))

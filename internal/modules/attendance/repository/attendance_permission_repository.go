@@ -33,7 +33,7 @@ func (s *Devices) evaluateAccess(ctx context.Context, tx pgx.Tx, e domain.Event)
 				result = "unapproved"
 				kind := "late_entry"
 				if e.Direction == "OUT" {
-					kind = "early_exit"
+					kind = s.accessPolicy.ExitIncidentType(e.OccurredAt)
 				}
 				if _, err = tx.Exec(ctx, `INSERT INTO hostelhive.attendance_incidents(device_id,event_id,student_id,direction,incident_type,occurred_at,hostel_timezone,exit_opening_minute,entry_deadline_minute,permission_window_seconds)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, e.DeviceID, e.EventID, e.StudentID, e.Direction, kind, e.OccurredAt, s.accessPolicy.Location.String(), s.accessPolicy.ExitOpening, s.accessPolicy.EntryDeadline, int(domain.PermissionWindow.Seconds())); err != nil {

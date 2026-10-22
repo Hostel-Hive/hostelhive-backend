@@ -206,14 +206,14 @@ func TestLateAccessWorkflow(t *testing.T) {
 	for _, test := range []struct {
 		hour      int
 		direction string
-	}{{19, "IN"}, {6, "OUT"}, {20, "OUT"}} {
+	}{{19, "IN"}, {6, "OUT"}, {19, "OUT"}} {
 		_, e = s.Submit(ctx, uid, makeInput(31, test.hour, test.direction))
 		expect(e, domain.ErrInvalid)
 	}
 	for _, test := range []struct {
 		hour      int
 		direction string
-	}{{20, "IN"}, {5, "OUT"}, {1, "IN"}} {
+	}{{20, "IN"}, {5, "OUT"}, {1, "IN"}, {20, "OUT"}, {23, "OUT"}} {
 		req, e := s.Submit(ctx, uid, makeInput(32, test.hour, test.direction))
 		if e != nil {
 			t.Fatal(e)

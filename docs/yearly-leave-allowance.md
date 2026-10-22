@@ -1,5 +1,10 @@
 # Yearly Student leave allowance (#102)
 
+> Retired by #118: GET /api/v1/me/leave-allowance now returns410
+> leave_workflow_retired after authentication/role checks. Remove the usage ring.
+> The calculation below is historical, not current hostel policy. See
+> [current movement policy](hostel-movement-policy.md).
+
 Students can read their own calendar-year allowance summary for the mobile Passes
 usage ring. This is informational: reaching 18 days does not block submission or
 staff approval. It does not change attendance or consume an approved permission.

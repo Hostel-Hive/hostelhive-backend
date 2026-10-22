@@ -1,5 +1,9 @@
 # Pending leave and late-access cancellation (#101)
 
+> Policy #118: only late-access cancellation remains active. Ordinary leave
+> cancellation returns410 leave_workflow_retired. Existing cancelled history
+> remains readable. See [current policy](hostel-movement-policy.md).
+
 Students may withdraw their own pending leave or late-access request. Approved,
 rejected and consumed requests cannot be cancelled. Going Home is outside this ticket.
 

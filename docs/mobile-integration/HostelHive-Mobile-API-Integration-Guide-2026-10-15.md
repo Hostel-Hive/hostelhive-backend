@@ -1,5 +1,11 @@
 # HostelHive Mobile API Integration Guide
 
+> Policy #118 supersedes the leave and timing instructions below: both IN and OUT
+> require approval outside [06:00,20:00), Asia/Colombo. Going Home is a no-approval
+> signing-book declaration with no expected return date. Leave writes and allowance
+> return410; retain historical reads and remove leave actions/usage ring. Apply
+> migration30 with a coordinated deployment. See [current contract](../hostel-movement-policy.md).
+
 > Faculty announcement update (20 October 2026, migration29): Students see global
 > notices plus notices for their current faculty. Inbox/read access uses the same
 > scope. Admin/Warden can publish with `audience: faculty` and a `faculty` value;
