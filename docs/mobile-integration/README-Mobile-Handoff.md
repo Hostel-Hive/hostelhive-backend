@@ -1,5 +1,10 @@
 # HostelHive mobile integration handoff
 
+> Student self-service editing is available through
+> [PATCH /api/v1/me/student-profile](../student-self-profile-editing.md) for both
+> mobile and web clients. Older packaged HTML/Postman/PDF files do not include it;
+> use the current Markdown contract and generated Swagger.
+
 > Policy #118: use [the current movement contract](../hostel-movement-policy.md).
 > Older packaged HTML/Postman/PDF handoffs describe superseded leave approval and
 > allowance behavior; use the current Markdown guide and generated Swagger instead.

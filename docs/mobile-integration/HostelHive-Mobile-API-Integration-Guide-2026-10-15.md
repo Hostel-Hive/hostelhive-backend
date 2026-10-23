@@ -1,5 +1,11 @@
 # HostelHive Mobile API Integration Guide
 
+> Student self-editing update (23 October 2026): PATCH /api/v1/me/student-profile
+> supports contact_phone and complete guardian replacement for the authenticated
+> Student, on mobile or web. Omit other fields; identity/academic/account fields
+> remain protected. See [the full editing contract](../student-self-profile-editing.md).
+> No database migration is needed. Frontend editing screens are separate work.
+
 > Policy #118 supersedes the leave and timing instructions below: both IN and OUT
 > require approval outside [06:00,20:00), Asia/Colombo. Going Home is a no-approval
 > signing-book declaration with no expected return date. Leave writes and allowance

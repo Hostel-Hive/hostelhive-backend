@@ -3774,6 +3774,58 @@
         ],
         "type": "object"
       },
+      "PatchOwnStudentProfile": {
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "contact_phone": {
+            "description": "Omit to preserve. Trimmed; at least seven digits required. Null/empty is invalid.",
+            "example": "0771234567",
+            "maxLength": 32,
+            "minLength": 7,
+            "nullable": false,
+            "pattern": "^[+()0-9 -]{7,32}$",
+            "type": "string"
+          },
+          "guardians": {
+            "description": "Omit to preserve existing guardians and IDs. When supplied, replaces the complete list atomically; use the IDs returned in the response, not old IDs. Null/empty and guardian_id input are invalid.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "contact_phone": {
+                  "example": "0771234567",
+                  "maxLength": 32,
+                  "minLength": 7,
+                  "pattern": "^[+()0-9 -]{7,32}$",
+                  "type": "string"
+                },
+                "name": {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "relationship": {
+                  "example": "Parent",
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "contact_phone",
+                "name",
+                "relationship"
+              ],
+              "type": "object"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "nullable": false,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "Presence": {
         "properties": {
           "status": {
@@ -12095,6 +12147,131 @@
           }
         },
         "summary": "Get own profile, guardians, accommodation and presence",
+        "tags": [
+          "Students"
+        ],
+        "x-roles": [
+          "student"
+        ]
+      },
+      "patch": {
+        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nAvailable to authenticated Student clients on mobile or web; no platform-based authorization. Identity is derived from the current account. Only contact_phone and guardians are accepted; at least one must be supplied. Omitted fields stay unchanged. Guardians is a complete replacement list (1-10), not per-guardian PATCH; do not send guardian_id. Explicit null, empty object, unknown fields, duplicate JSON keys and every query parameter are rejected. Input is trimmed and validated. Staff-managed identity, academic, photo, allocation, email, role and scanned presence are never editable here. Updates are atomic and return the same safe aggregate as GET; phone-only edits preserve guardian IDs. Existing Admin/Warden PUT remains unchanged. No email/password changes or attendance actions occur.",
+        "operationId": "students_patch_api_v1_me_student_profile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchOwnStudentProfile"
+              }
+            }
+          },
+          "description": "JSON only; unknown fields are rejected. See schema constraints and operation rules.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnStudentProfile"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "not_found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found: no unarchived Student profile."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "payload_too_large"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "payload_too_large: maximum16KiB JSON."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unsupported_media_type"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unsupported Content-Type; send the documented raw media type."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "Edit own contact phone and guardian details",
         "tags": [
           "Students"
         ],
