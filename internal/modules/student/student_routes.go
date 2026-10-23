@@ -50,3 +50,7 @@ func RegisterOwnProfile(a *handler.OwnProfileAPI, mux *http.ServeMux, authentica
 	mux.Handle("GET /api/v1/me/student-profile", protect(a.Get))
 	mux.Handle("GET /api/v1/me/student-profile/image", protect(a.Image))
 }
+
+func RegisterOwnProfileEdit(a *handler.OwnProfileEditAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("PATCH /api/v1/me/student-profile", authenticate(authentication.RequireRoles(domain.RoleStudent)(http.HandlerFunc(a.Patch))))
+}

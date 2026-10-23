@@ -26,6 +26,19 @@ func (s *Store) OwnProfile(ctx context.Context, actor string) (d.OwnProfile, err
 	if err = tx.QueryRow(ctx, "SELECT s.student_id::text FROM hostelhive.students s JOIN hostelhive.users u USING(user_id) WHERE u.firebase_uid=$1 AND s.deleted_at IS NULL", actor).Scan(&id); err != nil {
 		return result, dbError(err)
 	}
+	result, err = ownProfile(ctx, tx, id)
+	if err != nil {
+		return result, err
+	}
+	if tx.Commit(ctx) != nil {
+		return d.OwnProfile{}, d.ErrUnavailable
+	}
+	return result, nil
+}
+
+// Called inside either the read snapshot or the owning Student's update transaction.
+func ownProfile(ctx context.Context, tx pgx.Tx, id string) (d.OwnProfile, error) {
+	var result d.OwnProfile
 	p, err := get(ctx, tx, id)
 	if err != nil {
 		return result, err
@@ -47,9 +60,6 @@ func (s *Store) OwnProfile(ctx context.Context, actor string) (d.OwnProfile, err
 	err = tx.QueryRow(ctx, "SELECT status,updated_at FROM hostelhive.student_presence WHERE student_id=$1", id).Scan(&result.Presence.Status, &result.Presence.UpdatedAt)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return result, d.ErrUnavailable
-	}
-	if tx.Commit(ctx) != nil {
-		return d.OwnProfile{}, d.ErrUnavailable
 	}
 	return result, nil
 }

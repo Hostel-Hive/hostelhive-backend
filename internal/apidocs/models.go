@@ -59,7 +59,7 @@ func (d *document) models() {
 	}{})
 	for name, v := range map[string]any{
 		"ProvisionAccount": identitydto.Input{}, "ChangeRole": identitydto.RoleInput{}, "RegisterStudent": identitydto.StudentInvitationInput{}, "ResendInvitation": identitydto.InvitationResend{},
-		"CreateStudent": studentdto.CreateInput{}, "StudentDetails": studentdto.Details{}, "StaffDetails": staffdto.Details{}, "SelfStaffDetails": staffdto.SelfDetails{},
+		"CreateStudent": studentdto.CreateInput{}, "StudentDetails": studentdto.Details{}, "PatchOwnStudentProfile": studentdto.OwnProfilePatch{}, "StaffDetails": staffdto.Details{}, "SelfStaffDetails": staffdto.SelfDetails{},
 		"BlockDetails": inventorydto.BlockDetails{}, "CreateRoom": inventorydto.CreateRoom{}, "RoomDetails": inventorydto.RoomDetails{}, "CreateBed": inventorydto.CreateBed{}, "BedDetails": inventorydto.BedDetails{},
 		"AssignBed": allocationdto.Assign{}, "TransferBed": allocationdto.Transfer{}, "RegisterScanner": attendancedto.RegisterDevice{}, "SetScannerDirection": attendancedto.SetDirection{}, "RecordScan": attendancedto.Scan{},
 		"SubmitLeave": leavedto.Submit{}, "LeaveDecision": leavedto.Decision{}, "GoingHomeInput": leavedto.GoingHomeInput{}, "SubmitLateAccess": latedto.Submit{}, "LateAccessDecision": latedto.Decision{},
@@ -117,6 +117,19 @@ func (d *document) models() {
 	d.constrain("LeaveAllowance", "total_days", object{"enum": []int{18}})
 	d.constrain("Incident", "incident_type", enumeration("early_exit", "late_exit", "late_entry"))
 	d.constrain("Probe", "status", object{"enum": []string{"ok", "ready", "not_ready"}, "example": "ok"})
+	d.schemas["PatchOwnStudentProfile"].(object)["minProperties"] = 1
+	d.constrain("PatchOwnStudentProfile", "contact_phone", object{"nullable": false, "minLength": 7, "maxLength": 32, "pattern": "^[+()0-9 -]{7,32}$", "description": "Omit to preserve. Trimmed; at least seven digits required. Null/empty is invalid."})
+	d.constrain("PatchOwnStudentProfile", "guardians", object{"nullable": false, "minItems": 1, "maxItems": 10, "description": "Omit to preserve existing guardians and IDs. When supplied, replaces the complete list atomically; use the IDs returned in the response, not old IDs. Null/empty and guardian_id input are invalid."})
+	guardianPatch := d.schemas["PatchOwnStudentProfile"].(object)["properties"].(object)["guardians"].(object)["items"].(object)
+	guardianPatch["additionalProperties"] = false
+	for name, max := range map[string]int{"name": 200, "relationship": 80, "contact_phone": 32} {
+		property := guardianPatch["properties"].(object)[name].(object)
+		property["minLength"], property["maxLength"] = 1, max
+		if name == "contact_phone" {
+			property["minLength"] = 7
+			property["pattern"] = "^[+()0-9 -]{7,32}$"
+		}
+	}
 	for name, fields := range map[string]map[string]int{
 		"BlockDetails": {"name": 120}, "RoomDetails": {"room_no": 32}, "CreateRoom": {"room_no": 32},
 		"BedDetails": {"bed_no": 32}, "CreateBed": {"bed_no": 32},

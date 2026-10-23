@@ -1,5 +1,9 @@
 # HostelHive Backend
 
+Student self-service profile editing: [PATCH contract for mobile and web](docs/student-self-profile-editing.md).
+Students can edit their own contact phone and guardian details. No new migration
+is required; staff-managed fields and existing Admin/Warden editing are unchanged.
+
 Current movement policy (#118): [API changes, migration30 and rollout](docs/hostel-movement-policy.md).
 Both entry and exit require approval outside06:00 inclusive to20:00 exclusive.
 Going Home remains a no-approval signing-book declaration. Ordinary leave writes
