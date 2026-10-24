@@ -176,10 +176,12 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	student.RegisterImport(shandler.NewImportAPI(sservice.NewImporter(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	student.RegisterQR(shandler.NewQRAPI(sservice.NewQRs(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	var images shandler.ImageService
+	var ownImages shandler.OwnImageService
 	var complaintObjects complaintservice.ImageObjects
 	if cfg.R2Enabled {
 		objects := objectstorage.New(cfg.R2AccountID, cfg.R2Bucket, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.StudentProfileTimeout)
 		images = sservice.NewImages(studentStore, objects)
+		ownImages = sservice.NewOwnImages(studentStore, srepo.NewOwnImages(studentStore), objects)
 		complaintObjects = objects
 		cleanupCtx, stopCleanup := context.WithCancel(ctx)
 		cleanupDone := make(chan struct{})
@@ -197,6 +199,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	student.RegisterOwnProfile(shandler.NewOwnProfileAPI(sservice.NewOwnProfiles(studentStore), images, cfg.StudentProfileTimeout), handler, protected)
 	student.RegisterOwnProfileEdit(shandler.NewOwnProfileEditAPI(sservice.NewOwnProfileEditor(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	student.RegisterImages(shandler.NewImageAPI(images, cfg.StudentProfileTimeout), handler, protected)
+	student.RegisterOwnImages(shandler.NewOwnImageAPI(ownImages, cfg.StudentProfileTimeout), handler, protected)
 	complaint.RegisterImages(complainthandler.NewImageAPI(complaintservice.NewImages(complaintStore, complaintObjects), cfg.StudentProfileTimeout), handler, protected)
 	srv := &http.Server{
 		Handler:           handler,

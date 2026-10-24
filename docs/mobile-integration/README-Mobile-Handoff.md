@@ -1,5 +1,10 @@
 # HostelHive mobile integration handoff
 
+> Student-owned photo upload and removal: use
+> [PUT/DELETE /api/v1/me/student-profile/image](../student-own-profile-photo.md).
+> Both mobile and web are supported. Older packaged HTML/PDF/Postman files do not
+> include these endpoints; use the current Markdown contract and generated Swagger.
+
 > Student self-service editing is available through
 > [PATCH /api/v1/me/student-profile](../student-self-profile-editing.md) for both
 > mobile and web clients. Older packaged HTML/Postman/PDF files do not include it;

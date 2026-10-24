@@ -1,5 +1,9 @@
 # Student profile images — issue #30
 
+Students can now manage their own photo through the separate authenticated
+[own photo PUT/DELETE contract](student-own-profile-photo.md). The staff endpoints
+and shared private R2 lifecycle below retain their existing permissions.
+
 FR008 requires profile-image uploads. SDS architecture section 1.2 specifies
 Cloudflare R2 for profile photos; the selected implementation baseline requires
 private objects. FR006, FR007 and FR009 already have CRUD/details/search support.

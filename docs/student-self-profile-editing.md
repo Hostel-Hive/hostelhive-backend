@@ -1,5 +1,8 @@
 # Student self-service profile editing
 
+Photo editing uses separate [own photo PUT/DELETE endpoints](student-own-profile-photo.md).
+The profile PATCH body continues to accept contact phone and guardians only.
+
 `PATCH /api/v1/me/student-profile` lets an active Student update their own contact
 phone and guardian details from mobile or web. It uses the current Firebase ID
 token, not an account or Student ID supplied by the client. The existing staff

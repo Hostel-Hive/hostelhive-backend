@@ -1,5 +1,8 @@
 # HostelHive Backend
 
+Student self-service photos: [upload, replacement and removal contract](docs/student-own-profile-photo.md)
+for both mobile and web. Uses the existing private R2 storage and schema; no migration.
+
 Student self-service profile editing: [PATCH contract for mobile and web](docs/student-self-profile-editing.md).
 Students can edit their own contact phone and guardian details. No new migration
 is required; staff-managed fields and existing Admin/Warden editing are unchanged.

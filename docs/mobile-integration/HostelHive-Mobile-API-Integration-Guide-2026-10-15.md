@@ -1,5 +1,11 @@
 # HostelHive Mobile API Integration Guide
 
+> Student-owned photos (24 October 2026): PUT and DELETE
+> /api/v1/me/student-profile/image support upload/replacement and removal for
+> both mobile and web. Upload raw JPEG/PNG bytes, not multipart or JSON.
+> See [the photo contract](../student-own-profile-photo.md) and current Swagger.
+> Existing packaged HTML/PDF/Postman versions do not include these endpoints.
+
 > Student self-editing update (23 October 2026): PATCH /api/v1/me/student-profile
 > supports contact_phone and complete guardian replacement for the authenticated
 > Student, on mobile or web. Omit other fields; identity/academic/account fields
