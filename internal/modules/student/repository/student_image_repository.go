@@ -18,7 +18,10 @@ func lockStudent(ctx context.Context, tx pgx.Tx, id string) error {
 	return nil
 }
 func (r *Store) ReserveImage(ctx context.Context, actor, id string, m d.Image) error {
-	tx, err := r.begin(ctx, actor)
+	return reserveImage(ctx, actor, id, m, r.begin)
+}
+func reserveImage(ctx context.Context, actor, id string, m d.Image, begin imageBegin) error {
+	tx, err := begin(ctx, actor)
 	if err != nil {
 		return err
 	}
@@ -40,7 +43,10 @@ type imageWork struct {
 
 func (w *imageWork) Close() { rollback(w.tx) }
 func (r *Store) BeginImage(ctx context.Context, actor, id, key string) (s.ImageWork, error) {
-	tx, err := r.begin(ctx, actor)
+	return beginImage(ctx, actor, id, key, r.begin)
+}
+func beginImage(ctx context.Context, actor, id, key string, begin imageBegin) (s.ImageWork, error) {
+	tx, err := begin(ctx, actor)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +94,13 @@ func (r *Store) GetImage(ctx context.Context, id string) (d.Image, error) {
 	return m, nil
 }
 func (r *Store) RemoveImage(ctx context.Context, actor, id string) error {
-	tx, err := r.begin(ctx, actor)
+	return removeImage(ctx, actor, id, r.begin)
+}
+
+type imageBegin func(context.Context, string) (pgx.Tx, error)
+
+func removeImage(ctx context.Context, actor, id string, begin imageBegin) error {
+	tx, err := begin(ctx, actor)
 	if err != nil {
 		return err
 	}

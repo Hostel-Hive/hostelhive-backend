@@ -3479,6 +3479,23 @@
         ],
         "type": "object"
       },
+      "OwnStudentImageResult": {
+        "properties": {
+          "profile_image_url": {
+            "type": "string"
+          },
+          "student_id": {
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_image_url",
+          "student_id"
+        ],
+        "type": "object"
+      },
       "OwnStudentProfile": {
         "properties": {
           "accommodation": {
@@ -12281,6 +12298,87 @@
       }
     },
     "/api/v1/me/student-profile/image": {
+      "delete": {
+        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nMobile and web. Omit body and query parameters. Repeated removal returns204 for an eligible profile even if no photo remains. Private R2 must be enabled, otherwise503 student_images_unavailable. Removal clears the reference immediately and queues durable storage cleanup. No other profile fields or scan-derived presence are changed.",
+        "operationId": "students_delete_api_v1_me_student_profile_image",
+        "responses": {
+          "204": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "not_found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Student profile missing or archived."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "Remove own private profile photo",
+        "tags": [
+          "Students"
+        ],
+        "x-roles": [
+          "student"
+        ]
+      },
       "get": {
         "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\n404 for missing profile/photo as applicable. Authenticated download; selectors and GET bodies are rejected.",
         "operationId": "students_get_api_v1_me_student_profile_image",
@@ -12388,6 +12486,140 @@
           }
         },
         "summary": "Download own private profile photo",
+        "tags": [
+          "Students"
+        ],
+        "x-roles": [
+          "student"
+        ]
+      },
+      "put": {
+        "description": "Access: student. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nMobile and web: send raw JPEG or PNG bytes, not multipart or JSON. Maximum5MiB,12 million decoded pixels,4096 pixels per axis. Only the authenticated active, setup-complete Student is targeted; query selectors are rejected. Private R2 required, otherwise503 student_images_unavailable. Failed validation or replacement preserves the current photo. Superseded and orphan objects use durable cleanup. Response contains the authenticated download path, never a public storage URL.",
+        "operationId": "students_put_api_v1_me_student_profile_image",
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "format": "binary",
+                "maxLength": 5242880,
+                "type": "string"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "format": "binary",
+                "maxLength": 5242880,
+                "type": "string"
+              }
+            }
+          },
+          "description": "Raw JPEG or PNG bytes, maximum5MiB; not multipart, JSON or base64. Decoded image dimensions are also validated.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnStudentImageResult"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "not_found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Student profile missing or archived."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "payload_too_large"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Payload or export exceeds the documented limit."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unsupported_media_type"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unsupported Content-Type; send the documented raw media type."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "Upload or replace own private profile photo",
         "tags": [
           "Students"
         ],

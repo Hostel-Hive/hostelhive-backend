@@ -29,7 +29,8 @@ import (
 
 func (d *document) models() {
 	for name, v := range map[string]any{
-		"Account": identity.Account{}, "AccountPage": identity.AccountPage{}, "AccountChange": identity.AccountChange{}, "ProvisionResult": identitydto.Result{},
+		"OwnStudentImageResult": studentdomain.OwnImageResult{},
+		"Account":               identity.Account{}, "AccountPage": identity.AccountPage{}, "AccountChange": identity.AccountChange{}, "ProvisionResult": identitydto.Result{},
 		"Invitation": identity.StudentInvitation{}, "InvitationPage": identity.InvitationPage{}, "SetupResult": identity.SetupResult{}, "InvitationImportReport": identityservice.InvitationImportReport{},
 		"StudentProfile": studentdomain.Profile{}, "StudentPage": studentdomain.Page{}, "OwnStudentProfile": studentdomain.OwnProfile{}, "StudentImportReport": studentdomain.ImportReport{},
 		"StaffProfile": staff.Profile{}, "StaffPage": staff.Page{},
