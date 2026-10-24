@@ -1,5 +1,8 @@
 # HostelHive Backend
 
+Direct browser access from Vercel: set the backend's `CORS_ALLOWED_ORIGINS` and
+deploy the [browser CORS configuration](docs/browser-cors.md). No migration is needed.
+
 Student self-service photos: [upload, replacement and removal contract](docs/student-own-profile-photo.md)
 for both mobile and web. Uses the existing private R2 storage and schema; no migration.
 
