@@ -146,7 +146,7 @@ func TestInvitationGmailAndUniversityDomains(t *testing.T) {
 func invitationCSV(vs ...dto.StudentInvitationInput) []byte {
 	var b strings.Builder
 	w := csv.NewWriter(&b)
-	_ = w.Write(strings.Split(InvitationCSVHeader, ","))
+	_ = w.Write(strings.Split("request_id,"+InvitationCSVHeader, ","))
 	for _, v := range vs {
 		g, _ := json.Marshal(v.Guardians)
 		_ = w.Write([]string{v.RequestID, v.Email, v.IndexNo, v.FullName, v.Faculty, "1", v.ContactPhone, string(g)})
@@ -190,5 +190,52 @@ func TestInvitationCSVContractAndPartialResults(t *testing.T) {
 	r, e := s.Import(ctx, "admin", "127.0.0.1", invitationCSV(good))
 	if e != nil || r.NotAttempted != 1 {
 		t.Fatal("interruption", r, e)
+	}
+}
+
+func TestEmailCSVStableKeysAndRegistration(t *testing.T) {
+	repo := &invitationRepoFake{}
+	s := NewInvitations(repo, nil, []string{"stu.kln.ac.lk"}, true)
+	input := invitationInput()
+	g, _ := json.Marshal(input.Guardians)
+	var b strings.Builder
+	w := csv.NewWriter(&b)
+	_ = w.Write(strings.Split(InvitationCSVHeader, ","))
+	_ = w.Write([]string{input.Email, input.IndexNo, input.FullName, input.Faculty, "1", input.ContactPhone, string(g)})
+	w.Flush()
+	raw := []byte(b.String())
+	rows, err := s.parseInvitationCSV("admin", raw)
+	if err != nil || len(rows) != 1 || rows[0].code != "" || !invitationUUID(rows[0].input.RequestID) {
+		t.Fatal("email-only CSV rejected", rows, err)
+	}
+	again, _ := s.parseInvitationCSV("admin", raw)
+	other, _ := s.parseInvitationCSV("another-admin", raw)
+	if rows[0].input.RequestID != again[0].input.RequestID || rows[0].input.RequestID == other[0].input.RequestID {
+		t.Fatal("row key must be stable and actor scoped")
+	}
+	canonical, _ := s.parseInvitationCSV("admin", []byte(strings.Replace(string(raw), input.Email, "student@stu.kln.ac.lk", 1)))
+	if rows[0].input.RequestID != canonical[0].input.RequestID {
+		t.Fatal("normalization changed exact replay key")
+	}
+	changed, _ := s.parseInvitationCSV("admin", []byte(strings.Replace(string(raw), input.FullName, "Different Name", 1)))
+	if rows[0].input.RequestID == changed[0].input.RequestID {
+		t.Fatal("changed data must not replay another payload")
+	}
+	report, err := s.Import(context.Background(), "admin", "127.0.0.1", raw)
+	if err != nil || report.Queued != 1 || repo.calls != 1 {
+		t.Fatal("registration flow was not used", report, err)
+	}
+	if _, err := s.Import(context.Background(), "", "127.0.0.1", raw); !errors.Is(err, d.ErrInvitationForbidden) {
+		t.Fatal("missing actor accepted", err)
+	}
+	parts := strings.SplitN(string(raw), "\n", 2)
+	before := repo.calls
+	for _, malformed := range []string{string(raw) + "\"unclosed", parts[0] + "\n" + strings.Repeat(parts[1], 101)} {
+		if _, err := s.Import(context.Background(), "admin", "127.0.0.1", []byte(malformed)); !errors.Is(err, d.ErrInvitationInvalid) {
+			t.Fatal("invalid whole file accepted", err)
+		}
+	}
+	if repo.calls != before {
+		t.Fatal("structural failure caused partial writes")
 	}
 }

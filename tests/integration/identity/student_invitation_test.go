@@ -413,7 +413,7 @@ func TestStudentInvitationsPostgresLifecycle(t *testing.T) {
 	bad.Email = "invalid@gmail.com"
 	var b bytes.Buffer
 	writer := csv.NewWriter(&b)
-	_ = writer.Write(strings.Split(svc.InvitationCSVHeader, ","))
+	_ = writer.Write(strings.Split("request_id,"+svc.InvitationCSVHeader, ","))
 	for _, v := range []dto.StudentInvitationInput{firstInput, bulk, bad, bulk} {
 		g, _ := json.Marshal(v.Guardians)
 		_ = writer.Write([]string{v.RequestID, v.Email, v.IndexNo, v.FullName, v.Faculty, "2", v.ContactPhone, string(g)})
@@ -433,6 +433,36 @@ func TestStudentInvitationsPostgresLifecycle(t *testing.T) {
 	}
 	if provider.prepared[bulkUID] != 0 {
 		t.Fatal("HTTP registration contacted provider")
+	}
+
+	// The browser's email-only CSV creates the account/profile without a
+	// pre-existing account, and exact retries preserve the registration identity.
+	emailOnly := input("email-csv")
+	var emailCSV bytes.Buffer
+	emailWriter := csv.NewWriter(&emailCSV)
+	_ = emailWriter.Write(strings.Split(svc.InvitationCSVHeader, ","))
+	guardianJSON, _ := json.Marshal(emailOnly.Guardians)
+	_ = emailWriter.Write([]string{emailOnly.Email, emailOnly.IndexNo, emailOnly.FullName, emailOnly.Faculty, "2", emailOnly.ContactPhone, string(guardianJSON)})
+	emailWriter.Flush()
+	var firstRow svc.InvitationImportRow
+	for attempt := 0; attempt < 2; attempt++ {
+		res := do("POST", "/api/v1/student-invitations/import", uids[0], emailCSV.String(), "text/csv", 200)
+		var result svc.InvitationImportReport
+		if err := json.Unmarshal(res.Body.Bytes(), &result); err != nil || len(result.Rows) != 1 {
+			t.Fatal("email CSV report", err)
+		}
+		row := result.Rows[0]
+		if row.StudentID == "" || row.InvitationID == "" {
+			t.Fatal("missing profile/invitation identity", result)
+		}
+		if attempt == 0 {
+			if result.Queued != 1 {
+				t.Fatal("email registration was not queued", result)
+			}
+			firstRow = row
+		} else if result.Replayed != 1 || firstRow.StudentID != row.StudentID || firstRow.InvitationID != row.InvitationID {
+			t.Fatal("exact CSV retry created another registration", result)
+		}
 	}
 
 	drain()

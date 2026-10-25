@@ -19,6 +19,11 @@ func Register(a *handler.API, mux *http.ServeMux, authenticate func(http.Handler
 	mux.Handle("DELETE /api/v1/students/{studentID}", protect(a.Delete))
 }
 
+func RegisterRestoration(a *handler.RestorationAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/v1/students/archived", authenticate(authentication.RequireRoles(domain.RoleAdmin)(http.HandlerFunc(a.ListArchived))))
+	mux.Handle("POST /api/v1/students/{studentID}/restore", authenticate(authentication.RequireRoles(domain.RoleAdmin)(http.HandlerFunc(a.Restore))))
+}
+
 func RegisterImages(a *handler.ImageAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
 	protect := func(h http.HandlerFunc) http.Handler {
 		return authenticate(authentication.RequireRoles(domain.RoleAdmin, domain.RoleWarden)(h))
