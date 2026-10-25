@@ -77,7 +77,7 @@ func (d *document) models() {
 		items := d.schemas[name].(object)["properties"].(object)["guardians"].(object)["items"].(object)
 		items["additionalProperties"] = false
 	}
-	d.constrain("RegisterStudent", "email", object{"maxLength": 254, "description": "Approved university email; trimmed/lowercased. Exact domain allowlist is configured on the backend. Never send a university password."})
+	d.constrain("RegisterStudent", "email", object{"maxLength": 254, "description": "Approved Student email; trimmed/lowercased. Gmail (gmail.com) and university Student email (stu.kln.ac.lk) are allowed by default. STUDENT_EMAIL_DOMAINS can override the exact domain allowlist. Never send a university password."})
 	roles := []string{"admin", "warden", "sub_warden", "security_staff", "student"}
 	for _, name := range []string{"Account", "ProvisionAccount", "ChangeRole", "StaffProfile"} {
 		d.constrain(name, "role", object{"enum": roles})

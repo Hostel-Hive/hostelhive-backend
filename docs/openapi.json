@@ -4320,7 +4320,7 @@
             "type": "string"
           },
           "email": {
-            "description": "Approved university email; trimmed/lowercased. Exact domain allowlist is configured on the backend. Never send a university password.",
+            "description": "Approved Student email; trimmed/lowercased. Gmail (gmail.com) and university Student email (stu.kln.ac.lk) are allowed by default. STUDENT_EMAIL_DOMAINS can override the exact domain allowlist. Never send a university password.",
             "example": "example-student@stu.kln.ac.lk",
             "format": "email",
             "maxLength": 254,
@@ -17182,7 +17182,7 @@
         ]
       },
       "post": {
-        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nProfile only: user_id must identify an existing eligible Student account. It does not create a login or send invitations. Admin university-email registration uses /student-invitations instead.",
+        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nProfile only: user_id must identify an existing eligible Student account. It does not create a login or send invitations. Admin invitation registration uses /student-invitations instead.",
         "operationId": "students_post_api_v1_students",
         "requestBody": {
           "content": {
@@ -19019,7 +19019,7 @@
       "x-module": "app"
     },
     {
-      "description": "Accounts, roles, activation, university-email invitations and verified initial setup. Firebase owns login/passwords; there are no Go /auth/login or password-taking Student endpoints.",
+      "description": "Accounts, roles, activation, approved-email invitations and verified initial setup. Firebase owns login/passwords; there are no Go /auth/login or password-taking Student endpoints.",
       "name": "Identity",
       "x-module": "identity"
     },
