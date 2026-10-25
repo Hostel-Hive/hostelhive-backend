@@ -32,7 +32,7 @@ func JSON() []byte {
 	d := &document{paths: object{}, schemas: object{}}
 	for _, tag := range []struct{ name, module, description string }{
 		{"System", "app", "Unauthenticated liveness and PostgreSQL readiness probes."},
-		{"Identity", "identity", "Accounts, roles, activation, university-email invitations and verified initial setup. Firebase owns login/passwords; there are no Go /auth/login or password-taking Student endpoints."},
+		{"Identity", "identity", "Accounts, roles, activation, approved-email invitations and verified initial setup. Firebase owns login/passwords; there are no Go /auth/login or password-taking Student endpoints."},
 		{"Students", "student", "Staff-managed Student/guardian profiles, CSV, private photos, QR and Student-owned profile reads. Faculty is implemented; department is not."},
 		{"Staff", "staff", "Admin-managed staff profiles and current staff member's name."},
 		{"Inventory", "inventory", "Blocks, rooms and beds. Admin writes; Admin/Warden reads."},

@@ -94,6 +94,55 @@ func TestInvitationInputValidation(t *testing.T) {
 		t.Fatal("bad IP")
 	}
 }
+
+func TestInvitationGmailAndUniversityDomains(t *testing.T) {
+	for _, tc := range []struct {
+		email, normalized string
+		valid             bool
+	}{
+		{"student@gmail.com", "student@gmail.com", true},
+		{" Student@GMAIL.COM ", "student@gmail.com", true},
+		{"student+hostel@gmail.com", "student+hostel@gmail.com", true},
+		{"student@stu.kln.ac.lk", "student@stu.kln.ac.lk", true},
+		{" Student@STU.KLN.AC.LK ", "student@stu.kln.ac.lk", true},
+		{"student@other.example", "", false},
+		{"student@gmail.com.evil.example", "", false},
+		{"student@sub.gmail.com", "", false},
+		{"student@evil.stu.kln.ac.lk", "", false},
+		{"student@stu.kln.ac.lk.evil.example", "", false},
+		{"not-an-email", "", false},
+	} {
+		t.Run(tc.email, func(t *testing.T) {
+			repo := &invitationRepoFake{}
+			s := NewInvitations(repo, nil, []string{"gmail.com", "stu.kln.ac.lk"}, true)
+			input := invitationInput()
+			input.Email = tc.email
+			if tc.valid {
+				normalized, err := s.normalize(input)
+				if err != nil || normalized.Email != tc.normalized {
+					t.Fatal("email normalization", normalized.Email, err)
+				}
+				if _, _, err = s.Register(context.Background(), "admin", "127.0.0.1", input); err != nil || repo.calls != 1 {
+					t.Fatal("approved email rejected", err)
+				}
+			} else if _, _, err := s.Register(context.Background(), "admin", "127.0.0.1", input); !errors.Is(err, d.ErrInvitationInvalid) || repo.calls != 0 {
+				t.Fatal("unapproved email reached repository", err)
+			}
+		})
+	}
+	// CSV registration uses the same policy as individual registration.
+	repo := &invitationRepoFake{}
+	s := NewInvitations(repo, nil, []string{"gmail.com", "stu.kln.ac.lk"}, true)
+	gmail, university := invitationInput(), invitationInput()
+	gmail.Email = "student@gmail.com"
+	gmail.IndexNo = "GMAIL-STUDENT"
+	university.Email = "student@stu.kln.ac.lk"
+	university.IndexNo = "UNIVERSITY-STUDENT"
+	report, err := s.Import(context.Background(), "admin", "127.0.0.1", invitationCSV(gmail, university))
+	if err != nil || report.Queued != 2 || report.Rejected != 0 || repo.calls != 2 {
+		t.Fatal("mixed-domain CSV registration", report, err)
+	}
+}
 func invitationCSV(vs ...dto.StudentInvitationInput) []byte {
 	var b strings.Builder
 	w := csv.NewWriter(&b)

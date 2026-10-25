@@ -1,5 +1,8 @@
 # HostelHive Backend
 
+Student invitation email domains default to `gmail.com,stu.kln.ac.lk`; an explicit
+`STUDENT_EMAIL_DOMAINS` overrides this list. See [email setup](docs/student-invitations.md).
+
 Direct browser access from Vercel: set the backend's `CORS_ALLOWED_ORIGINS` and
 deploy the [browser CORS configuration](docs/browser-cors.md). No migration is needed.
 

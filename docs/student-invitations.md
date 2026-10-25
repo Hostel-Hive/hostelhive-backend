@@ -1,11 +1,11 @@
-# Student invitations and university-email setup (#95)
+# Student invitations and email setup (#95)
 
 Implemented on `feature/95-student-invitations`. This is a source contract, not
 proof that a shared server is deployed or that real email/Flutter setup passed.
 
 ## Process and responsibility
 
-1. An active Admin registers an approved Student with university email and profile
+1. An active Admin registers an approved Student with an allowed email and profile
    details. The API atomically creates a local Student account, profile, guardians
    and durable invitation intent; it does not wait for Firebase email delivery.
 2. The worker creates the reserved Firebase UID with an unpredictable internal
@@ -23,7 +23,8 @@ proof that a shared server is deployed or that real email/Flutter setup passed.
 5. Completion returns `setup_required:false`. Refresh `/me` and load Student APIs.
    Account activation, current role and unarchived profile remain required.
 
-The university email is an identifier. This does not connect to university SSO,
+The email is an identifier; Gmail and approved university addresses are supported.
+This does not connect to university SSO,
 collect university passwords or change university credentials. Later HostelHive
 password changes/reset use Firebase as usual. A Firebase-only public signup gets
 no local role/profile/access. Existing approved accounts need no forced reset.
@@ -37,7 +38,7 @@ Use the existing migration helper with the correct development database configur
 ```powershell
 .\scripts\migrate.ps1 up
 $env:STUDENT_INVITATIONS_ENABLED = 'true'
-$env:STUDENT_EMAIL_DOMAINS = 'stu.kln.ac.lk'
+$env:STUDENT_EMAIL_DOMAINS = 'gmail.com,stu.kln.ac.lk'
 ```
 
 These variables must be present in the backend process environment at startup;
@@ -45,6 +46,17 @@ the example file is documentation, not automatic environment loading. The featur
 flag defaults to false. The comma-separated domain allowlist matches exact domains
 only, case-insensitively; no wildcard or implicit subdomain match. Confirm the
 institution's actual approved domains. Existing accounts are not domain-filtered.
+
+When `STUDENT_EMAIL_DOMAINS` is unset, the default is `gmail.com,stu.kln.ac.lk`.
+An explicit setting overrides this default, including a stricter university-only
+list. To enable both on an existing Render deployment, update the backend's
+Environment setting to `STUDENT_EMAIL_DOMAINS=gmail.com,stu.kln.ac.lk` and redeploy.
+For local development, put the setting in ignored `.env.local` and restart with
+`scripts/dev.ps1`. Other email providers require their exact domain to be added;
+Gmail subdomains and suffix lookalikes are not implicitly approved. The same
+allowlist applies to individual and CSV invitation registration. No migration is
+required, existing accounts/passwords are unchanged, and enabling invitations
+still requires the Firebase prerequisites below.
 
 Use the existing Firebase project and Application Default Credentials, e.g. the
 server's configured `GOOGLE_APPLICATION_CREDENTIALS`. Never ship that credential to

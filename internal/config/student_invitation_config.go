@@ -13,7 +13,7 @@ func (c *Config) loadStudentInvitations(value func(string, string) string) error
 	}
 	c.StudentInvitationsEnabled = enabled
 	seen := map[string]bool{}
-	for _, domain := range strings.Split(value("STUDENT_EMAIL_DOMAINS", "stu.kln.ac.lk"), ",") {
+	for _, domain := range strings.Split(value("STUDENT_EMAIL_DOMAINS", "gmail.com,stu.kln.ac.lk"), ",") {
 		domain = strings.ToLower(strings.TrimSpace(domain))
 		if len(domain) > 253 || !strings.Contains(domain, ".") {
 			return fmt.Errorf("STUDENT_EMAIL_DOMAINS must list valid email domains")
