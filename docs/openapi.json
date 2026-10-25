@@ -77,6 +77,20 @@
               "setup_required": {
                 "type": "boolean"
               },
+              "student_has_active_bed": {
+                "nullable": true,
+                "type": "boolean"
+              },
+              "student_profile_archived": {
+                "nullable": true,
+                "type": "boolean"
+              },
+              "student_profile_id": {
+                "example": "11111111-1111-4111-8111-111111111111",
+                "format": "uuid",
+                "nullable": true,
+                "type": "string"
+              },
               "user_id": {
                 "example": "11111111-1111-4111-8111-111111111111",
                 "format": "uuid",
@@ -141,6 +155,20 @@
                 },
                 "setup_required": {
                   "type": "boolean"
+                },
+                "student_has_active_bed": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "student_profile_archived": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "student_profile_id": {
+                  "example": "11111111-1111-4111-8111-111111111111",
+                  "format": "uuid",
+                  "nullable": true,
+                  "type": "string"
                 },
                 "user_id": {
                   "example": "11111111-1111-4111-8111-111111111111",
@@ -4043,6 +4071,20 @@
               "setup_required": {
                 "type": "boolean"
               },
+              "student_has_active_bed": {
+                "nullable": true,
+                "type": "boolean"
+              },
+              "student_profile_archived": {
+                "nullable": true,
+                "type": "boolean"
+              },
+              "student_profile_id": {
+                "example": "11111111-1111-4111-8111-111111111111",
+                "format": "uuid",
+                "nullable": true,
+                "type": "string"
+              },
               "user_id": {
                 "example": "11111111-1111-4111-8111-111111111111",
                 "format": "uuid",
@@ -5061,6 +5103,153 @@
           "staff_id",
           "updated_at",
           "user_id"
+        ],
+        "type": "object"
+      },
+      "StudentCheckoutInput": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmed": {
+            "description": "Must explicitly confirm this permanent departure.",
+            "enum": [
+              true
+            ],
+            "example": true,
+            "type": "boolean"
+          },
+          "deactivate_account": {
+            "description": "Required explicit boolean. True immediately denies local access and queues Firebase disable/session revocation. False preserves current account access; it never reactivates an inactive account.",
+            "nullable": false,
+            "type": "boolean"
+          },
+          "notes": {
+            "description": "Optional trimmed text without control characters.",
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "graduated",
+              "withdrawn",
+              "moved_out",
+              "accommodation_cancelled",
+              "other"
+            ],
+            "example": "graduated",
+            "type": "string"
+          },
+          "request_id": {
+            "description": "Generate once per intended operation; preserve with identical payload on retry. Not a source/detail ID.",
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmed",
+          "deactivate_account",
+          "reason",
+          "request_id"
+        ],
+        "type": "object"
+      },
+      "StudentCheckoutResult": {
+        "properties": {
+          "checkout": {
+            "properties": {
+              "account_active_after": {
+                "type": "boolean"
+              },
+              "archived_at": {
+                "example": "2099-01-15T09:00:00+05:30",
+                "format": "date-time",
+                "type": "string"
+              },
+              "checkout_id": {
+                "example": "11111111-1111-4111-8111-111111111111",
+                "format": "uuid",
+                "type": "string"
+              },
+              "deactivate_account": {
+                "type": "boolean"
+              },
+              "notes": {
+                "type": "string"
+              },
+              "performed_at": {
+                "example": "2099-01-15T09:00:00+05:30",
+                "format": "date-time",
+                "type": "string"
+              },
+              "performed_by": {
+                "example": "11111111-1111-4111-8111-111111111111",
+                "format": "uuid",
+                "type": "string"
+              },
+              "profile_was_archived": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "released_allocation_id": {
+                "example": "11111111-1111-4111-8111-111111111111",
+                "format": "uuid",
+                "nullable": true,
+                "type": "string"
+              },
+              "released_bed_id": {
+                "example": "11111111-1111-4111-8111-111111111111",
+                "format": "uuid",
+                "nullable": true,
+                "type": "string"
+              },
+              "request_id": {
+                "description": "Generate once per intended operation; preserve with identical payload on retry. Not a source/detail ID.",
+                "example": "11111111-1111-4111-8111-111111111111",
+                "format": "uuid",
+                "type": "string"
+              },
+              "student_id": {
+                "example": "11111111-1111-4111-8111-111111111111",
+                "format": "uuid",
+                "type": "string"
+              },
+              "user_id": {
+                "example": "11111111-1111-4111-8111-111111111111",
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "account_active_after",
+              "archived_at",
+              "checkout_id",
+              "deactivate_account",
+              "notes",
+              "performed_at",
+              "performed_by",
+              "profile_was_archived",
+              "reason",
+              "released_allocation_id",
+              "released_bed_id",
+              "request_id",
+              "student_id",
+              "user_id"
+            ],
+            "type": "object"
+          },
+          "replayed": {
+            "type": "boolean"
+          },
+          "revocation_pending": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "checkout",
+          "replayed",
+          "revocation_pending"
         ],
         "type": "object"
       },
@@ -18078,6 +18267,145 @@
         "x-roles": [
           "admin",
           "warden"
+        ]
+      }
+    },
+    "/api/v1/students/{studentID}/checkout": {
+      "post": {
+        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nRequires migration 32. Permanent departure only; temporary trips home do not use checkout. Explicit confirmed=true and deactivate_account boolean required. Atomically releases the active allocation with end_reason=checkout, archives the profile, queues private photo cleanup, optionally deactivates local access and queues durable Firebase revocation, and writes the departure audit. Students without beds and already-inactive student accounts are supported. A manually archived stay not yet checked out can be finalized, including a later stay after restoration. Exact same-Admin request_id/body retries return the original immutable checkout snapshot with replayed=true, even after a later restoration, without changing that new stay. revocation_pending reflects current durable job state; external failures do not roll back committed departure. No presence event is invented and no Firebase call occurs inside the transaction. Account activation and profile restoration remain explicit separate workflows.",
+        "operationId": "students_post_api_v1_students_studentID_checkout",
+        "parameters": [
+          {
+            "description": "Resource UUID from a previous response. Fictional example must be replaced.",
+            "in": "path",
+            "name": "studentID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentCheckoutInput"
+              }
+            }
+          },
+          "description": "JSON only; unknown fields are rejected. See schema constraints and operation rules.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentCheckoutResult"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "not_found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found (including concealed inaccessible records where applicable)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "conflict"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "checkout_conflict for a reused request UUID with another actor/payload; student_already_checked_out for a fresh request on an already-ended stay; student_account_required for a non-student account."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unsupported_media_type"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unsupported Content-Type; send the documented raw media type."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "End a Student's hostel stay",
+        "tags": [
+          "Students"
+        ],
+        "x-roles": [
+          "admin"
         ]
       }
     },
