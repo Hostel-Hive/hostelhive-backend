@@ -31,6 +31,7 @@ func (d *document) models() {
 	for name, v := range map[string]any{
 		"OwnStudentImageResult":    studentdomain.OwnImageResult{},
 		"StudentRestorationResult": studentdomain.RestorationResult{},
+		"StudentCheckoutResult":    studentdomain.CheckoutResult{},
 		"Account":                  identity.Account{}, "AccountPage": identity.AccountPage{}, "AccountChange": identity.AccountChange{}, "ProvisionResult": identitydto.Result{},
 		"Invitation": identity.StudentInvitation{}, "InvitationPage": identity.InvitationPage{}, "SetupResult": identity.SetupResult{}, "InvitationImportReport": identityservice.InvitationImportReport{},
 		"StudentProfile": studentdomain.Profile{}, "StudentPage": studentdomain.Page{}, "OwnStudentProfile": studentdomain.OwnProfile{}, "StudentImportReport": studentdomain.ImportReport{},
@@ -60,7 +61,8 @@ func (d *document) models() {
 		Error string `json:"error"`
 	}{})
 	for name, v := range map[string]any{
-		"ProvisionAccount": identitydto.Input{}, "ChangeRole": identitydto.RoleInput{}, "RegisterStudent": identitydto.StudentInvitationInput{}, "ResendInvitation": identitydto.InvitationResend{},
+		"StudentCheckoutInput": studentdto.CheckoutInput{},
+		"ProvisionAccount":     identitydto.Input{}, "ChangeRole": identitydto.RoleInput{}, "RegisterStudent": identitydto.StudentInvitationInput{}, "ResendInvitation": identitydto.InvitationResend{},
 		"CreateStudent": studentdto.CreateInput{}, "StudentDetails": studentdto.Details{}, "PatchOwnStudentProfile": studentdto.OwnProfilePatch{}, "StaffDetails": staffdto.Details{}, "SelfStaffDetails": staffdto.SelfDetails{},
 		"BlockDetails": inventorydto.BlockDetails{}, "CreateRoom": inventorydto.CreateRoom{}, "RoomDetails": inventorydto.RoomDetails{}, "CreateBed": inventorydto.CreateBed{}, "BedDetails": inventorydto.BedDetails{},
 		"AssignBed": allocationdto.Assign{}, "TransferBed": allocationdto.Transfer{}, "RegisterScanner": attendancedto.RegisterDevice{}, "SetScannerDirection": attendancedto.SetDirection{}, "RecordScan": attendancedto.Scan{},
@@ -69,6 +71,11 @@ func (d *document) models() {
 	} {
 		d.input(name, v)
 	}
+	d.optional("StudentCheckoutInput", "notes")
+	d.constrain("StudentCheckoutInput", "reason", object{"enum": []string{"graduated", "withdrawn", "moved_out", "accommodation_cancelled", "other"}, "example": "graduated"})
+	d.constrain("StudentCheckoutInput", "notes", object{"maxLength": 1000, "description": "Optional trimmed text without control characters."})
+	d.constrain("StudentCheckoutInput", "deactivate_account", object{"nullable": false, "description": "Required explicit boolean. True immediately denies local access and queues Firebase disable/session revocation. False preserves current account access; it never reactivates an inactive account."})
+	d.constrain("StudentCheckoutInput", "confirmed", object{"enum": []bool{true}, "example": true, "description": "Must explicitly confirm this permanent departure."})
 	for _, name := range []string{"RegisterStudent", "CreateStudent", "StudentDetails"} {
 		for field, max := range map[string]int{"index_no": 64, "full_name": 200, "faculty": 120} {
 			d.constrain(name, field, object{"minLength": 1, "maxLength": max})
