@@ -187,11 +187,15 @@ Do not change its template. The new invitation CSV has exactly these columns
 (order may vary; no unknown/repeated/missing columns):
 
 ```csv
-request_id,email,index_no,full_name,faculty,year,contact_phone,guardians
+email,index_no,full_name,faculty,year,contact_phone,guardians
 ```
 
-Maximum100 records and2MiB UTF-8; a UTF-8 BOM is accepted. Each row uses its own
-stable request UUID. guardians is a JSON array in one CSV field; let a CSV writer
+Maximum100 records and2MiB UTF-8; a UTF-8 BOM is accepted. The server derives each
+row's stable request UUID from normalized data and the authenticated Admin.
+Retry unchanged data as the same Admin, including after reordering rows or headers.
+An optional eighth `request_id` column remains supported for clients using explicit
+UUIDs; preserve those UUIDs and payloads on retry. Never add user IDs or passwords.
+guardians is a JSON array in one CSV field; let a CSV writer
 quote it. Use `/student-invitations/import/template` or the checked-in
 `docs/templates/student-invitations.csv` for the header. Never add passwords/links.
 
@@ -203,7 +207,9 @@ and every row; partial outcomes are not rolled back as a batch.
 
 Report fields: total, queued, replayed, rejected, not_attempted, retry_required,
 optional stopped_reason, and rows. Each row has record (1-based data record), line
-(physical CSV start line), status, optional safe error and optional invitation_id.
+(physical CSV start line), status, optional safe error and, on successful rows,
+invitation_id and student_id. A queued row confirms an account/profile and delivery
+intent, not a delivered email. The worker provisions Firebase and sends the setup invitation.
 Statuses: queued, replayed, rejected, retry_required, not_attempted. Invalid profile
 or email data is rejected; repeated valid email/index/request UUID within a file
 is duplicate_in_file. Existing email/index/reservation conflict is reported without

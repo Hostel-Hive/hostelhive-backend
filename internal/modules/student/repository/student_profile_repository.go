@@ -96,11 +96,15 @@ func (s *Store) Get(ctx context.Context, id string) (sdomain.Profile, error) {
 }
 
 func (s *Store) List(ctx context.Context, f sdomain.Filter) (sdomain.Page, error) {
+	return listProfiles(ctx, s.pool, f, false)
+}
+
+func listProfiles(ctx context.Context, q querier, f sdomain.Filter, archived bool) (sdomain.Page, error) {
 	page := sdomain.Page{Students: []sdomain.Profile{}, Limit: f.Limit, Offset: f.Offset}
-	rows, err := s.pool.Query(ctx, "SELECT "+profileColumns+` FROM hostelhive.students s JOIN hostelhive.users u USING(user_id)
- WHERE s.deleted_at IS NULL AND ($1::text='' OR strpos(lower(s.index_no),lower($1))>0 OR strpos(lower(s.full_name),lower($1))>0)
+	rows, err := q.Query(ctx, "SELECT "+profileColumns+` FROM hostelhive.students s JOIN hostelhive.users u USING(user_id)
+ WHERE (s.deleted_at IS NOT NULL)=$6 AND ($1::text='' OR strpos(lower(s.index_no),lower($1))>0 OR strpos(lower(s.full_name),lower($1))>0)
  AND ($2::text='' OR lower(s.faculty)=lower($2)) AND ($3::int=0 OR s.year=$3)
- ORDER BY s.created_at,s.student_id LIMIT $4 OFFSET $5`, f.Q, f.Faculty, f.Year, f.Limit+1, f.Offset)
+ ORDER BY s.created_at,s.student_id LIMIT $4 OFFSET $5`, f.Q, f.Faculty, f.Year, f.Limit+1, f.Offset, archived)
 	if err != nil {
 		return page, sdomain.ErrUnavailable
 	}
