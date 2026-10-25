@@ -32,14 +32,20 @@ func scan(row pgx.Row) (domain.Account, error) {
 
 func (s *Store) List(ctx context.Context, limit, offset int) (domain.AccountPage, error) {
 	page := domain.AccountPage{Users: []domain.Account{}, Limit: limit, Offset: offset}
-	rows, err := s.pool.Query(ctx, "SELECT user_id::text,firebase_uid,email,role,is_active,full_name,designation FROM hostelhive.account_profiles JOIN hostelhive.users USING(user_id,firebase_uid,email,role,is_active) ORDER BY created_at,user_id LIMIT $1 OFFSET $2", limit+1, offset)
+	rows, err := s.pool.Query(ctx, `SELECT u.user_id::text,u.firebase_uid,u.email,u.role,u.is_active,ap.full_name,ap.designation,
+ s.student_id::text,
+ CASE WHEN s.student_id IS NOT NULL THEN s.deleted_at IS NOT NULL END,
+ CASE WHEN s.student_id IS NOT NULL THEN EXISTS(SELECT 1 FROM hostelhive.bed_allocations a WHERE a.student_id=s.student_id AND a.ended_at IS NULL) END
+ FROM hostelhive.account_profiles ap JOIN hostelhive.users u USING(user_id,firebase_uid,email,role,is_active)
+ LEFT JOIN hostelhive.students s ON s.user_id=u.user_id AND u.role='student'
+ ORDER BY u.created_at,u.user_id LIMIT $1 OFFSET $2`, limit+1, offset)
 	if err != nil {
 		return page, domain.ErrManagementUnavailable
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var a domain.Account
-		err := rows.Scan(&a.UserID, &a.FirebaseUID, &a.Email, &a.Role, &a.IsActive, &a.FullName, &a.Designation)
+		err := rows.Scan(&a.UserID, &a.FirebaseUID, &a.Email, &a.Role, &a.IsActive, &a.FullName, &a.Designation, &a.StudentProfileID, &a.StudentProfileArchived, &a.StudentHasActiveBed)
 		if err != nil {
 			return page, domain.ErrManagementUnavailable
 		}
