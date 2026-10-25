@@ -68,6 +68,13 @@ jobs:
           go vet ./cmd/... ./internal/... ./tests/...
           go build -o bin/hostelhive-server ./cmd/server
           go run ./cmd/openapi -check docs/openapi.json
+      - name: Known vulnerability scan (govulncheck)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Fails the job when reachable code uses a module or Go release with a known vulnerability.
+          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+          govulncheck ./...
       - name: Install pinned migration CLI
         shell: bash
         run: |

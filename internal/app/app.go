@@ -203,7 +203,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	student.RegisterOwnImages(shandler.NewOwnImageAPI(ownImages, cfg.StudentProfileTimeout), handler, protected)
 	complaint.RegisterImages(complainthandler.NewImageAPI(complaintservice.NewImages(complaintStore, complaintObjects), cfg.StudentProfileTimeout), handler, protected)
 	srv := &http.Server{
-		Handler:           authentication.CORS(cfg.CORSAllowedOrigins)(handler),
+		Handler:           authentication.RequestLog(logger)(authentication.CORS(cfg.CORSAllowedOrigins)(handler)),
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,

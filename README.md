@@ -34,7 +34,7 @@ and [docs/openapi.json](docs/openapi.json).
 
 ## Prerequisites
 
-- Go 1.27 or later: https://go.dev/dl/
+- Go 1.27.3 or later: https://go.dev/dl/ (earlier 1.27 releases are missing security fixes)
 - Git
 
 PostgreSQL is now required for readiness. The backend uses pgxpool, with dependencies pinned in go.mod/go.sum. Firebase Authentication now requires a Firebase project ID and Application Default Credentials (see below).

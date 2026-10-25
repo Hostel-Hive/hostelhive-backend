@@ -4,7 +4,8 @@ The workflow runs on PRs to develop/main, pushes to those branches and manual
 dispatch. It requires no real Firebase, R2 or deployment credentials. All database
 fixtures run serially (`-p 1`) against disposable PostgreSQL migrated from scratch.
 The Linux job exercises full rollback/reapply, Go race tests, gofmt, go mod verify,
-vet and build. A Windows job checks offline password helpers on PowerShell 5.1.
+govulncheck (fails on known vulnerabilities reachable from our code), vet and
+build. A Windows job checks offline password helpers on PowerShell 5.1.
 Coverage covers cmd and internal packages, including repository code exercised by
 integration tests. The evidence parser rejects skipped, failed or missing database
 package runs. Race detection requires CGO and a C compiler; CI has both.

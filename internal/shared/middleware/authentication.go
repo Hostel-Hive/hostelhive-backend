@@ -59,6 +59,7 @@ func Middleware(verifier Verifier, accounts Accounts, timeout time.Duration) fun
 				response.Error(w, http.StatusServiceUnavailable, "service_unavailable")
 				return
 			}
+			NoteActor(r.Context(), "user", account.UserID)
 			if !account.IsActive || account.FirebaseUID != uid || !domain.ValidRole(account.Role) {
 				response.Error(w, http.StatusForbidden, "forbidden")
 				return
