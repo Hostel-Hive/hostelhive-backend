@@ -127,6 +127,26 @@ func TestStudentCheckoutPostgres(t *testing.T) {
 	// guardians, QR and history. It never manufactures a scanner event.
 	first := makeStudent("first")
 	a := assign(first, beds[0])
+	checkLifecycle := func(archived, hasBed bool) {
+		t.Helper()
+		page, e := identityrepo.NewStore(pool).List(ctx, 100, 0)
+		if e != nil {
+			t.Fatal("list account lifecycle", e)
+		}
+		for _, account := range page.Users {
+			if account.UserID == adminID && (account.StudentProfileID != nil || account.StudentProfileArchived != nil || account.StudentHasActiveBed != nil) {
+				t.Fatal("student metadata exposed for admin")
+			}
+			if account.UserID == first.UserID {
+				if account.StudentProfileID == nil || *account.StudentProfileID != first.StudentID || account.StudentProfileArchived == nil || *account.StudentProfileArchived != archived || account.StudentHasActiveBed == nil || *account.StudentHasActiveBed != hasBed {
+					t.Fatal("incorrect student lifecycle metadata", account)
+				}
+				return
+			}
+		}
+		t.Fatal("student missing from account list")
+	}
+	checkLifecycle(false, true)
 	photo := "student-images/" + first.StudentID + "/" + strings.ReplaceAll(uuid.NewString(), "-", "")
 	exec("INSERT INTO hostelhive.student_image_objects(object_key,student_id,content_type,size_bytes,width,height,cleanup_at) VALUES($1,$2,'image/png',1,1,1,NULL)", photo, first.StudentID)
 	exec("UPDATE hostelhive.students SET profile_image_key=$2 WHERE student_id=$1", first.StudentID, photo)
@@ -135,6 +155,7 @@ func TestStudentCheckoutPostgres(t *testing.T) {
 	exec("INSERT INTO hostelhive.student_qr(student_id,token) VALUES($1,$2)", first.StudentID, qr)
 	v := input(false)
 	r := run(first, v)
+	checkLifecycle(true, false)
 	if r.Replayed || r.RevocationPending || !r.Checkout.AccountActiveAfter || r.Checkout.ReleasedBedID == nil || *r.Checkout.ReleasedBedID != beds[0] || r.Checkout.ReleasedAllocationID == nil || *r.Checkout.ReleasedAllocationID != a.AllocationID || r.Checkout.PerformedBy != adminID {
 		t.Fatal("checkout snapshot", r)
 	}
@@ -185,6 +206,7 @@ func TestStudentCheckoutPostgres(t *testing.T) {
 		t.Fatal(e)
 	}
 	secondAllocation := assign(first, beds[1])
+	checkLifecycle(false, true)
 	_ = run(first, v)
 	if _, e := store.Get(ctx, first.StudentID); e != nil {
 		t.Fatal("old replay archived new stay", e)
