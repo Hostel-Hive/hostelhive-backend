@@ -239,6 +239,8 @@ func dataGroups(doc domain.ExportDocument) ([]string, [][]int, error) {
 		return []string{"Date", "Entries", "Exits", "Distinct Students"}, [][]int{{0}, {1}, {2}, {3}}, nil
 	case len(doc.Headers) == 8 && doc.Headers[0] == "Event ID":
 		return []string{"Identifiers", "Movement", "Recorded Time", "Access Details"}, [][]int{{0, 1, 2}, {3}, {4}, {5, 6, 7}}, nil
+	case len(doc.Headers) == 14 && doc.Headers[0] == "Leave ID":
+		return []string{"Identifiers", "Requested Period / Submission", "Reason", "Status / Audit"}, [][]int{{0, 1, 2, 3}, {4, 5, 8}, {6}, {7, 9, 10, 11, 12, 13}}, nil
 	case len(doc.Headers) == 12 && doc.Headers[0] == "Leave ID":
 		return []string{"Identifiers", "Requested Period / Submission", "Reason", "Status / Decision"}, [][]int{{0, 1, 2, 3}, {4, 5, 8}, {6}, {7, 9, 10, 11}}, nil
 	case len(doc.Headers) == 15 && doc.Headers[0] == "Complaint ID":

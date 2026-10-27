@@ -24,6 +24,10 @@ func (f *fake) Decide(context.Context, string, string, dto.Decision) (domain.Req
 	f.calls++
 	return domain.Request{}, nil
 }
+func (f *fake) Cancel(context.Context, string, string) (domain.Request, error) {
+	f.calls++
+	return domain.Request{}, nil
+}
 func (f *fake) Get(context.Context, string, string) (domain.Request, error) {
 	f.calls++
 	return domain.Request{}, nil

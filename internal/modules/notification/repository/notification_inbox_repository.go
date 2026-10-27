@@ -70,8 +70,9 @@ const visible = ` FROM hostelhive.notifications n
   OR (e.kind='leave_decided' AND $2::text='student' AND st.user_id=$1)))
  OR (e.source_type='late_access' AND ((e.kind='late_access_submitted' AND $2::text IN ('admin','warden')) OR (e.kind='late_access_decided' AND $2::text='student' AND st.user_id=$1)))
  OR (e.source_type='attendance' AND $2::text IN ('admin','warden'))
- OR (e.source_type='announcement' AND $2::text='student' AND a.audience='all_students'
- AND EXISTS(SELECT 1 FROM hostelhive.students member WHERE member.user_id=$1 AND member.deleted_at IS NULL)))`
+ OR (e.source_type='announcement' AND $2::text='student'
+ AND EXISTS(SELECT 1 FROM hostelhive.students member WHERE member.user_id=$1 AND member.deleted_at IS NULL
+ AND (a.audience='all_students' OR (a.audience='faculty' AND lower(btrim(member.faculty))=a.faculty)))))`
 const projection = `n.notification_id::text,e.source_type,COALESCE(c.complaint_id::text,'') AS complaint_id,
  COALESCE(ai.incident_id::text,'') AS attendance_incident_id,COALESCE(la.late_access_id::text,'') AS late_access_id,COALESCE(l.leave_id::text,'') AS leave_id,COALESCE(a.announcement_id::text,'') AS announcement_id,e.kind,COALESCE(c.category,'') AS category,e.status,
  CASE e.kind
@@ -81,7 +82,7 @@ const projection = `n.notification_id::text,e.source_type,COALESCE(c.complaint_i
  WHEN 'leave_decided' THEN 'Your leave request is '||e.status
  WHEN 'late_access_submitted' THEN 'New late-access request'
  WHEN 'late_access_decided' THEN 'Your late-access request is '||e.status
- WHEN 'attendance_incident' THEN CASE ai.incident_type WHEN 'early_exit' THEN 'Early exit without permission' ELSE 'Late entry without permission' END
+ WHEN 'attendance_incident' THEN CASE ai.incident_type WHEN 'early_exit' THEN 'Early exit without permission' WHEN 'late_exit' THEN 'Late exit without permission' ELSE 'Late entry without permission' END
  WHEN 'announcement_published' THEN a.title END AS title,
  e.occurred_at,n.created_at,n.read_at`
 

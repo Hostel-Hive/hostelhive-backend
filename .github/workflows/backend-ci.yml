@@ -65,8 +65,16 @@ jobs:
           python3 scripts/check-go-format.py
           python3 scripts/test_coverage_report.py
           go mod verify
-          go vet ./...
+          go vet ./cmd/... ./internal/... ./tests/...
           go build -o bin/hostelhive-server ./cmd/server
+          go run ./cmd/openapi -check docs/openapi.json
+      - name: Known vulnerability scan (govulncheck)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Fails the job when reachable code uses a module or Go release with a known vulnerability.
+          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+          govulncheck ./...
       - name: Install pinned migration CLI
         shell: bash
         run: |
@@ -138,20 +146,85 @@ jobs:
           migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
           migrate -path migrations -database "$migration_url" goto 25
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_upgrade_before.sql
-          migrate -path migrations -database "$migration_url" up
+          migrate -path migrations -database "$migration_url" goto 26
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_upgrade_after.sql
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_rollback_before.sql
           migrate -path migrations -database "$migration_url" down 1
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_rollback_after.sql
-          migrate -path migrations -database "$migration_url" up
+          migrate -path migrations -database "$migration_url" goto 26
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_rollback_after.sql
           docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/student_invitation_upgrade_cleanup.sql
+      - name: Going Home upgrade preserves scanned presence and source history
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+          migrate -path migrations -database "$migration_url" goto 26
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/going_home_upgrade_before.sql
+          migrate -path migrations -database "$migration_url" goto 27
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/going_home_upgrade_after.sql
+          migrate -path migrations -database "$migration_url" down 1
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/going_home_rollback_after.sql
+          migrate -path migrations -database "$migration_url" goto 27
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/going_home_upgrade_after.sql
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/going_home_upgrade_cleanup.sql
+      - name: Cancellation upgrade preserves decisions, consumption and inbox history
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+          migrate -path migrations -database "$migration_url" goto 27
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_upgrade_before.sql
+          migrate -path migrations -database "$migration_url" goto 28
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_upgrade_after.sql
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_constraints.sql
+          migrate -path migrations -database "$migration_url" down 1
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_rollback_after.sql
+          migrate -path migrations -database "$migration_url" goto 28
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_upgrade_after.sql
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/pass_cancellation_upgrade_cleanup.sql
+      - name: Faculty targeting preserves broadcasts and rollback cannot widen the audience
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+          migrate -path migrations -database "$migration_url" goto 28
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/faculty_announcement_upgrade_before.sql
+          migrate -path migrations -database "$migration_url" goto 29
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/faculty_announcement_upgrade_after.sql
+          if rollback_output=$(docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < migrations/000029_faculty_announcements.down.sql 2>&1); then
+            echo 'Rollback unexpectedly accepted faculty-only notices'; exit 1
+          fi
+          [[ "$rollback_output" == *"Cannot roll back faculty announcements"* ]] || { printf '%s\n' "$rollback_output"; exit 1; }
+          docker exec '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 -c "DELETE FROM hostelhive.announcements WHERE audience='faculty' AND published_by IN(SELECT user_id FROM hostelhive.users WHERE firebase_uid='faculty-upgrade-admin');"
+          migrate -path migrations -database "$migration_url" down 1
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/faculty_announcement_rollback_after.sql
+          migrate -path migrations -database "$migration_url" up
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/faculty_announcement_upgrade_after.sql
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/faculty_announcement_cleanup.sql
+      - name: Hostel movement policy upgrades and rollback guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_url="${TEST_DATABASE_URL}&x-migrations-table=%22public%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+          migrate -path migrations -database "$migration_url" goto 29
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/hostel_policy_upgrade_before.sql
+          migrate -path migrations -database "$migration_url" up
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/hostel_policy_upgrade_after.sql
+          if rollback_output=$(docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < migrations/000030_hostel_movement_policy.down.sql 2>&1); then
+            echo 'Rollback unexpectedly accepted late-exit incidents'; exit 1
+          fi
+          [[ "$rollback_output" == *"Cannot roll back hostel movement policy"* ]] || { printf '%s\n' "$rollback_output"; exit 1; }
+          docker exec '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 -c "DELETE FROM hostelhive.attendance_incidents WHERE incident_type='late_exit' AND student_id IN(SELECT student_id FROM hostelhive.students WHERE index_no='policy118-upgrade');"
+          migrate -path migrations -database "$migration_url" down 1
+          migrate -path migrations -database "$migration_url" up
+          docker exec -i '${{ job.services.postgres.id }}' psql -U hostelhive -d hostelhive_ci -v ON_ERROR_STOP=1 < tests/migration/hostel_policy_cleanup.sql
       - name: Race tests with application-wide coverage (database packages serial)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          go test -p 1 -count=1 -race -timeout=120s -json -covermode=atomic -coverpkg=./cmd/...,./internal/... -coverprofile=artifacts/coverage.out ./... | tee artifacts/tests.jsonl
+          go test -p 1 -count=1 -race -timeout=120s -json -covermode=atomic -coverpkg=./cmd/...,./internal/... -coverprofile=artifacts/coverage.out ./cmd/... ./internal/... ./tests/... | tee artifacts/tests.jsonl
           python3 scripts/coverage-report.py --profile artifacts/coverage.out --events artifacts/tests.jsonl --output artifacts/coverage.md --require-integration
           go tool cover -html=artifacts/coverage.out -o artifacts/coverage.html
           cat artifacts/coverage.md >> "$GITHUB_STEP_SUMMARY"
@@ -163,6 +236,24 @@ jobs:
           path: artifacts/
           if-no-files-found: warn
           retention-days: 14
+  openapi:
+    name: OpenAPI specification validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: tools/openapi/package-lock.json
+      - name: Validate portable contract against OpenAPI 3
+        working-directory: tools/openapi
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run validate
   powershell:
     name: Windows PowerShell helper contracts
     runs-on: windows-2025
@@ -174,3 +265,6 @@ jobs:
       - name: Offline Firebase password helpers on Windows PowerShell 5.1
         shell: powershell
         run: ./scripts/test-firebase-password-tools.ps1
+      - name: Offline local development launcher on Windows PowerShell 5.1
+        shell: powershell
+        run: ./scripts/test-dev.ps1

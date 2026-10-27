@@ -27,12 +27,17 @@ func text(v string, max int, multiline bool) bool {
 func (s *Service) Publish(ctx context.Context, uid string, in dto.Publish) (domain.Publication, error) {
 	in.Title = strings.TrimSpace(in.Title)
 	in.Content = strings.TrimSpace(in.Content)
+	in.Faculty = strings.TrimSpace(in.Faculty)
 	if in.Audience == "" {
 		in.Audience = "all_students"
 	}
-	if !validation.UUID(in.RequestID) || !text(in.Title, 160, false) || !text(in.Content, 5000, true) || in.Audience != "all_students" {
+	if !validation.UUID(in.RequestID) || !text(in.Title, 160, false) || !text(in.Content, 5000, true) ||
+		(in.Audience != "all_students" && in.Audience != "faculty") ||
+		(in.Audience == "faculty" && !text(in.Faculty, 120, false)) ||
+		(in.Audience == "all_students" && in.Faculty != "") {
 		return domain.Publication{}, domain.ErrInvalid
 	}
+	in.Faculty = strings.ToLower(in.Faculty)
 	in.RequestID = strings.ToLower(in.RequestID)
 	return s.store.Publish(ctx, uid, in)
 }

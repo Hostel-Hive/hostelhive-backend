@@ -1,13 +1,47 @@
 # HostelHive Mobile API Integration Guide
 
+> Student-owned photos (24 October 2026): PUT and DELETE
+> /api/v1/me/student-profile/image support upload/replacement and removal for
+> both mobile and web. Upload raw JPEG/PNG bytes, not multipart or JSON.
+> See [the photo contract](../student-own-profile-photo.md) and current Swagger.
+> Existing packaged HTML/PDF/Postman versions do not include these endpoints.
+
+> Student self-editing update (23 October 2026): PATCH /api/v1/me/student-profile
+> supports contact_phone and complete guardian replacement for the authenticated
+> Student, on mobile or web. Omit other fields; identity/academic/account fields
+> remain protected. See [the full editing contract](../student-self-profile-editing.md).
+> No database migration is needed. Frontend editing screens are separate work.
+
+> Policy #118 supersedes the leave and timing instructions below: both IN and OUT
+> require approval outside [06:00,20:00), Asia/Colombo. Going Home is a no-approval
+> signing-book declaration with no expected return date. Leave writes and allowance
+> return410; retain historical reads and remove leave actions/usage ring. Apply
+> migration30 with a coordinated deployment. See [current contract](../hostel-movement-policy.md).
+
+> Faculty announcement update (20 October 2026, migration29): Students see global
+> notices plus notices for their current faculty. Inbox/read access uses the same
+> scope. Admin/Warden can publish with `audience: faculty` and a `faculty` value;
+> this supersedes the older all-Students-only contract below. See
+> [faculty announcements](../faculty-announcements.md) and current Swagger `/docs/`.
+
+> Pass workflow update (#101-#103, 20 October 2026): use
+> `GET /api/v1/me/passes` for globally paginated leave/late-access history,
+> the source-specific pending cancellation endpoints, and
+> `GET /api/v1/me/leave-allowance` for the informational 18-day annual summary.
+> See [the current combined-pass contract](../combined-student-pass-history.md),
+> [cancellation rules](../pass-cancellation.md) and
+> [allowance policy](../yearly-leave-allowance.md). These contracts supersede older
+> missing-feature statements below. The dated HTML/PDF/Postman handoff packages
+> remain historical snapshots; confirm that the shared server includes #103.
+
 | Document detail | Value |
 | --- | --- |
 | Audience | Flutter mobile application developer |
-| Reviewed | 16 October 2026, Asia/Colombo |
-| Contract version | Feature-branch snapshot 1.6 (issue95 Student invitations/setup) |
+| Reviewed | 20 October 2026, Asia/Colombo |
+| Contract version | Feature-branch snapshot 1.8 (issue103 combined pass history) |
 | Backend | Hostel-Hive/hostelhive-backend |
-| Inspected branch | feature/95-student-invitations |
-| Base revision | e95cc3c plus issue95 working-tree implementation; deployment unverified |
+| Inspected branch | feature/103-combined-student-pass-history |
+| Base revision | 56e2c39 plus issue103 working-tree implementation; deployment unverified |
 
 This guide describes the backend that exists today. It is not a proposal to
 implement the endpoint names from the earlier mobile mock repository. Examples
@@ -34,9 +68,9 @@ and deployed end-to-end behavior have not been audited in this repository.
 | 4 | Student profile and accommodation details | Available in #91 | Section4.3 | Use /me/student-profile and its authenticated image endpoint. Handle null accommodation/image and missing/archived profile errors. No Student editing endpoint is added. |
 | 5 | Student QR display | Available | Section4.2 | Fetch /me/qr with Bearer auth and render PNG bytes. Require an eligible profile; handle errors and clear private images on account switch. |
 | 6 | Own attendance history | Available in #93 | Section4.4 | Use /me/attendance/events for recorded IN/OUT movements. Apply local-date/direction filters and pagination; use movement_id for list identity. Staff readers remain protected. |
-| 7 | Extended leave requests and history | Available for agreed request/decision model | Section5 | Create/list/detail through /leaves, preserve request UUID on retry and display decision_note. No quota or cancellation support; approval does not change presence. |
-| 8 | Early-exit/late-entry requests and history | Available for one movement per request | Section6 | Use /late-access-requests with IN/OUT, expected_at and reason. Display decision and optional consumption metadata. No round-trip payload or cancellation. |
-| 9 | Going Home declaration | Missing | Sections13 and18 | Do not substitute an approved date-range leave or set attendance locally. Agree a scan-compatible normal-hours declaration lifecycle before implementation. |
+| 7 | Extended leave requests and history | Available for agreed request/decision model | Section5 | Create/detail through /leaves; combined history through /me/passes. Pending cancellation and informational yearly allowance are available; approval does not change presence. |
+| 8 | Early-exit/late-entry requests and history | Available for one movement per request | Section6 | Use /late-access-requests with IN/OUT, expected_at and reason; /me/passes for combined history. Pending cancellation available. No round-trip payload. |
+| 9 | Going Home declaration | Backend implemented #100; confirm deployment | Section6.5 | POST /going-home with request_id. Known IN required; no approval or return date. Keep presence scan-based and preserve the UUID on retries. |
 | 10 | Complaints, photos and progress | Available with existing limits | Sections7 and8 | JSON create; separate timeline and authenticated photo requests. Maximum 3 JPEG/PNG images, Pending-only new photo changes. No title/severity. Handle partial uploads and versions. |
 | 11 | Announcements and notification inbox | Available core feed/detail/read-one workflow | Sections9 and10 | Use announcement feed/details and /notifications. Derive isRead from read_at, navigate by source ID and refresh unread count. Dedicated notification-detail GET and read-all are absent. |
 | 12 | Phone push notifications | Backend implemented in #89 feature-branch work; mobile/live testing pending | Section11 | Configure FCM/APNs as applicable, register token, handle refresh/taps/foreground and logout. Confirm running revision/migration 25/FCM enablement; observe real phone receipt. |
@@ -53,9 +87,9 @@ and deployed end-to-end behavior have not been audited in this repository.
 - Backend implemented/mobile pending means client setup and real integration are
   still required; it does not mean another Go endpoint must be invented.
 
-The proposed 18-day quota, pass cancellation, Student-ID login
-and bulk mark-read must be resolved explicitly. Their presence in a teammate's
-mock contract does not automatically make each one an approved SRS requirement.
+The 18-day informational summary, pending cancellation and combined history are
+implemented in #101-#103. Student-ID login and bulk mark-read remain separate
+requests. A teammate's mock contract does not automatically approve extra scope.
 Section18 distinguishes those requests from implemented behavior. For the complete
 application's intended screen design and acceptance scope, retain the SRS/SDS and
 approved amendments alongside this current API reference.
@@ -66,8 +100,10 @@ approved amendments alongside this current API reference.
    /auth/forgot-password, /auth/reset-password or /auth/logout endpoints.
 2. Every business API path starts with /api/v1. Send a Firebase ID token as Bearer.
 3. /me returns account metadata. Use /me/student-profile for the Student profile, guardians, current room/bed and scan-based presence.
-4. Extended leave and late access are separate models and endpoints. There is no
-   /passes endpoint, 18-day quota, Going Home endpoint or cancellation endpoint.
+4. Extended leave and late access retain separate write/detail endpoints. Use
+   GET /api/v1/me/passes for combined history; pending cancellation is source-specific.
+   GET /api/v1/me/leave-allowance provides an informational 18-day summary.
+   Going Home uses /going-home; section6.5.
 5. Complaints are created as JSON. Photos upload separately as image bytes.
    Maximum THREE attached photos, not five; title and severity are unsupported.
 6. The inbox is /notifications. Read state is read_at, not is_read. There is no
@@ -574,7 +610,8 @@ No query. JSON body limit 16 KiB. First creation AND exact creation retry return
 Ownership is derived from authentication. Do not send student_id, status, title,
 destination or decision fields. Pending/approved periods for the same Student
 cannot overlap. Intervals are [start,end): one request may start exactly when
-another ends. Rejected requests do not reserve a period. No 18-day annual quota.
+another ends. Rejected/cancelled requests do not reserve a period. The 18-day
+annual allowance summary is informational and does not block new requests.
 
 Success object (also used by GET detail):
 
@@ -596,7 +633,7 @@ Success object (also used by GET detail):
 ```
 
 The server generates leave_id and timestamps. submitted_by/decided_by are local
-user UUIDs, not display names. status is pending, approved or rejected. Decision
+user UUIDs, not display names. status is pending, approved, rejected or cancelled. Decision
 fields remain null/empty until decided. The object does not expand Student/staff
 profiles. On approval, do not mark the Student OUT in Flutter or RTDB.
 
@@ -611,7 +648,8 @@ GET /api/v1/leaves?status=pending&limit=20&offset=0
 ```
 
 Returns the standard page object with Request objects in items. Order is
-created_at DESC then leave_id DESC. Omit status to include all three statuses.
+created_at DESC then leave_id DESC. Omit status to include all four statuses.
+Cancelled records also include cancelled_at and cancelled_by; see the #101 contract.
 
 ### 5.3 GET /api/v1/leaves/{leaveID}
 
@@ -630,8 +668,10 @@ decided_by. Fetching does not mark any notification read.
 | 503 leave_unavailable | Temporary backend failure |
 
 A retry of an already-created request retains its original record, including later
-decisions. Do not treat repeated201 as another leave. There is no edit/delete,
-Student approval, cancellation, quota or separate Going Home endpoint.
+decisions/cancellation. Do not treat repeated201 as another leave. There is no
+edit/delete or Student approval endpoint. Pending cancellation uses
+POST /api/v1/leaves/{leaveID}/cancel with no body; yearly allowance uses
+GET /api/v1/me/leave-allowance. Going Home uses /going-home; section6.5.
 
 For test coordination only, Admin/Warden use:
 
@@ -715,7 +755,7 @@ GET /api/v1/late-access-requests?status=approved&limit=20&offset=0
 GET /api/v1/late-access-requests/{lateAccessID}
 ```
 
-List supports status=pending|approved|rejected, limit and offset; omit status for
+List supports status=pending|approved|rejected|cancelled, limit and offset; omit status for
 all. Do not send student_id for Student requests. Items are owned Request objects,
 ordered created_at DESC then late_access_id DESC, in the standard page envelope.
 Detail200 returns one Request, including decision/optional consumption metadata.
@@ -746,7 +786,9 @@ conflicts. Distinct expected times can coexist. Rejected requests allow a replac
 Past-time validation is 400, NOT the422 in the proposed mobile contract.
 For test coordination, Admin/Warden use POST /api/v1/late-access-requests/{lateAccessID}/decision
 with {"status":"approved","note":"Approved."}; success 200 Request. Rejection
-requires a note. Student calls are forbidden. No cancellation/reminder/quota API.
+requires a note. Student decision calls are forbidden. Pending cancellation uses
+POST /api/v1/late-access-requests/{lateAccessID}/cancel with no body. There is no
+reminder API; late-access requests do not consume the yearly leave allowance.
 
 ### 6.5 Adapting PassRepository
 
@@ -755,11 +797,56 @@ Use its type plus server ID for detail/navigation; do not assume all UUIDs belon
 to one collection. Map decision_note to the UI's Warden comment label. Do not
 mislabel submitted_by or decided_by UUIDs as human names.
 
-Prefer separate tabs/independent pagination initially. A client-merged page from
-two endpoints is NOT a globally paginated /passes service; it can omit unseen
-records when sorted together. If a combined feed with reliable global ordering
-and pagination is essential, agree a backend aggregate contract before shipping.
-No real quota calculation exists: do not show a fabricated18-day balance.
+Use GET /api/v1/me/passes for one globally paginated feed (#103). It accepts optional
+type=leave|late_access, status=pending|approved|rejected|cancelled, limit and offset.
+Order is created_at DESC, type ASC, source_id DESC. Each item retains source_id,
+request_id, status, reason, nullable leave/movement times and decision/cancellation
+audit. Use (type, source_id) as its key and source-specific detail/cancel routes.
+Totals and items share one snapshot per response; separate pages can change when
+new requests arrive. Refresh from offset0 after mutations. Going Home is excluded.
+For exact fields, errors and examples see [combined-pass API](../combined-student-pass-history.md).
+Use GET /api/v1/me/leave-allowance for the real informational annual balance (#102);
+it does not block requests. See [the counting policy](../yearly-leave-allowance.md).
+
+### 6.5 Going Home declarations (#100)
+
+```http
+POST /api/v1/going-home
+Authorization: Bearer FIREBASE_ID_TOKEN
+Content-Type: application/json
+```
+
+```json
+{"request_id":"10000000-0000-4000-8000-000000000010"}
+```
+
+An active Student with completed setup, an unarchived profile and known IN presence
+can declare an intention without Warden approval or a return date. Send only the
+nonzero UUID request_id; no query, owner, timestamps or form extras. Success201
+returns going_home_id, request_id, student_id, submitted_by, status, declared_at,
+nullable departed_at, departure_device_id and departure_event_id. The initial
+status is declared. Exact retries return200 with the same ID/time and current
+lifecycle, including departed if the Student has since exited.
+
+Do not mark the Student OUT in Flutter after this response. Only the next new
+recorded OUT scan changes physical presence and marks the declaration departed.
+Suppressed scans and old scan retries do not consume it. Early-exit and late-entry
+permissions remain separate. There is no required return date or automatic expiry;
+if the Student never exits, the declaration remains outstanding.
+
+409 already_outside means new declarations require an actual IN scan first.
+409 presence_unknown means presence must first be established by a scan; do not
+assume inside. 409 going_home_pending means an outstanding declaration already
+exists. Missing/archived profile gives409 active_student_required; existing401,
+403/setup_required,400 invalid_input,413,415 and503 going_home_unavailable apply.
+Keep the same request UUID on an unknown network outcome; do not generate another
+one for a retry. Replays still require current eligibility. A new declaration
+after departure and return requires a new UUID.
+
+This endpoint creates a durable declaration, not an approved extended leave or
+late-access permission, notification or quota usage. No new GET/list/cancel route
+is supplied here. Keep the returned declaration/request ID; future feed inclusion
+needs an explicit contract. Full lifecycle: [Going Home API](../going-home-declarations.md).
 
 ## 7. Complaints: creation, lists, details and notes
 
@@ -1286,6 +1373,7 @@ the braces. Staff approval actions in sections5/6 are deliberately absent here.
 | GET | /api/v1/me/student-profile/image | 200 | Own JPEG/PNG bytes |
 | POST | /api/v1/me/setup/complete | 200 | SetupResult; empty body; section3.5 |
 | GET | /api/v1/me/qr | 200 | PNG bytes |
+| POST | /api/v1/going-home | 201 first /200 replay | GoingHomeDeclaration; section6.5 |
 | POST | /api/v1/leaves | 201 | Leave Request |
 | GET | /api/v1/leaves | 200 | Request page |
 | GET | /api/v1/leaves/{leaveID} | 200 | Leave Request |
@@ -1326,12 +1414,12 @@ These are compatibility decisions, not permission to invent new backend routes.
 | POST /auth/reset-password | Firebase action-code reset | No Go reset endpoint |
 | POST /auth/logout | Firebase sign-out plus push cleanup | No backend revoke-session/logout API |
 | ProfileRepository GET /me with full profile | GET /api/v1/me/student-profile; /me remains account-only | Map nullable accommodation/image and UNKNOWN presence; section4.3 |
-| PassRepository GET /passes | Separate /leaves and /late-access-requests | Reliable combined feed/pagination absent |
+| PassRepository GET /passes | GET /api/v1/me/passes | Combined global pagination, type/source_id; see current #103 contract |
 | GET /passes/{id} | Type-specific detail path | Retain type discriminator |
-| GET /passes/quota | None | No 18-day quota calculation/enforcement |
+| GET /passes/quota | GET /api/v1/me/leave-allowance | Informational 18-day calendar-year summary; no enforcement |
 | POST /passes/late-access | POST /api/v1/late-access-requests | Replace interval/extra fields with one direction/expected_at/reason and request_id |
-| POST /passes/going-home | None | UC009 workflow missing; scan-based presence needs agreed rules |
-| POST /passes/{id}/cancel | None | Cancellation state/lifecycle missing |
+| POST /passes/going-home | POST /api/v1/going-home | request_id only; known IN required; no optimistic OUT; section6.5 |
+| POST /passes/{id}/cancel | Source-specific /leaves/{id}/cancel or /late-access-requests/{id}/cancel | Owning Student, pending only, empty body; preserve type |
 | ComplaintRepository GET /complaints | GET /api/v1/complaints | Decode pagination and ownership |
 | GET /complaints/{id} with progress/photos | Detail plus /updates plus /images | Three calls, not one aggregate |
 | POST /complaints multipart+title+severity+5images | JSON create then raw image PUTs | Remove unsupported fields; maximum 3; handle partial uploads |
@@ -1356,7 +1444,7 @@ Flutter architecture. Adapt existing repositories behind their interfaces.
 | AuthenticatedApiClient | Environment base URL, Bearer token, timeout, safe error decoding, one refresh/retry, account scoping |
 | AccountRepository | /me, pending setup and /me/setup/complete; current account role/status |
 | QrRepository | Authenticated /me/qr byte download |
-| LeaveRepository | Extended leave create/list/detail |
+| LeaveRepository | Extended leave create/list/detail and Going Home declarations |
 | LateAccessRepository | Single-movement permission create/list/detail |
 | ComplaintRepository | Complaint JSON, timeline/notes, image metadata/bytes/upload/removal |
 | InboxRepository | Notifications, unread count, mark one read; source navigation |
@@ -1371,6 +1459,7 @@ flight, but rely on backend operation identity for network retries.
 
 | Operation | Stable retry identity | What not to change on a retry |
 | --- | --- | --- |
+| Going Home declaration | request_id within Student | Same request ID; no extra payload |
 | Create leave | request_id within Student | Dates and reason |
 | Create late access | request_id within Student | Direction, expected_at and reason |
 | Create complaint | request_id within Student | Category and description |
@@ -1403,7 +1492,7 @@ Never label a timeout as definitely failed if the server might have committed.
 ## 15. Using the accompanying Postman collection
 
 File: HostelHive-Mobile-API-2026-10-15.postman_collection.json.
-The collection contains 29 implemented Student-facing requests, grouped by feature;
+The collection contains 30 implemented Student-facing requests, grouped by feature;
 it does not add the missing proposed routes or perform Firebase password login.
 
 1. Import the JSON collection in Postman.
@@ -1459,7 +1548,7 @@ Backend local automated evidence is described in section19.
 | Push receipt | Fresh leave/late-access decision reaches registered Student phone; actual receipt observed |
 | Push lifecycle | Foreground/background/cold start, token refresh and logout/account switch tested |
 | Push scope | Complaint/ordinary announcement remain inbox-only; staff incidents are not Student push |
-| Missing features | No fake quota, cancellation, Going Home or bulk-read success shown |
+| Pass workflows | Real combined history, cancellation, annual allowance and Going Home contracts used; no fabricated bulk-read success |
 
 Use two dedicated Student accounts for ownership tests and an Admin/Warden test
 account only for staff-side coordination. Keep those credentials out of source,
@@ -1500,10 +1589,10 @@ hardcoding Admin credentials or storing passwords in PostgreSQL/the mobile app.
 | Full Student profile/home aggregate | Implemented in #91; deployment must be confirmed | Use /me/student-profile and authenticated /image; section4.3 |
 | Student invitation and initial password setup | Backend implemented #95; live email/Flutter pending | Admin-approved university email, hosted Firebase setup, fresh password sign-in and /me/setup/complete; section3.5. No SSO. |
 | Student-ID login | Not implemented | Selected onboarding uses university email; an alternative Student-ID login requires a separate scope decision |
-| 18-day yearly quota| Missing; not currently enforced | Agree year, entitlement, day counting, overlap/cancellation effects before implementation |
-| Going Home declaration | Missing | Agree scan-compatible normal-hours declaration/history/return rules |
-| Cancel pending pass | Missing | Agree eligible states, audit, races and notification effects for both request types |
-| Combined pass feed | No unified backend route | Separate type-aware lists now, or agree reliable aggregate pagination |
+| 18-day yearly quota| Informational summary implemented #102 | Asia/Colombo calendar year, approved local dates, no blocking enforcement |
+| Going Home declaration | Backend implemented #100; deployment unverified | Use /going-home; no approval/return date, actual OUT stays scan-based; section6.5 |
+| Cancel pending pass | Implemented #101 | Source-specific cancellation with ownership, pending-state and audit rules |
+| Combined pass feed | Implemented #103 | GET /me/passes with deterministic ordering, combined pagination and consistent totals |
 | Notification detail GET | No dedicated route | Use source detail now, or agree aggregate behavior |
 | Mark all read | Missing | Add explicit recipient-scoped bulk contract if required |
 | Student-owned attendance history | Implemented in #93; confirm deployment | Use /me/attendance/events, section4.4 |
@@ -1519,7 +1608,7 @@ a mocked endpoint. Do not label a future API as available in a production reposi
 ## 19. Evidence, source files and maintenance
 
 Source of truth for this snapshot: backend route files, DTOs, domain models,
-handlers, services and repositories reviewed through 16 October 2026. No backend code or
+handlers, services and repositories reviewed through 19 October 2026. No backend code or
 cloud settings were changed to write this guide. Source paths below are relative
 to the backend repository, not links to an already deployed API.
 
@@ -1542,13 +1631,19 @@ that row's module directory. Read the backend docs/*.md feature guide for staff-
 manual tests and deployment prerequisites. Earlier ticket docs may say a later
 feature was future work; this guide incorporates subsequent implementation through #93.
 
-Local issue95 verification on16 October passed80 package results, all15 required
+Historical issue95 verification on16 October passed80 package results, all15 required
 database packages without test skips, and reported84.8% statement coverage. The
 populated invitation upgrade/rollback and all26 migration rollback/reapply checks
 also passed, including the new helper under Windows PowerShell5.1. These numbers
 are not feature completeness, live Firebase/R2/FCM behavior, remote CI or deployed
 acceptance. Firebase adapter tests use fakes; real setup email and Flutter remain
 pending. No live invitation accounts or emails were created by those checks.
+
+Local issue100 verification on19 October passed80 package results and all15
+required PostgreSQL packages without test skips. Overall statement coverage84.9%
+and Leave87.1%; all27 migrations passed rollback/reapply and the populated Going
+Home preservation check passed. This is automated backend evidence, not live
+Flutter/device or remote CI acceptance.
 
 Before changing a route/payload/status/limit, update this guide, the collection and
 both repositories' mapping together. Confirm the running server revision, migrations

@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	CORSAllowedOrigins                     []string
 	StudentInvitationsEnabled              bool
 	StudentEmailDomains                    []string
 	HostelLocation                         *time.Location
@@ -113,6 +114,9 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, fmt.Errorf("DATABASE_URL must be a PostgreSQL URL with host, user and database")
 	}
 	if err := cfg.loadLateAccess(value); err != nil {
+		return Config{}, err
+	}
+	if err := cfg.loadCORS(value("CORS_ALLOWED_ORIGINS", "")); err != nil {
 		return Config{}, err
 	}
 	if err := cfg.loadR2(value); err != nil {

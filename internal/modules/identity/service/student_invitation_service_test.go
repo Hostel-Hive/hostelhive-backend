@@ -94,10 +94,59 @@ func TestInvitationInputValidation(t *testing.T) {
 		t.Fatal("bad IP")
 	}
 }
+
+func TestInvitationGmailAndUniversityDomains(t *testing.T) {
+	for _, tc := range []struct {
+		email, normalized string
+		valid             bool
+	}{
+		{"student@gmail.com", "student@gmail.com", true},
+		{" Student@GMAIL.COM ", "student@gmail.com", true},
+		{"student+hostel@gmail.com", "student+hostel@gmail.com", true},
+		{"student@stu.kln.ac.lk", "student@stu.kln.ac.lk", true},
+		{" Student@STU.KLN.AC.LK ", "student@stu.kln.ac.lk", true},
+		{"student@other.example", "", false},
+		{"student@gmail.com.evil.example", "", false},
+		{"student@sub.gmail.com", "", false},
+		{"student@evil.stu.kln.ac.lk", "", false},
+		{"student@stu.kln.ac.lk.evil.example", "", false},
+		{"not-an-email", "", false},
+	} {
+		t.Run(tc.email, func(t *testing.T) {
+			repo := &invitationRepoFake{}
+			s := NewInvitations(repo, nil, []string{"gmail.com", "stu.kln.ac.lk"}, true)
+			input := invitationInput()
+			input.Email = tc.email
+			if tc.valid {
+				normalized, err := s.normalize(input)
+				if err != nil || normalized.Email != tc.normalized {
+					t.Fatal("email normalization", normalized.Email, err)
+				}
+				if _, _, err = s.Register(context.Background(), "admin", "127.0.0.1", input); err != nil || repo.calls != 1 {
+					t.Fatal("approved email rejected", err)
+				}
+			} else if _, _, err := s.Register(context.Background(), "admin", "127.0.0.1", input); !errors.Is(err, d.ErrInvitationInvalid) || repo.calls != 0 {
+				t.Fatal("unapproved email reached repository", err)
+			}
+		})
+	}
+	// CSV registration uses the same policy as individual registration.
+	repo := &invitationRepoFake{}
+	s := NewInvitations(repo, nil, []string{"gmail.com", "stu.kln.ac.lk"}, true)
+	gmail, university := invitationInput(), invitationInput()
+	gmail.Email = "student@gmail.com"
+	gmail.IndexNo = "GMAIL-STUDENT"
+	university.Email = "student@stu.kln.ac.lk"
+	university.IndexNo = "UNIVERSITY-STUDENT"
+	report, err := s.Import(context.Background(), "admin", "127.0.0.1", invitationCSV(gmail, university))
+	if err != nil || report.Queued != 2 || report.Rejected != 0 || repo.calls != 2 {
+		t.Fatal("mixed-domain CSV registration", report, err)
+	}
+}
 func invitationCSV(vs ...dto.StudentInvitationInput) []byte {
 	var b strings.Builder
 	w := csv.NewWriter(&b)
-	_ = w.Write(strings.Split(InvitationCSVHeader, ","))
+	_ = w.Write(strings.Split("request_id,"+InvitationCSVHeader, ","))
 	for _, v := range vs {
 		g, _ := json.Marshal(v.Guardians)
 		_ = w.Write([]string{v.RequestID, v.Email, v.IndexNo, v.FullName, v.Faculty, "1", v.ContactPhone, string(g)})
@@ -141,5 +190,52 @@ func TestInvitationCSVContractAndPartialResults(t *testing.T) {
 	r, e := s.Import(ctx, "admin", "127.0.0.1", invitationCSV(good))
 	if e != nil || r.NotAttempted != 1 {
 		t.Fatal("interruption", r, e)
+	}
+}
+
+func TestEmailCSVStableKeysAndRegistration(t *testing.T) {
+	repo := &invitationRepoFake{}
+	s := NewInvitations(repo, nil, []string{"stu.kln.ac.lk"}, true)
+	input := invitationInput()
+	g, _ := json.Marshal(input.Guardians)
+	var b strings.Builder
+	w := csv.NewWriter(&b)
+	_ = w.Write(strings.Split(InvitationCSVHeader, ","))
+	_ = w.Write([]string{input.Email, input.IndexNo, input.FullName, input.Faculty, "1", input.ContactPhone, string(g)})
+	w.Flush()
+	raw := []byte(b.String())
+	rows, err := s.parseInvitationCSV("admin", raw)
+	if err != nil || len(rows) != 1 || rows[0].code != "" || !invitationUUID(rows[0].input.RequestID) {
+		t.Fatal("email-only CSV rejected", rows, err)
+	}
+	again, _ := s.parseInvitationCSV("admin", raw)
+	other, _ := s.parseInvitationCSV("another-admin", raw)
+	if rows[0].input.RequestID != again[0].input.RequestID || rows[0].input.RequestID == other[0].input.RequestID {
+		t.Fatal("row key must be stable and actor scoped")
+	}
+	canonical, _ := s.parseInvitationCSV("admin", []byte(strings.Replace(string(raw), input.Email, "student@stu.kln.ac.lk", 1)))
+	if rows[0].input.RequestID != canonical[0].input.RequestID {
+		t.Fatal("normalization changed exact replay key")
+	}
+	changed, _ := s.parseInvitationCSV("admin", []byte(strings.Replace(string(raw), input.FullName, "Different Name", 1)))
+	if rows[0].input.RequestID == changed[0].input.RequestID {
+		t.Fatal("changed data must not replay another payload")
+	}
+	report, err := s.Import(context.Background(), "admin", "127.0.0.1", raw)
+	if err != nil || report.Queued != 1 || repo.calls != 1 {
+		t.Fatal("registration flow was not used", report, err)
+	}
+	if _, err := s.Import(context.Background(), "", "127.0.0.1", raw); !errors.Is(err, d.ErrInvitationForbidden) {
+		t.Fatal("missing actor accepted", err)
+	}
+	parts := strings.SplitN(string(raw), "\n", 2)
+	before := repo.calls
+	for _, malformed := range []string{string(raw) + "\"unclosed", parts[0] + "\n" + strings.Repeat(parts[1], 101)} {
+		if _, err := s.Import(context.Background(), "admin", "127.0.0.1", []byte(malformed)); !errors.Is(err, d.ErrInvitationInvalid) {
+			t.Fatal("invalid whole file accepted", err)
+		}
+	}
+	if repo.calls != before {
+		t.Fatal("structural failure caused partial writes")
 	}
 }

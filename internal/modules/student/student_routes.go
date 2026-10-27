@@ -19,6 +19,15 @@ func Register(a *handler.API, mux *http.ServeMux, authenticate func(http.Handler
 	mux.Handle("DELETE /api/v1/students/{studentID}", protect(a.Delete))
 }
 
+func RegisterRestoration(a *handler.RestorationAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/v1/students/archived", authenticate(authentication.RequireRoles(domain.RoleAdmin)(http.HandlerFunc(a.ListArchived))))
+	mux.Handle("POST /api/v1/students/{studentID}/restore", authenticate(authentication.RequireRoles(domain.RoleAdmin)(http.HandlerFunc(a.Restore))))
+}
+
+func RegisterCheckout(a *handler.CheckoutAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("POST /api/v1/students/{studentID}/checkout", authenticate(authentication.RequireRoles(domain.RoleAdmin)(http.HandlerFunc(a.Checkout))))
+}
+
 func RegisterImages(a *handler.ImageAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
 	protect := func(h http.HandlerFunc) http.Handler {
 		return authenticate(authentication.RequireRoles(domain.RoleAdmin, domain.RoleWarden)(h))
@@ -49,4 +58,16 @@ func RegisterOwnProfile(a *handler.OwnProfileAPI, mux *http.ServeMux, authentica
 	}
 	mux.Handle("GET /api/v1/me/student-profile", protect(a.Get))
 	mux.Handle("GET /api/v1/me/student-profile/image", protect(a.Image))
+}
+
+func RegisterOwnProfileEdit(a *handler.OwnProfileEditAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	mux.Handle("PATCH /api/v1/me/student-profile", authenticate(authentication.RequireRoles(domain.RoleStudent)(http.HandlerFunc(a.Patch))))
+}
+
+func RegisterOwnImages(a *handler.OwnImageAPI, mux *http.ServeMux, authenticate func(http.Handler) http.Handler) {
+	protect := func(h http.HandlerFunc) http.Handler {
+		return authenticate(authentication.RequireRoles(domain.RoleStudent)(h))
+	}
+	mux.Handle("PUT /api/v1/me/student-profile/image", protect(a.Upload))
+	mux.Handle("DELETE /api/v1/me/student-profile/image", protect(a.Remove))
 }

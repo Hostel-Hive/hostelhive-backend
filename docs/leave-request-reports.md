@@ -13,7 +13,7 @@ through existing Firebase authentication and local account checks.
 | from | Required inclusive submission date, exactly YYYY-MM-DD |
 | to | Required inclusive submission date, at most 366 calendar days including from |
 | student_id | Optional canonical lowercase nonzero Student profile UUID |
-| status | Optional pending, approved or rejected; case-sensitive |
+| status | Optional pending, approved, rejected or cancelled; case-sensitive |
 | limit | 1..100; default 20 |
 | offset | 0..1000000; default 0 |
 
@@ -34,9 +34,9 @@ decision can therefore change the report for an earlier submission period.
 
 JSON fields: from, to, timezone, optional applied student_id/status, summary,
 total, limit, offset, has_more and items. Items is always an array, including [].
-Summary contains pending, approved and rejected counts across ALL matching
+Summary contains pending, approved, rejected and cancelled counts across ALL matching
 requests, independent of page size and offset. Every filter, including status,
-affects both rows and summary. total = pending + approved + rejected.
+affects both rows and summary. total = pending + approved + rejected + cancelled.
 
 Items include leave_id, request_id, student_id, submitted_by, starts_at, ends_at,
 reason, status, created_at, decided_at, decided_by and decision_note. Pending
@@ -101,7 +101,7 @@ $toDate = '2026-10-15'
 $query = "from=$fromDate&to=$toDate"
 $report = Invoke-RestMethod -Uri "${reportURL}?${query}&limit=20&offset=0" -Headers $adminHeaders
 $report | ConvertTo-Json -Depth 8
-if ($report.total -ne ($report.summary.pending + $report.summary.approved + $report.summary.rejected)) {
+if ($report.total -ne ($report.summary.pending + $report.summary.approved + $report.summary.rejected + $report.summary.cancelled)) {
     throw 'FAIL: status totals do not add up.'
 }
 ```

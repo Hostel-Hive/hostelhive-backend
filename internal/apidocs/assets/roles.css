@@ -1,0 +1,32 @@
+.hh-role-toolbar {
+  max-width: 1460px;
+  margin: 20px auto;
+  padding: 16px 20px;
+  box-sizing: border-box;
+  border: 1px solid #b6c6dc;
+  border-radius: 6px;
+  background: #f3f7fc;
+  color: #263449;
+  font-family: sans-serif;
+}
+.hh-role-toolbar label { font-weight: 700; margin-right: 12px; }
+.hh-role-toolbar select { padding: 8px; font-size: 1rem; max-width: 100%; }
+.hh-role-toolbar p { margin: 10px 0 0; line-height: 1.5; }
+.hh-role-badges { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 8px; }
+.hh-role-badge {
+  border: 1px solid #68778a;
+  border-radius: 12px;
+  padding: 3px 9px;
+  background: #fff;
+  color: #263449;
+  font-size: 12px;
+  font-family: sans-serif;
+  font-weight: 700;
+}
+.hh-role-admin { background: #e8eaff; color: #303b80; border-color: #707bc0; }
+.hh-role-student { background: #e3f4e9; color: #205b36; border-color: #57976c; }
+.hh-role-scanner { background: #fff1da; color: #755019; border-color: #ad853f; }
+@media (max-width: 600px) {
+  .hh-role-toolbar { margin: 12px; }
+  .hh-role-toolbar label { display: block; margin-bottom: 8px; }
+}

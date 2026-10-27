@@ -11,11 +11,13 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
+
 	d "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/dto"
 )
 
-const InvitationCSVHeader = "request_id,email,index_no,full_name,faculty,year,contact_phone,guardians"
+const InvitationCSVHeader = "email,index_no,full_name,faculty,year,contact_phone,guardians"
 const MaxInvitationCSVBytes = 2 * 1024 * 1024
 const MaxInvitationCSVRows = 100
 
@@ -30,6 +32,7 @@ type InvitationImportRow struct {
 	Status       string `json:"status"`
 	Error        string `json:"error,omitempty"`
 	InvitationID string `json:"invitation_id,omitempty"`
+	StudentID    string `json:"student_id,omitempty"`
 }
 type InvitationImportReport struct {
 	Total         int                   `json:"total"`
@@ -42,13 +45,13 @@ type InvitationImportReport struct {
 	Rows          []InvitationImportRow `json:"rows"`
 }
 
-func (s *Invitations) parseInvitationCSV(raw []byte) ([]invitationCSVRow, error) {
+func (s *Invitations) parseInvitationCSV(actor string, raw []byte) ([]invitationCSVRow, error) {
 	if len(raw) > MaxInvitationCSVBytes || !utf8.Valid(raw) {
 		return nil, d.ErrInvitationInvalid
 	}
 	reader := csv.NewReader(bytes.NewReader(bytes.TrimPrefix(raw, []byte{0xef, 0xbb, 0xbf})))
 	headers, e := reader.Read()
-	if e != nil || len(headers) != 8 {
+	if e != nil || (len(headers) != 7 && len(headers) != 8) {
 		return nil, d.ErrInvitationInvalid
 	}
 	positions := map[string]int{}
@@ -60,6 +63,11 @@ func (s *Invitations) parseInvitationCSV(raw []byte) ([]invitationCSVRow, error)
 	}
 	for _, h := range strings.Split(InvitationCSVHeader, ",") {
 		if _, ok := positions[h]; !ok {
+			return nil, d.ErrInvitationInvalid
+		}
+	}
+	if len(headers) == 8 {
+		if _, ok := positions["request_id"]; !ok {
 			return nil, d.ErrInvitationInvalid
 		}
 	}
@@ -76,7 +84,15 @@ func (s *Invitations) parseInvitationCSV(raw []byte) ([]invitationCSVRow, error)
 		line, _ := reader.FieldPos(0)
 		row := invitationCSVRow{line: line}
 		value := func(k string) string { return fields[positions[k]] }
-		v := dto.StudentInvitationInput{RequestID: value("request_id"), Email: value("email")}
+		// Explicit row UUIDs remain supported for existing API clients. The
+		// seven-column Admin template derives a stable key from normalized data,
+		// scoped to the actor. Reordering rows or exact retries cannot create again.
+		_, explicit := positions["request_id"]
+		requestID := "00000000-0000-4000-8000-000000000001"
+		if explicit {
+			requestID = value("request_id")
+		}
+		v := dto.StudentInvitationInput{RequestID: requestID, Email: value("email")}
 		v.IndexNo, v.FullName, v.Faculty, v.ContactPhone = value("index_no"), value("full_name"), value("faculty"), value("contact_phone")
 		var yearErr error
 		v.Year, yearErr = strconv.Atoi(strings.TrimSpace(value("year")))
@@ -93,6 +109,11 @@ func (s *Invitations) parseInvitationCSV(raw []byte) ([]invitationCSVRow, error)
 		if e != nil || yearErr != nil || guardianErr != nil {
 			row.code = "invalid_input"
 		} else {
+			if !explicit {
+				normalized.RequestID = ""
+				payload, _ := json.Marshal(normalized)
+				normalized.RequestID = uuid.NewSHA1(uuid.NameSpaceURL, append([]byte("hostelhive:csv-registration:v1:"+actor+":"), payload...)).String()
+			}
 			row.input = normalized
 			index := strings.ToLower(normalized.IndexNo)
 			if seenEmails[normalized.Email] || seenIndexes[index] || seenRequests[normalized.RequestID] {
@@ -113,7 +134,10 @@ func (s *Invitations) Import(ctx context.Context, actor, ip string, raw []byte) 
 	if !s.enabled {
 		return report, d.ErrInvitationUnavailable
 	}
-	rows, e := s.parseInvitationCSV(raw)
+	if actor == "" {
+		return report, d.ErrInvitationForbidden
+	}
+	rows, e := s.parseInvitationCSV(actor, raw)
 	if e != nil {
 		return report, e
 	}
@@ -137,7 +161,7 @@ func (s *Invitations) Import(ctx context.Context, actor, ip string, raw []byte) 
 		v, replayed, e := s.Register(ctx, actor, ip, row.input)
 		switch {
 		case e == nil:
-			out.Status, out.InvitationID = "queued", v.InvitationID
+			out.Status, out.InvitationID, out.StudentID = "queued", v.InvitationID, v.StudentID
 			if replayed {
 				out.Status = "replayed"
 				report.Replayed++

@@ -1,0 +1,10 @@
+BEGIN;
+DELETE FROM hostelhive.attendance_events WHERE student_id IN(SELECT student_id FROM hostelhive.students WHERE index_no='policy118-upgrade');
+DELETE FROM hostelhive.leave_requests WHERE student_id IN(SELECT student_id FROM hostelhive.students WHERE index_no='policy118-upgrade');
+DELETE FROM hostelhive.late_access_requests WHERE student_id IN(SELECT student_id FROM hostelhive.students WHERE index_no='policy118-upgrade');
+DELETE FROM hostelhive.students WHERE index_no='policy118-upgrade';
+DELETE FROM hostelhive.scanner_device_audit WHERE device_id IN(SELECT device_id FROM hostelhive.scanner_devices WHERE name='policy118-upgrade');
+DELETE FROM hostelhive.scanner_devices WHERE name='policy118-upgrade';
+DELETE FROM hostelhive.users WHERE firebase_uid IN('policy118-admin','policy118-student');
+DROP TABLE public.hostel_policy_upgrade_evidence;
+COMMIT;

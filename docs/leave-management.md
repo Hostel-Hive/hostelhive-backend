@@ -1,5 +1,10 @@
 # Leave requests - issue #62
 
+> Retired by #118: submission, decision and cancellation routes return410 after
+> authentication/role checks. Leave list/detail and reports are historical reads.
+> No return date or approval is required for a trip home. See
+> [current policy](hostel-movement-policy.md); the original implementation is below.
+
 Students request extended leave; Admin/Warden approve or reject it. PostgreSQL
 stores permanent request/decision history. Approval does not update presence or
 Firebase counts: entry/exit scans remain the source of recorded presence.
@@ -147,3 +152,9 @@ Firebase-authenticated API verification remain pending.
 Local and live results must be recorded separately. Commit/PR title:
 [DDP-#62] feat(leave): add student leave requests and approval workflow
 Commit subject without the ticket prefix; body Refs #62. PR base develop.
+
+## Pending request cancellation (#101)
+
+Migration28 adds owner-only cancellation and the terminal `cancelled` status.
+See [the cancellation contract](pass-cancellation.md) for routes, audit, retries,
+permissions and race handling. Earlier ticket-scope exclusions above are historical.

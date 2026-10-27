@@ -16,15 +16,27 @@ func Normalize(v sdto.Details) (sdto.Details, error) {
 	if !validation.Text(v.IndexNo, 64) || !validation.Text(v.FullName, 200) || !validation.Text(v.Faculty, 120) || v.Year < 1 || v.Year > 10 || !validation.Phone(v.ContactPhone) || len(v.Guardians) < 1 || len(v.Guardians) > 10 {
 		return sdto.Details{}, sdomain.ErrInvalid
 	}
-	v.Guardians = append([]sdomain.GuardianInput(nil), v.Guardians...)
-	for n, g := range v.Guardians {
+	gs, err := normalizeGuardians(v.Guardians)
+	if err != nil {
+		return sdto.Details{}, err
+	}
+	v.Guardians = gs
+	return v, nil
+}
+
+func normalizeGuardians(input []sdomain.GuardianInput) ([]sdomain.GuardianInput, error) {
+	if len(input) < 1 || len(input) > 10 {
+		return nil, sdomain.ErrInvalid
+	}
+	gs := append([]sdomain.GuardianInput(nil), input...)
+	for n, g := range gs {
 		g.Name = strings.TrimSpace(g.Name)
 		g.Relationship = strings.TrimSpace(g.Relationship)
 		g.ContactPhone = strings.TrimSpace(g.ContactPhone)
 		if !validation.Text(g.Name, 200) || !validation.Text(g.Relationship, 80) || !validation.Phone(g.ContactPhone) {
-			return sdto.Details{}, sdomain.ErrInvalid
+			return nil, sdomain.ErrInvalid
 		}
-		v.Guardians[n] = g
+		gs[n] = g
 	}
-	return v, nil
+	return gs, nil
 }

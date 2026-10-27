@@ -1,0 +1,9 @@
+BEGIN;
+DELETE FROM hostelhive.going_home_declarations WHERE student_id='10000000-0000-4000-8000-000000000003';
+DELETE FROM hostelhive.student_presence WHERE student_id='10000000-0000-4000-8000-000000000003';
+DELETE FROM hostelhive.attendance_events WHERE student_id='10000000-0000-4000-8000-000000000003';
+DELETE FROM hostelhive.scanner_devices WHERE device_id='10000000-0000-4000-8000-000000000004';
+DELETE FROM hostelhive.students WHERE student_id='10000000-0000-4000-8000-000000000003';
+DELETE FROM hostelhive.users WHERE user_id IN('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002');
+DROP TABLE public.going_home_upgrade_snapshot;
+COMMIT;

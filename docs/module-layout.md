@@ -1,6 +1,6 @@
 # Module layout and file naming
 
-Reviewed 2026-10-16. Modules follow the existing modular monolith. One cohesive
+Reviewed 2026-10-19. Modules follow the existing modular monolith. One cohesive
 file per folder is valid; file counts and size alone do not determine quality.
 
 | Layer | Responsibility |
@@ -357,3 +357,8 @@ eligible per-device jobs when inbox rows are inserted. No new module is introduc
 Issue95 also adds platform/firebase/student_invitation_provider.go,
 config/student_invitation_config.go and workers/student_invitation_delivery.go
 under internal, with matching focused tests.
+
+Issue100 adds leave/domain/going_home_declaration.go, dto/going_home_requests.go,
+handler/going_home_handler.go, repository/going_home_repository.go and
+service/going_home_service.go. These names identify the feature and layer; the
+existing Leave module owns declaration intent, while scanner events own presence.

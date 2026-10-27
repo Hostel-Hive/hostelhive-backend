@@ -5,5 +5,6 @@ type Publish struct {
 	Title     string `json:"title"`
 	Content   string `json:"content"`
 	Audience  string `json:"audience,omitempty"`
+	Faculty   string `json:"faculty,omitempty"`
 }
 type Filter struct{ Limit, Offset int }

@@ -15,6 +15,8 @@ var (
 )
 
 type Request struct {
+	CancelledAt      *time.Time `json:"cancelled_at"`
+	CancelledBy      *string    `json:"cancelled_by"`
 	ConsumedAt       *time.Time `json:"consumed_at,omitempty"`
 	ConsumedDeviceID *string    `json:"consumed_device_id,omitempty"`
 	ConsumedEventID  *string    `json:"consumed_event_id,omitempty"`
@@ -44,7 +46,7 @@ type Page struct {
 }
 
 // Policy uses hostel local wall time, independent of the submitted offset.
-// Entry after midnight belongs to the overnight restriction until exits open.
+// Both entry and exit require approval outside [opening, deadline).
 type Policy struct {
 	Location                   *time.Location
 	ExitOpening, EntryDeadline int
@@ -53,8 +55,14 @@ type Policy struct {
 func (p Policy) RequiresPermission(direction string, at time.Time) bool {
 	local := at.In(p.Location)
 	minute := local.Hour()*60 + local.Minute()
-	if direction == "OUT" {
-		return minute < p.ExitOpening
+	return (direction == "IN" || direction == "OUT") && (minute < p.ExitOpening || minute >= p.EntryDeadline)
+}
+
+// ExitIncidentType distinguishes new late exits without rewriting old incidents.
+func (p Policy) ExitIncidentType(at time.Time) string {
+	local := at.In(p.Location)
+	if local.Hour()*60+local.Minute() >= p.EntryDeadline {
+		return "late_exit"
 	}
-	return direction == "IN" && (minute >= p.EntryDeadline || minute < p.ExitOpening)
+	return "early_exit"
 }

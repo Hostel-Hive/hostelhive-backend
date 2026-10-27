@@ -163,6 +163,29 @@ func (a *API) Decide(w http.ResponseWriter, r *http.Request) {
 	}
 	reply(w, 200, v)
 }
+
+// Cancel is an empty-body, owner-only transition. Retries preserve the audit.
+func (a *API) Cancel(w http.ResponseWriter, r *http.Request) {
+	uid, ok := authorized(w, r, true, false)
+	if !ok {
+		return
+	}
+	if r.URL.RawQuery != "" {
+		failure(w, domain.ErrInvalid)
+		return
+	}
+	if !empty(w, r) {
+		return
+	}
+	ctx, c := context.WithTimeout(r.Context(), a.timeout)
+	defer c()
+	v, err := a.service.Cancel(ctx, uid, r.PathValue("lateAccessID"))
+	if err != nil {
+		failure(w, err)
+		return
+	}
+	reply(w, 200, v)
+}
 func (a *API) Get(w http.ResponseWriter, r *http.Request) {
 	uid, ok := authorized(w, r, false, false)
 	if !ok {

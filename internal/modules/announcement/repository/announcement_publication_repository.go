@@ -82,7 +82,11 @@ func (s *Store) Publish(ctx context.Context, uid string, in dto.Publish) (domain
 	}
 	prior, e := scan(tx.QueryRow(ctx, `SELECT to_jsonb(a) FROM hostelhive.announcements a WHERE published_by=$1 AND request_id=$2`, id, in.RequestID))
 	if e == nil {
-		if prior.Title != in.Title || prior.Content != in.Content || prior.Audience != in.Audience {
+		faculty := ""
+		if prior.Faculty != nil {
+			faculty = *prior.Faculty
+		}
+		if prior.Title != in.Title || prior.Content != in.Content || prior.Audience != in.Audience || faculty != in.Faculty {
 			return domain.Publication{}, domain.ErrConflict
 		}
 		if tx.Commit(ctx) != nil {
@@ -93,7 +97,16 @@ func (s *Store) Publish(ctx context.Context, uid string, in dto.Publish) (domain
 	if !errors.Is(e, domain.ErrNotFound) {
 		return domain.Publication{}, e
 	}
-	v, e := scan(tx.QueryRow(ctx, `INSERT INTO hostelhive.announcements(request_id,published_by,title,content,audience) VALUES($1,$2,$3,$4,$5) RETURNING to_jsonb(announcements)`, in.RequestID, id, in.Title, in.Content, in.Audience))
+	if in.Audience == "faculty" {
+		var known bool
+		if e = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM hostelhive.students WHERE deleted_at IS NULL AND lower(btrim(faculty))=$1)`, in.Faculty).Scan(&known); e != nil {
+			return domain.Publication{}, domain.ErrUnavailable
+		}
+		if !known {
+			return domain.Publication{}, domain.ErrInvalid
+		}
+	}
+	v, e := scan(tx.QueryRow(ctx, `INSERT INTO hostelhive.announcements(request_id,published_by,title,content,audience,faculty) VALUES($1,$2,$3,$4,$5,NULLIF($6,'')) RETURNING to_jsonb(announcements)`, in.RequestID, id, in.Title, in.Content, in.Audience, in.Faculty))
 	if e != nil {
 		return domain.Publication{}, e
 	}
@@ -102,13 +115,20 @@ func (s *Store) Publish(ctx context.Context, uid string, in dto.Publish) (domain
 	}
 	return domain.Publication{Announcement: v}, nil
 }
+
+// Staff can read all notices; Students must match the current audience. The
+// Student profile was locked by begin, including against a concurrent transfer.
+const audienceScope = `($2::text IN ('admin','warden') OR a.audience='all_students'
+ OR (a.audience='faculty' AND EXISTS(SELECT 1 FROM hostelhive.students member
+ WHERE member.user_id=$1 AND member.deleted_at IS NULL AND lower(btrim(member.faculty))=a.faculty)))`
+
 func (s *Store) Get(ctx context.Context, uid, aid string) (domain.Announcement, error) {
-	tx, _, _, e := s.begin(ctx, uid)
+	tx, id, role, e := s.begin(ctx, uid)
 	if e != nil {
 		return domain.Announcement{}, e
 	}
 	defer rollback(tx)
-	v, e := scan(tx.QueryRow(ctx, `SELECT to_jsonb(a) FROM hostelhive.announcements a WHERE announcement_id=$1`, aid))
+	v, e := scan(tx.QueryRow(ctx, `SELECT to_jsonb(a) FROM hostelhive.announcements a WHERE announcement_id=$3 AND `+audienceScope, id, role, aid))
 	if e != nil {
 		return v, e
 	}
@@ -119,14 +139,15 @@ func (s *Store) Get(ctx context.Context, uid, aid string) (domain.Announcement, 
 }
 func (s *Store) List(ctx context.Context, uid string, f dto.Filter) (domain.Page, error) {
 	p := domain.Page{Items: []domain.Announcement{}, Limit: f.Limit, Offset: f.Offset}
-	tx, _, _, e := s.begin(ctx, uid)
+	tx, id, role, e := s.begin(ctx, uid)
 	if e != nil {
 		return p, e
 	}
 	defer rollback(tx)
 	var raw []byte
-	e = tx.QueryRow(ctx, `WITH page AS(SELECT * FROM hostelhive.announcements ORDER BY published_at DESC,announcement_id DESC LIMIT $1 OFFSET $2)
- SELECT (SELECT count(*) FROM hostelhive.announcements),COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.published_at DESC,p.announcement_id DESC) FROM page p),'[]'::jsonb)`, f.Limit, f.Offset).Scan(&p.Total, &raw)
+	e = tx.QueryRow(ctx, `WITH matching AS(SELECT a.* FROM hostelhive.announcements a WHERE `+audienceScope+`),
+ page AS(SELECT * FROM matching ORDER BY published_at DESC,announcement_id DESC LIMIT $3 OFFSET $4)
+ SELECT (SELECT count(*) FROM matching),COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.published_at DESC,p.announcement_id DESC) FROM page p),'[]'::jsonb)`, id, role, f.Limit, f.Offset).Scan(&p.Total, &raw)
 	if e != nil || json.Unmarshal(raw, &p.Items) != nil {
 		return p, domain.ErrUnavailable
 	}

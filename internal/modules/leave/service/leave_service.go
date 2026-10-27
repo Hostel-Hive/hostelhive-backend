@@ -46,6 +46,12 @@ func (s *Service) Decide(ctx context.Context, actor, id string, in dto.Decision)
 	}
 	return s.store.Decide(ctx, actor, strings.ToLower(id), in)
 }
+func (s *Service) Cancel(ctx context.Context, actor, id string) (domain.Request, error) {
+	if !validation.UUID(id) {
+		return domain.Request{}, domain.ErrInvalid
+	}
+	return s.store.Cancel(ctx, actor, strings.ToLower(id))
+}
 func (s *Service) Get(ctx context.Context, actor, id string) (domain.Request, error) {
 	if !validation.UUID(id) {
 		return domain.Request{}, domain.ErrInvalid
@@ -53,7 +59,7 @@ func (s *Service) Get(ctx context.Context, actor, id string) (domain.Request, er
 	return s.store.Get(ctx, actor, strings.ToLower(id))
 }
 func (s *Service) List(ctx context.Context, actor string, f domain.Filter) (domain.Page, error) {
-	if f.Limit < 1 || f.Limit > 100 || f.Offset < 0 || (f.StudentID != "" && !validation.UUID(f.StudentID)) || (f.Status != "" && f.Status != "pending" && f.Status != "approved" && f.Status != "rejected") {
+	if f.Limit < 1 || f.Limit > 100 || f.Offset < 0 || (f.StudentID != "" && !validation.UUID(f.StudentID)) || (f.Status != "" && f.Status != "pending" && f.Status != "approved" && f.Status != "rejected" && f.Status != "cancelled") {
 		return domain.Page{}, domain.ErrInvalid
 	}
 	f.StudentID = strings.ToLower(f.StudentID)

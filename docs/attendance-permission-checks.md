@@ -1,5 +1,10 @@
 # Attendance permission checks - issue #76
 
+> Policy #118: OUT at/after20:00 now requires approval and creates a late_exit
+> incident if unapproved. Both directions are restricted until06:00. Apply
+> migration30 first; existing scans and decisions are not reclassified. See
+> [current policy](hostel-movement-policy.md).
+
 This extends attendance and the #74 late-access workflow; it is not a new module.
 Tasheen approved a 30-minute window on either side of the expected movement and
 single use per approved request. PostgreSQL remains authoritative. Scanners

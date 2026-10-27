@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/domain"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/shared/middleware"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/shared/response"
 )
 
@@ -37,6 +38,7 @@ func (a *API) DeviceMiddleware(next http.Handler) http.Handler {
 			failure(w, err)
 			return
 		}
+		middleware.NoteActor(r.Context(), "device", device.DeviceID)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), deviceKey{}, device)))
 	})
 }

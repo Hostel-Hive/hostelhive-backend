@@ -138,6 +138,9 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	complaint.Register(complainthandler.New(complaintservice.New(complaintStore), cfg.AccountManagementTimeout), handler, protected)
 	lateaccess.Register(lateaccesshandler.New(lateaccessservice.New(lateaccessrepo.New(pool, lateaccessdomain.Policy{Location: cfg.HostelLocation, ExitOpening: cfg.HostelExitOpening, EntryDeadline: cfg.HostelEntryDeadline})), cfg.AccountManagementTimeout), handler, protected)
 	leave.Register(leavehandler.New(leaveservice.New(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
+	leave.RegisterGoingHome(leavehandler.NewGoingHome(leaveservice.NewGoingHome(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
+	leave.RegisterAllowance(leavehandler.NewAllowance(leaveservice.NewAllowance(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
+	leave.RegisterPassHistory(leavehandler.NewPassHistory(leaveservice.NewPassHistory(leaverepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	allocation.Register(allocationhandler.New(allocationservice.New(allocationrepo.New(pool)), cfg.InventoryTimeout), handler, protected)
 	attendanceStore := attendancerepo.NewDevicesWithPolicy(pool, lateaccessdomain.Policy{Location: cfg.HostelLocation, ExitOpening: cfg.HostelExitOpening, EntryDeadline: cfg.HostelEntryDeadline})
 	var realtimePublisher attendanceservice.RealtimePublisher
@@ -170,13 +173,17 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	staff.Register(staffhandler.New(staffservice.New(staffrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	studentStore := srepo.NewStore(pool)
 	student.Register(shandler.NewAPI(sservice.New(studentStore), cfg.StudentProfileTimeout), handler, protected)
+	student.RegisterRestoration(shandler.NewRestorationAPI(studentStore, cfg.StudentProfileTimeout), handler, protected)
+	student.RegisterCheckout(shandler.NewCheckoutAPI(sservice.NewCheckouts(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	student.RegisterImport(shandler.NewImportAPI(sservice.NewImporter(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	student.RegisterQR(shandler.NewQRAPI(sservice.NewQRs(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	var images shandler.ImageService
+	var ownImages shandler.OwnImageService
 	var complaintObjects complaintservice.ImageObjects
 	if cfg.R2Enabled {
 		objects := objectstorage.New(cfg.R2AccountID, cfg.R2Bucket, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.StudentProfileTimeout)
 		images = sservice.NewImages(studentStore, objects)
+		ownImages = sservice.NewOwnImages(studentStore, srepo.NewOwnImages(studentStore), objects)
 		complaintObjects = objects
 		cleanupCtx, stopCleanup := context.WithCancel(ctx)
 		cleanupDone := make(chan struct{})
@@ -192,10 +199,12 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		defer func() { stopCleanup(); <-cleanupDone; <-complaintCleanupDone }()
 	}
 	student.RegisterOwnProfile(shandler.NewOwnProfileAPI(sservice.NewOwnProfiles(studentStore), images, cfg.StudentProfileTimeout), handler, protected)
+	student.RegisterOwnProfileEdit(shandler.NewOwnProfileEditAPI(sservice.NewOwnProfileEditor(studentStore), cfg.StudentProfileTimeout), handler, protected)
 	student.RegisterImages(shandler.NewImageAPI(images, cfg.StudentProfileTimeout), handler, protected)
+	student.RegisterOwnImages(shandler.NewOwnImageAPI(ownImages, cfg.StudentProfileTimeout), handler, protected)
 	complaint.RegisterImages(complainthandler.NewImageAPI(complaintservice.NewImages(complaintStore, complaintObjects), cfg.StudentProfileTimeout), handler, protected)
 	srv := &http.Server{
-		Handler:           handler,
+		Handler:           authentication.RequestLog(logger)(authentication.CORS(cfg.CORSAllowedOrigins)(handler)),
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
