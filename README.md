@@ -1,8 +1,49 @@
 # HostelHive Backend
 
+[![Backend CI](https://github.com/Hostel-Hive/hostelhive-backend/actions/workflows/backend-ci.yml/badge.svg?branch=develop)](https://github.com/Hostel-Hive/hostelhive-backend/actions/workflows/backend-ci.yml?query=branch%3Adevelop)
+[![Test coverage reports](https://img.shields.io/badge/coverage-CI%20artifacts-blue)](https://github.com/Hostel-Hive/hostelhive-backend/actions/workflows/backend-ci.yml?query=branch%3Adevelop)
+
 Go REST API for HostelHive student registration, accommodation, attendance,
 access requests, complaints, announcements and reporting. Firebase handles
 authentication; PostgreSQL stores application data.
+
+Part of the [HostelHive project](https://github.com/Hostel-Hive), with
+[design documents and the development guideline](https://github.com/Hostel-Hive/Design-and-Development-Project)
+and a separate [frontend repository](https://github.com/Hostel-Hive/hostelhive-frontend).
+
+## Live application and API
+
+The shared assessment environment uses the `develop` branch. The frontend is
+hosted on Vercel, the backend on Render and PostgreSQL on Supabase.
+
+| Service | Live URL |
+| --- | --- |
+| Student login | [Open student portal](https://web-kohl-delta-90.vercel.app/login) |
+| Admin / Warden login | [Open staff portal](https://web-kohl-delta-90.vercel.app/staff/login) |
+| Backend base URL | [hostelhive-backend-dev.onrender.com](https://hostelhive-backend-dev.onrender.com) |
+| API base URL | [Backend `/api/v1`](https://hostelhive-backend-dev.onrender.com/api/v1) |
+| Swagger API documentation | [Open Swagger](https://hostelhive-backend-dev.onrender.com/docs/) |
+| OpenAPI specification | [Open API JSON](https://hostelhive-backend-dev.onrender.com/openapi.json) |
+| Backend health | [Check `/health`](https://hostelhive-backend-dev.onrender.com/health) |
+| Database readiness | [Check `/ready`](https://hostelhive-backend-dev.onrender.com/ready) |
+
+The backend base URL and `/api/v1` are prefixes, not landing pages. Open Swagger
+to browse endpoints. Health and readiness return JSON; readiness checks database
+connectivity, not migration completeness or Firebase configuration.
+
+## Demo accounts
+
+These shared accounts are supplied for assessment using test data. Admin and
+Warden use the staff portal; Student uses the student portal.
+
+| Role | Email | Password | Login |
+| --- | --- | --- | --- |
+| Admin | `darshikatasheen99@gmail.com` | `JackCM@3003` | [Staff](https://web-kohl-delta-90.vercel.app/staff/login) |
+| Warden | `navonsanjuni@gmail.com` | `Sanjuni@1234` | [Staff](https://web-kohl-delta-90.vercel.app/staff/login) |
+| Student | `kavindithagya21@gmail.com` | `Thagya21` | [Student](https://web-kohl-delta-90.vercel.app/login) |
+
+For Swagger testing, sign in through Firebase and authorize with the resulting
+ID token. The account email, password and Firebase UID are not bearer tokens.
 
 ## Requirements
 
@@ -83,7 +124,7 @@ and [first administrator setup](docs/admin-bootstrap.md).
 ## Configuration and deployment
 
 [.env.example](.env.example) lists supported settings. `.env.local` is ignored by
-Git; keep passwords, tokens and service-account files out of version control.
+Git; keep deployment secrets, bearer tokens and service-account files out of version control.
 The Go executable reads process environment variables; the development launcher
 loads the local file explicitly.
 
@@ -147,6 +188,19 @@ Database integration tests require an isolated migrated `TEST_DATABASE_URL`;
 without it, applicable tests skip. See [CI and coverage](docs/backend-ci.md) for
 the full verification workflow. After API changes, regenerate the specification
 with `go run ./cmd/openapi -output docs/openapi.json`.
+
+The coverage badge links to workflow runs containing coverage artifacts; it does
+not claim a measured percentage. Open a successful run and download its coverage
+artifacts for the measured results.
+
+## Contribution workflow
+
+Follow the [course development guideline, section 9.3](https://github.com/Hostel-Hive/Design-and-Development-Project/blob/main/documents/guidelines/SENG34213_System_Development_Project.pdf)
+for repository submission. Create an issue, branch from `develop` using
+`feature/<ticket>-<slug>` or `fix/<ticket>-<slug>`, use Conventional Commits and
+open a pull request into `develop`. Require passing CI and peer review.
+Production-ready releases move to `main` through an approved pull request;
+the shared assessment deployment currently uses `develop`.
 
 See [architecture](docs/architecture.md), [module layout](docs/module-layout.md)
 and [file naming](docs/file-naming.md) for code organization.
