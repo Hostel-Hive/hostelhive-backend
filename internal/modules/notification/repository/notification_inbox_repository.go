@@ -72,7 +72,9 @@ const visible = ` FROM hostelhive.notifications n
  OR (e.source_type='attendance' AND $2::text IN ('admin','warden'))
  OR (e.source_type='announcement' AND $2::text='student'
  AND EXISTS(SELECT 1 FROM hostelhive.students member WHERE member.user_id=$1 AND member.deleted_at IS NULL
- AND (a.audience='all_students' OR (a.audience='faculty' AND lower(btrim(member.faculty))=a.faculty)))))`
+ AND (a.audience='all_students' OR (a.audience='faculty' AND (lower(btrim(member.faculty))=a.faculty
+ OR EXISTS(SELECT 1 FROM hostelhive.faculty_names current_name JOIN hostelhive.faculty_names old_name USING(faculty_id)
+ WHERE current_name.name_key=lower(btrim(member.faculty)) AND old_name.name_key=a.faculty)))))))`
 const projection = `n.notification_id::text,e.source_type,COALESCE(c.complaint_id::text,'') AS complaint_id,
  COALESCE(ai.incident_id::text,'') AS attendance_incident_id,COALESCE(la.late_access_id::text,'') AS late_access_id,COALESCE(l.leave_id::text,'') AS leave_id,COALESCE(a.announcement_id::text,'') AS announcement_id,e.kind,COALESCE(c.category,'') AS category,e.status,
  CASE e.kind

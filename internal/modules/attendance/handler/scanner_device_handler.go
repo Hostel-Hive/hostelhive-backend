@@ -24,6 +24,7 @@ type DeviceService interface {
 	Register(context.Context, string, dto.RegisterDevice) (dto.IssuedCredential, error)
 	List(context.Context, string, int, int) (domain.DevicePage, error)
 	Rotate(context.Context, string, string) (dto.IssuedCredential, error)
+	Reactivate(context.Context, string, string, dto.ReactivateDevice) (dto.IssuedCredential, error)
 	Deactivate(context.Context, string, string) (domain.Device, error)
 	Authenticate(context.Context, string) (domain.Device, error)
 }
@@ -57,6 +58,8 @@ func failure(w http.ResponseWriter, err error) {
 		status, code = 404, "not_found"
 	case errors.Is(err, domain.ErrConflict):
 		status, code = 409, "scanner_name_conflict"
+	case errors.Is(err, domain.ErrAlreadyActive):
+		status, code = 409, "scanner_already_active"
 	}
 	response.Error(w, status, code)
 }
@@ -173,6 +176,51 @@ func (a *API) Rotate(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), a.timeout)
 	defer cancel()
 	v, err := a.service.Rotate(ctx, actor, r.PathValue("deviceID"))
+	if err != nil {
+		failure(w, err)
+		return
+	}
+	reply(w, 200, v)
+}
+
+func (a *API) Reactivate(w http.ResponseWriter, r *http.Request) {
+	actor, ok := admin(w, r)
+	if !ok {
+		return
+	}
+	if r.URL.RawQuery != "" {
+		failure(w, domain.ErrInvalid)
+		return
+	}
+	media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || media != "application/json" {
+		response.Error(w, 415, "unsupported_media_type")
+		return
+	}
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 2048))
+	if err != nil {
+		var max *http.MaxBytesError
+		if errors.As(err, &max) {
+			response.Error(w, 413, "payload_too_large")
+		} else {
+			failure(w, domain.ErrInvalid)
+		}
+		return
+	}
+	if !utf8.Valid(raw) {
+		failure(w, domain.ErrInvalid)
+		return
+	}
+	var in dto.ReactivateDevice
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&in) != nil || decoder.Decode(&struct{}{}) != io.EOF || !in.Confirmed {
+		failure(w, domain.ErrInvalid)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), a.timeout)
+	defer cancel()
+	v, err := a.service.Reactivate(ctx, actor, r.PathValue("deviceID"), in)
 	if err != nil {
 		failure(w, err)
 		return

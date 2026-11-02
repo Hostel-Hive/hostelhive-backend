@@ -66,6 +66,10 @@ func (f *fakeService) Deactivate(ctx context.Context, actor, id string) (d.Devic
 	f.note(ctx, actor)
 	return d.Device{DeviceID: id}, f.err
 }
+func (f *fakeService) Reactivate(ctx context.Context, actor, id string, in dto.ReactivateDevice) (dto.IssuedCredential, error) {
+	f.note(ctx, actor)
+	return dto.IssuedCredential{Device: d.Device{DeviceID: id, IsActive: true}, Credential: "issued-only"}, f.err
+}
 func (f *fakeService) Authenticate(ctx context.Context, credential string) (d.Device, error) {
 	f.note(ctx, "")
 	f.credential = credential
@@ -83,6 +87,25 @@ func TestScannerRoutesAndValidation(t *testing.T) {
 		{"list", "GET", "/api/v1/scanner-devices?limit=2&offset=1", "", "", "firebase-test", "admin", false, nil, 200, 1},
 		{"rotate", "POST", "/api/v1/scanner-devices/" + id + "/rotate-credential", "", "", "firebase-test", "admin", false, nil, 200, 1},
 		{"deactivate", "POST", "/api/v1/scanner-devices/" + id + "/deactivate", "", "", "firebase-test", "admin", false, nil, 200, 1},
+		{"reactivate", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "firebase-test", "admin", false, nil, 200, 1},
+		{"reactivate anonymous", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "", "admin", false, nil, 401, 0},
+		{"reactivate inactive admin", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "firebase-test", "admin", true, nil, 403, 0},
+		{"reactivate warden", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "firebase-test", "warden", false, nil, 403, 0},
+		{"reactivate student", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "firebase-test", "student", false, nil, 403, 0},
+		{"reactivate security", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "firebase-test", "security_staff", false, nil, 403, 0},
+		{"reactivate subwarden", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "firebase-test", "sub_warden", false, nil, 403, 0},
+		{"reactivate unconfirmed", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":false}`, "application/json", "firebase-test", "admin", false, nil, 400, 0},
+		{"reactivate missing confirmation", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{}`, "application/json", "firebase-test", "admin", false, nil, 400, 0},
+		{"reactivate unknown property", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true,"is_active":true}`, "application/json", "firebase-test", "admin", false, nil, 400, 0},
+		{"reactivate invalid JSON", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":"true"}`, "application/json", "firebase-test", "admin", false, nil, 400, 0},
+		{"reactivate trailing JSON", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}{}`, "application/json", "firebase-test", "admin", false, nil, 400, 0},
+		{"reactivate UTF8", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", string([]byte{0xff}), "application/json", "firebase-test", "admin", false, nil, 400, 0},
+		{"reactivate oversize", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", strings.Repeat("a", 2049), "application/json", "firebase-test", "admin", false, nil, 413, 0},
+		{"reactivate media", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "text/plain", "firebase-test", "admin", false, nil, 415, 0},
+		{"reactivate query", "POST", "/api/v1/scanner-devices/" + id + "/reactivate?confirmed=true", `{"confirmed":true}`, "application/json", "firebase-test", "admin", false, nil, 400, 0},
+		{"reactivate missing device", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "firebase-test", "admin", false, d.ErrNotFound, 404, 1},
+		{"reactivate already active", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "firebase-test", "admin", false, d.ErrAlreadyActive, 409, 1},
+		{"reactivate DB error", "POST", "/api/v1/scanner-devices/" + id + "/reactivate", `{"confirmed":true}`, "application/json", "firebase-test", "admin", false, errors.New("private hash SQL"), 503, 1},
 		{"check", "GET", "/api/v1/device/check", "", "", "scanner-test", "", false, nil, 200, 1},
 		{"anonymous", "GET", "/api/v1/scanner-devices", "", "", "", "admin", false, nil, 401, 0},
 		{"inactive admin", "GET", "/api/v1/scanner-devices", "", "", "firebase-test", "admin", true, nil, 403, 0},
@@ -137,6 +160,9 @@ func TestScannerRoutesAndValidation(t *testing.T) {
 			}
 			if tc.status >= 400 && strings.Contains(w.Body.String(), "issued-only") {
 				t.Fatal("failed issuance leaked secret")
+			}
+			if tc.name == "reactivate already active" && !strings.Contains(w.Body.String(), "scanner_already_active") {
+				t.Fatal("wrong reactivation conflict code")
 			}
 			if tc.status < 300 && tc.path == "/api/v1/device/check" && (strings.Contains(w.Body.String(), "credential") || !strings.Contains(w.Body.String(), "authenticated")) {
 				t.Fatal("bad check response")

@@ -72,6 +72,15 @@ func TestFacultyAnnouncementIsolation(t *testing.T) {
 		}
 	}()
 	science, arts := prefix+"science", prefix+"arts"
+	for _, name := range []string{science, arts} {
+		exec(`WITH created AS(INSERT INTO hostelhive.faculties(name) VALUES($1) RETURNING faculty_id,name) INSERT INTO hostelhive.faculty_names(name_key,faculty_id) SELECT lower(name),faculty_id FROM created`, name)
+	}
+	defer func() {
+		_, e := pool.Exec(context.Background(), "DELETE FROM hostelhive.faculties WHERE name=ANY($1::text[])", []string{science, arts})
+		if e != nil {
+			t.Error(e)
+		}
+	}()
 	for _, name := range []string{"one", "two", "arts", "inactive", "archived"} {
 		faculty := science
 		if name == "arts" {

@@ -15,6 +15,7 @@ func Register(a *handler.API, mux *http.ServeMux, authenticate func(http.Handler
 	mux.Handle("GET /api/v1/scanner-devices", protect(a.List))
 	mux.Handle("POST /api/v1/scanner-devices/{deviceID}/rotate-credential", protect(a.Rotate))
 	mux.Handle("POST /api/v1/scanner-devices/{deviceID}/deactivate", protect(a.Deactivate))
+	mux.Handle("POST /api/v1/scanner-devices/{deviceID}/reactivate", protect(a.Reactivate))
 	mux.Handle("GET /api/v1/device/check", a.DeviceMiddleware(http.HandlerFunc(a.Check)))
 }
 

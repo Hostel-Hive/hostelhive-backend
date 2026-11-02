@@ -49,6 +49,18 @@ func (f *fakeDevices) Deactivate(context.Context, string, string) (d.Device, err
 	f.device.IsActive = false
 	return f.device, f.err
 }
+func (f *fakeDevices) Reactivate(_ context.Context, actor, id string, hash []byte) (d.Device, error) {
+	f.calls++
+	f.actor = actor
+	if f.err != nil {
+		return d.Device{}, f.err
+	}
+	f.device.DeviceID = id
+	f.device.IsActive = true
+	f.device.CredentialVersion++
+	f.hash = append([]byte{}, hash...)
+	return f.device, nil
+}
 func (f *fakeDevices) Authentication(context.Context, string) (d.AuthenticationMaterial, error) {
 	f.calls++
 	return d.AuthenticationMaterial{Device: f.device, Hash: f.hash}, f.err
@@ -99,6 +111,39 @@ func TestDeviceCredentialLifecycle(t *testing.T) {
 	}
 	if _, err := s.Authenticate(context.Background(), rotated.Credential); !errors.Is(err, d.ErrUnauthorized) {
 		t.Fatal("inactive rotated credential accepted")
+	}
+	previous := rotated.Credential
+	reactivated, err := s.Reactivate(context.Background(), "verified-admin", strings.ToUpper(issued.Device.DeviceID), dto.ReactivateDevice{Confirmed: true})
+	if err != nil || !reactivated.Device.IsActive || reactivated.Device.DeviceID != issued.Device.DeviceID || reactivated.Device.CredentialVersion != 4 || reactivated.Credential == previous || fake.actor != "verified-admin" {
+		t.Fatal("reactivation failed")
+	}
+	if _, err := s.Authenticate(context.Background(), previous); !errors.Is(err, d.ErrUnauthorized) {
+		t.Fatal("pre-reactivation credential accepted")
+	}
+	if _, err := s.Authenticate(context.Background(), reactivated.Credential); err != nil {
+		t.Fatal("reactivated credential rejected")
+	}
+}
+
+func TestReactivationValidationAndFailures(t *testing.T) {
+	ctx := context.Background()
+	const id = "11111111-1111-4111-8111-111111111111"
+	for _, input := range []struct {
+		actor, device string
+		confirmed     bool
+	}{{"", id, true}, {"admin", "bad", true}, {"admin", id, false}} {
+		fake := &fakeDevices{}
+		result, err := svc.NewDevices(fake).Reactivate(ctx, input.actor, input.device, dto.ReactivateDevice{Confirmed: input.confirmed})
+		if !errors.Is(err, d.ErrInvalid) || fake.calls != 0 || result.Credential != "" {
+			t.Fatal("invalid reactivation reached persistence or exposed credential")
+		}
+	}
+	for _, failure := range []error{d.ErrForbidden, d.ErrUnavailable, d.ErrNotFound, d.ErrAlreadyActive} {
+		fake := &fakeDevices{err: failure}
+		result, err := svc.NewDevices(fake).Reactivate(ctx, "admin", id, dto.ReactivateDevice{Confirmed: true})
+		if !errors.Is(err, failure) || result.Credential != "" {
+			t.Fatal("failed reactivation exposed a credential or hid error")
+		}
 	}
 }
 
