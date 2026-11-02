@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add a managed faculty catalogue with Admin create/rename/deactivate/activate, Admin/Warden reads, default active choices, case-insensitive current/historical name reservation and transactional audit. Migration 34 imports existing Student and announcement faculties. Registration/CSV/new targeted notices require active current names; unchanged inactive assignments and historical announcement/inbox access remain. Rename preserves identity and old notice snapshots. Add migration preservation and role/lifecycle/concurrency tests and the Faculties Swagger tag.
+
+- Add Admin-only scanner reactivation with explicit confirmation, a fresh one-time credential, preserved device identity/direction/history and transactional auditing. Migration 33 permits the reactivated audit action and refuses rollback once reactivation history exists. Already-active retries return a conflict without replacing credentials.
+
 - Security: require Go 1.27.3 and update x/net, x/text, x/image and Excelize (pinned to the upstream fix commit until a tagged release) so govulncheck reports no reachable vulnerabilities; add a govulncheck step to backend CI. Add a structured request log: one line per request with method, route pattern, status, duration and internal user/scanner ID; 401/403 as warnings and 5xx as errors; no query, headers or body; healthy probes skipped. No migration.
 
 - #100: add Student-owned Going Home declarations without approval/return date, known-IN eligibility, idempotent retries and one outstanding declaration. Migration27 correlates the next recorded OUT scan without changing attendance or waiving permissions; add concurrency, preservation and mobile contract tests.

@@ -1,5 +1,9 @@
 # Scanner device authentication — issue #53
 
+Returning an inactive scanner to service is documented in
+[scanner reactivation](scanner-reactivation.md). It requires migration 33,
+Admin confirmation and a new one-time credential.
+
 This ticket starts the attendance module with device identity and Admin management.
 Issue #55 adds scans and presence; current checkouts require all migrations through
 000013. See [attendance verification](attendance-scans.md) for that workflow.
@@ -13,6 +17,7 @@ It does not ingest QR scans, toggle presence or implement offline event retries.
 | GET `/api/v1/scanner-devices` | Firebase Admin; optional limit/offset | 200 `{items,limit,offset,has_more}` |
 | POST `/api/v1/scanner-devices/{deviceID}/rotate-credential` | Firebase Admin; empty body | 200 `{device,credential}` |
 | POST `/api/v1/scanner-devices/{deviceID}/deactivate` | Firebase Admin; empty body | 200 device |
+| POST `/api/v1/scanner-devices/{deviceID}/reactivate` | Firebase Admin; JSON `{"confirmed":true}` | 200 device + new credential; 409 if already active |
 | GET `/api/v1/device/check` | Device credential; empty body | 200 `{device_id,name,status:"authenticated"}` |
 
 Only active Admins manage or list devices. Management transactions recheck current

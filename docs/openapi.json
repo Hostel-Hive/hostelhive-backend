@@ -1881,6 +1881,113 @@
         ],
         "type": "object"
       },
+      "Faculty": {
+        "properties": {
+          "created_at": {
+            "example": "2099-01-15T09:00:00+05:30",
+            "format": "date-time",
+            "type": "string"
+          },
+          "faculty_id": {
+            "example": "11111111-1111-4111-8111-111111111111",
+            "format": "uuid",
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "example": "2099-01-15T09:00:00+05:30",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "faculty_id",
+          "is_active",
+          "name",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "FacultyDetails": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Trimmed display name without control characters. Current and historical names are unique ignoring case.",
+            "example": "Science",
+            "maxLength": 120,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "FacultyPage": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "properties": {
+                "created_at": {
+                  "example": "2099-01-15T09:00:00+05:30",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "faculty_id": {
+                  "example": "11111111-1111-4111-8111-111111111111",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "is_active": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "example": "2099-01-15T09:00:00+05:30",
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "created_at",
+                "faculty_id",
+                "is_active",
+                "name",
+                "updated_at"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "offset": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "has_more",
+          "items",
+          "limit",
+          "offset"
+        ],
+        "type": "object"
+      },
       "GoingHomeDeclaration": {
         "properties": {
           "declared_at": {
@@ -4286,6 +4393,22 @@
         ],
         "type": "object"
       },
+      "ReactivateScanner": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmed": {
+            "enum": [
+              true
+            ],
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "confirmed"
+        ],
+        "type": "object"
+      },
       "RealtimeSession": {
         "properties": {
           "database_url": {
@@ -6583,7 +6706,7 @@
         ]
       },
       "post": {
-        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nAudience defaults to all_students. For audience=faculty, include faculty (1-120 characters); it must match an existing unarchived Student faculty, case-insensitively. Faculty is trimmed/lowercased. No custom recipients or priority input. Publication snapshots active Student recipients in the target and queues durable inbox delivery. Exact retry does not republish or resnapshot. Omit faculty for all_students.",
+        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nAudience defaults to all_students. For audience=faculty, include faculty (1-120 characters); it must match an existing unarchived Student faculty, case-insensitively. Faculty is trimmed/lowercased. No custom recipients or priority input. Publication snapshots active Student recipients in the target and queues durable inbox delivery. Exact retry does not republish or resnapshot. Omit faculty for all_students.\n\nFaculty catalogue: new assignments/registrations and targeted publications require an active current faculty name. Unknown/inactive/former names are invalid_input (400), or a per-row invalid result for CSV. Existing unchanged inactive Student assignments may still be edited. Exact invitation/publication replays are checked before active-faculty validation.",
         "operationId": "announcements_post_api_v1_announcements",
         "requestBody": {
           "content": {
@@ -10148,6 +10271,706 @@
         ],
         "x-roles": [
           "scanner"
+        ]
+      }
+    },
+    "/api/v1/faculties": {
+      "get": {
+        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nOrdered by case-insensitive name then faculty_id. Use returned current name in existing Student and announcement faculty fields. No request body.",
+        "operationId": "faculties_get_api_v1_faculties",
+        "parameters": [
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Zero-based offset. Pages are separate snapshots and can shift after writes.",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Default true: active choices only. False returns inactive faculties; all returns both for administration and historical filters.",
+            "in": "query",
+            "name": "active",
+            "required": false,
+            "schema": {
+              "enum": [
+                "true",
+                "false",
+                "all"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FacultyPage"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "List faculties for forms and administration",
+        "tags": [
+          "Faculties"
+        ],
+        "x-roles": [
+          "admin",
+          "warden"
+        ]
+      },
+      "post": {
+        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nJSON name only, maximum 8 KiB. Duplicate names conflict; check the catalogue after an uncertain create response rather than creating another name.",
+        "operationId": "faculties_post_api_v1_faculties",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FacultyDetails"
+              }
+            }
+          },
+          "description": "JSON only; unknown fields are rejected. See schema constraints and operation rules.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Faculty"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "conflict"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "faculty_name_conflict: current and historical names are case-insensitively reserved."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "payload_too_large"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Payload or export exceeds the documented limit."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unsupported_media_type"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unsupported Content-Type; send the documented raw media type."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "Create active faculty",
+        "tags": [
+          "Faculties"
+        ],
+        "x-roles": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/faculties/{facultyID}": {
+      "get": {
+        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nStable identity is preserved across rename, deactivation and activation.",
+        "operationId": "faculties_get_api_v1_faculties_facultyID",
+        "parameters": [
+          {
+            "description": "Resource UUID from a previous response. Fictional example must be replaced.",
+            "in": "path",
+            "name": "facultyID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Faculty"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "not_found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found (including concealed inaccessible records where applicable)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "Get faculty including inactive state",
+        "tags": [
+          "Faculties"
+        ],
+        "x-roles": [
+          "admin",
+          "warden"
+        ]
+      },
+      "patch": {
+        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nJSON name only. Updates existing Student faculty labels, including archived profiles. Old announcements retain their original name snapshot and remain associated with the same audience identity. Old names remain reserved and are not selectable for new registrations/publications. Exact same-name retry is a no-op.",
+        "operationId": "faculties_patch_api_v1_faculties_facultyID",
+        "parameters": [
+          {
+            "description": "Resource UUID from a previous response. Fictional example must be replaced.",
+            "in": "path",
+            "name": "facultyID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FacultyDetails"
+              }
+            }
+          },
+          "description": "JSON only; unknown fields are rejected. See schema constraints and operation rules.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Faculty"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "not_found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found (including concealed inaccessible records where applicable)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "conflict"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "faculty_name_conflict: another faculty owns this current or historical name."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "payload_too_large"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Payload or export exceeds the documented limit."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unsupported_media_type"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unsupported Content-Type; send the documented raw media type."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "Rename faculty without replacing its identity",
+        "tags": [
+          "Faculties"
+        ],
+        "x-roles": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/faculties/{facultyID}/activate": {
+      "post": {
+        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nEmpty body and no query. Preserves faculty_id, existing Students and history; makes the current name selectable again. Repeat activation is a no-op. No delete endpoint.",
+        "operationId": "faculties_post_api_v1_faculties_facultyID_activate",
+        "parameters": [
+          {
+            "description": "Resource UUID from a previous response. Fictional example must be replaced.",
+            "in": "path",
+            "name": "facultyID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Faculty"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "not_found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found (including concealed inaccessible records where applicable)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "Reactivate the same faculty",
+        "tags": [
+          "Faculties"
+        ],
+        "x-roles": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/faculties/{facultyID}/deactivate": {
+      "post": {
+        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nEmpty body and no query. Existing Student assignments, profile edits and historical announcement/inbox visibility remain. New assignments, invitation/CSV registrations and new faculty-targeted publications are rejected. Exact prior invitation/publication retries remain readable. Repeat deactivation is a no-op with no duplicate audit entry.",
+        "operationId": "faculties_post_api_v1_faculties_facultyID_deactivate",
+        "parameters": [
+          {
+            "description": "Resource UUID from a previous response. Fictional example must be replaced.",
+            "in": "path",
+            "name": "facultyID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Faculty"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "not_found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found (including concealed inaccessible records where applicable)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "Deactivate faculty for new registrations and notices",
+        "tags": [
+          "Faculties"
+        ],
+        "x-roles": [
+          "admin"
         ]
       }
     },
@@ -16145,6 +16968,145 @@
         ]
       }
     },
+    "/api/v1/scanner-devices/{deviceID}/reactivate": {
+      "post": {
+        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nRequires migration 33 and explicit confirmed=true. Only inactive scanners can be reactivated. Atomically enables the existing device, replaces its credential verifier, increments credential_version and records a reactivated audit event. Original identity, direction and attendance history are preserved. New credential is returned ONCE; all old credentials remain invalid. Repeating the request while active returns409 without rotating again. If the response is lost, check Admin device listing; if already active, explicitly rotate its credential to recover instead of blindly retrying. Install the returned credential on the physical scanner; never expose it in URLs or logs.",
+        "operationId": "attendance_post_api_v1_scanner_devices_deviceID_reactivate",
+        "parameters": [
+          {
+            "description": "Resource UUID from a previous response. Fictional example must be replaced.",
+            "in": "path",
+            "name": "deviceID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactivateScanner"
+              }
+            }
+          },
+          "description": "JSON only; unknown fields are rejected. See schema constraints and operation rules.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedScannerCredential"
+                }
+              }
+            },
+            "description": "Successful operation"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "invalid_input"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "invalid_input: invalid fields, identifiers, query or body. Report routes use invalid_report_query."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unauthorized"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "unauthorized: missing, expired or invalid credential."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "forbidden"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "forbidden or setup_required: current role/account/setup does not permit access."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "not_found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "not_found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "conflict"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "scanner_already_active"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "unsupported_media_type"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unsupported Content-Type; send the documented raw media type."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "service_unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "service_unavailable or module-specific unavailable code: bounded retry, preserving write idempotency."
+          }
+        },
+        "summary": "Reactivate scanner and issue a new credential",
+        "tags": [
+          "Attendance"
+        ],
+        "x-roles": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/scanner-devices/{deviceID}/rotate-credential": {
       "post": {
         "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nEmpty body. New credential returned once; old credential immediately stops authenticating.",
@@ -16770,7 +17732,7 @@
         ]
       },
       "post": {
-        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nRequires STUDENT_INVITATIONS_ENABLED=true and configured approved email domains; otherwise503 student_invitations_unavailable. Atomically creates local account/profile/guardians and durable delivery intent. The worker prepares Firebase identity and sends a private password setup email. No password or setup link is returned. Preserve identical request_id/body for uncertain retries. Sent means provider accepted the email request, not mailbox receipt.",
+        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nRequires STUDENT_INVITATIONS_ENABLED=true and configured approved email domains; otherwise503 student_invitations_unavailable. Atomically creates local account/profile/guardians and durable delivery intent. The worker prepares Firebase identity and sends a private password setup email. No password or setup link is returned. Preserve identical request_id/body for uncertain retries. Sent means provider accepted the email request, not mailbox receipt.\n\nFaculty catalogue: new assignments/registrations and targeted publications require an active current faculty name. Unknown/inactive/former names are invalid_input (400), or a per-row invalid result for CSV. Existing unchanged inactive Student assignments may still be edited. Exact invitation/publication replays are checked before active-faculty validation.",
         "operationId": "identity_post_api_v1_student_invitations",
         "requestBody": {
           "content": {
@@ -16894,7 +17856,7 @@
     },
     "/api/v1/student-invitations/import": {
       "post": {
-        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nMaximum 100 records and 2 MiB UTF-8 CSV. Registers accounts and profiles and queues setup invitations; queued does not mean email delivered. Stable row keys are derived from normalized data and the Admin identity, so retry the same data as the same Admin. An optional request_id UUID column remains supported for explicit replay keys. Rows report queued, replayed, rejected, not_attempted or retry_required; successful rows include invitation_id and student_id. The older /students/import route creates profiles for existing accounts only.",
+        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nMaximum 100 records and 2 MiB UTF-8 CSV. Registers accounts and profiles and queues setup invitations; queued does not mean email delivered. Stable row keys are derived from normalized data and the Admin identity, so retry the same data as the same Admin. An optional request_id UUID column remains supported for explicit replay keys. Rows report queued, replayed, rejected, not_attempted or retry_required; successful rows include invitation_id and student_id. The older /students/import route creates profiles for existing accounts only.\n\nFaculty catalogue: new assignments/registrations and targeted publications require an active current faculty name. Unknown/inactive/former names are invalid_input (400), or a per-row invalid result for CSV. Existing unchanged inactive Student assignments may still be edited. Exact invitation/publication replays are checked before active-faculty validation.",
         "operationId": "identity_post_api_v1_student_invitations_import",
         "requestBody": {
           "content": {
@@ -17502,7 +18464,7 @@
         ]
       },
       "post": {
-        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nProfile only: user_id must identify an existing eligible Student account. It does not create a login or send invitations. Admin invitation registration uses /student-invitations instead.",
+        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nProfile only: user_id must identify an existing eligible Student account. It does not create a login or send invitations. Admin invitation registration uses /student-invitations instead.\n\nFaculty catalogue: new assignments/registrations and targeted publications require an active current faculty name. Unknown/inactive/former names are invalid_input (400), or a per-row invalid result for CSV. Existing unchanged inactive Student assignments may still be edited. Exact invitation/publication replays are checked before active-faculty validation.",
         "operationId": "students_post_api_v1_students",
         "requestBody": {
           "content": {
@@ -17738,7 +18700,7 @@
     },
     "/api/v1/students/import": {
       "post": {
-        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nMaximum500 records, not100. Links existing eligible Student account UUIDs; never creates Firebase identities. Per-record report may be partial. Use the separate invitation CSV for automatic accounts and setup emails.",
+        "description": "Access: admin. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nMaximum500 records, not100. Links existing eligible Student account UUIDs; never creates Firebase identities. Per-record report may be partial. Use the separate invitation CSV for automatic accounts and setup emails.\n\nFaculty catalogue: new assignments/registrations and targeted publications require an active current faculty name. Unknown/inactive/former names are invalid_input (400), or a per-row invalid result for CSV. Existing unchanged inactive Student assignments may still be edited. Exact invitation/publication replays are checked before active-faculty validation.",
         "operationId": "students_post_api_v1_students_import",
         "requestBody": {
           "content": {
@@ -18159,7 +19121,7 @@
         ]
       },
       "put": {
-        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nComplete profile details replace the editable fields and guardian list. Account email/credentials are managed separately.",
+        "description": "Access: admin,warden. Account must be active; pending setup is blocked except /me and /me/setup/complete. No request body unless one is explicitly shown.\n\nComplete profile details replace the editable fields and guardian list. Account email/credentials are managed separately.\n\nFaculty catalogue: new assignments/registrations and targeted publications require an active current faculty name. Unknown/inactive/former names are invalid_input (400), or a per-row invalid result for CSV. Existing unchanged inactive Student assignments may still be edited. Exact invitation/publication replays are checked before active-faculty validation.",
         "operationId": "students_put_api_v1_students_studentID",
         "parameters": [
           {
@@ -19740,6 +20702,11 @@
       "description": "Admin-managed staff profiles and current staff member's name.",
       "name": "Staff",
       "x-module": "staff"
+    },
+    {
+      "description": "Faculty catalogue. Admin creates, renames, deactivates and activates; Admin/Warden read. Inactive faculties cannot receive new assignments or targeted publications. Historical records remain readable.",
+      "name": "Faculties",
+      "x-module": "faculty"
     },
     {
       "description": "Blocks, rooms and beds. Admin writes; Admin/Warden reads.",

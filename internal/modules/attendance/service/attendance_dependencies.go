@@ -11,6 +11,7 @@ type DeviceRepository interface {
 	Register(context.Context, string, string, string, []byte) (domain.Device, error)
 	List(context.Context, string, int, int) (domain.DevicePage, error)
 	Rotate(context.Context, string, string, []byte) (domain.Device, error)
+	Reactivate(context.Context, string, string, []byte) (domain.Device, error)
 	Deactivate(context.Context, string, string) (domain.Device, error)
 	Authentication(context.Context, string) (domain.AuthenticationMaterial, error)
 }

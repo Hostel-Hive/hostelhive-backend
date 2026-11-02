@@ -35,6 +35,7 @@ func JSON() []byte {
 		{"Identity", "identity", "Accounts, roles, activation, approved-email invitations and verified initial setup. Firebase owns login/passwords; there are no Go /auth/login or password-taking Student endpoints."},
 		{"Students", "student", "Staff-managed Student/guardian profiles, CSV, private photos, QR and Student-owned profile reads. Faculty is implemented; department is not."},
 		{"Staff", "staff", "Admin-managed staff profiles and current staff member's name."},
+		{"Faculties", "faculty", "Faculty catalogue. Admin creates, renames, deactivates and activates; Admin/Warden read. Inactive faculties cannot receive new assignments or targeted publications. Historical records remain readable."},
 		{"Inventory", "inventory", "Blocks, rooms and beds. Admin writes; Admin/Warden reads."},
 		{"Allocation", "allocation", "Bed assignment, transfer, revocation and permanent accommodation history."},
 		{"Attendance", "attendance", "Scanner identities, explicit scan events, presence, incidents and authorized RTDB sessions. Scanner bearer credentials are separate from Firebase tokens."},
@@ -50,6 +51,7 @@ func JSON() []byte {
 	d.models()
 	d.systemAndIdentity()
 	d.studentsAndStaff()
+	d.faculties()
 	d.inventoryAndAllocation()
 	d.attendance()
 	d.requestsAndInbox()

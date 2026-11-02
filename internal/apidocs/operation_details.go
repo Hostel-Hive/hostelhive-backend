@@ -7,6 +7,9 @@ func (d *document) applyDetails() {
 		data := d.paths[path].(object)[method].(object)
 		return &operation{data: data, responses: data["responses"].(object)}
 	}
+	for _, route := range []struct{ method, path string }{{"post", "/api/v1/students"}, {"put", "/api/v1/students/{studentID}"}, {"post", "/api/v1/student-invitations"}, {"post", "/api/v1/student-invitations/import"}, {"post", "/api/v1/students/import"}, {"post", "/api/v1/announcements"}} {
+		find(route.method, route.path).note("Faculty catalogue: new assignments/registrations and targeted publications require an active current faculty name. Unknown/inactive/former names are invalid_input (400), or a per-row invalid result for CSV. Existing unchanged inactive Student assignments may still be edited. Exact invitation/publication replays are checked before active-faculty validation.")
+	}
 	for _, path := range []string{"/api/v1/me/student-profile", "/api/v1/me/student-profile/image", "/api/v1/me/qr", "/api/v1/me/attendance/events", "/api/v1/attendance/presence", "/api/v1/attendance/events"} {
 		find("get", path).fail(404, "not_found: missing/inaccessible profile, image or source as applicable.")
 	}

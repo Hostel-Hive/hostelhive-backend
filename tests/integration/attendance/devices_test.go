@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -37,7 +38,7 @@ func (verifier) Verify(_ context.Context, token string) (string, error) {
 func TestScannerDevicePostgresLifecycle(t *testing.T) {
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
-		t.Skip("requires disposable PostgreSQL migrated to version 12")
+		t.Skip("requires disposable PostgreSQL with current migrations")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -63,6 +64,9 @@ func TestScannerDevicePostgresLifecycle(t *testing.T) {
 		clean, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		for _, sql := range []string{
+			"DELETE FROM hostelhive.student_presence WHERE device_id IN(SELECT device_id FROM hostelhive.scanner_devices WHERE created_by=ANY($1::uuid[]))",
+			"DELETE FROM hostelhive.attendance_events WHERE device_id IN(SELECT device_id FROM hostelhive.scanner_devices WHERE created_by=ANY($1::uuid[]))",
+			"DELETE FROM hostelhive.students WHERE user_id=ANY($1::uuid[])",
 			"DELETE FROM hostelhive.scanner_device_audit WHERE device_id IN(SELECT device_id FROM hostelhive.scanner_devices WHERE created_by=ANY($1::uuid[]))",
 			"DELETE FROM hostelhive.scanner_devices WHERE created_by=ANY($1::uuid[])",
 			"DELETE FROM hostelhive.users WHERE user_id=ANY($1::uuid[])",
@@ -196,6 +200,118 @@ func TestScannerDevicePostgresLifecycle(t *testing.T) {
 	}
 	do("GET", "/api/v1/device/check", "", rotated.Credential, 401)
 	// Account mutation while a management request is blocked must be rechecked.
+	// Reactivation preserves identity, direction and the previously recorded scan.
+	if _, err := store.SetDirection(ctx, uids[0], id, "IN"); err != nil {
+		t.Fatal(err)
+	}
+	var historyStudent, historyEvent string
+	if err := pool.QueryRow(ctx, `INSERT INTO hostelhive.students(user_id,index_no,full_name,faculty,year,contact_phone) VALUES($1,$2,'Scanner Test Student','Test Faculty',1,'0771234567') RETURNING student_id::text`, ids[2], prefix).Scan(&historyStudent); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `INSERT INTO hostelhive.attendance_events(event_id,device_id,student_id,payload_hash,direction,outcome,occurred_at,access_result) VALUES(gen_random_uuid(),$1,$2,$3,'IN','recorded',clock_timestamp(),'not_required') RETURNING event_id::text`, id, historyStudent, make([]byte, 32)).Scan(&historyEvent); err != nil {
+		t.Fatal(err)
+	}
+	exec(`INSERT INTO hostelhive.student_presence(student_id,status,updated_at,device_id,event_id) SELECT student_id,'IN',occurred_at,device_id,event_id FROM hostelhive.attendance_events WHERE device_id=$1 AND event_id=$2`, id, historyEvent)
+	snapshot := func(query string) string {
+		t.Helper()
+		var value string
+		if err := pool.QueryRow(ctx, query, id).Scan(&value); err != nil {
+			t.Fatal(err)
+		}
+		return value
+	}
+	eventBefore := snapshot("SELECT row_to_json(e)::text FROM hostelhive.attendance_events e WHERE device_id=$1")
+	presenceBefore := snapshot("SELECT row_to_json(p)::text FROM hostelhive.student_presence p WHERE device_id=$1")
+	for _, uid := range uids[1:] {
+		do("POST", "/api/v1/scanner-devices/"+id+"/reactivate", `{"confirmed":true}`, uid, 403)
+	}
+	do("POST", "/api/v1/scanner-devices/bad/reactivate", `{"confirmed":true}`, uids[0], 400)
+	do("POST", "/api/v1/scanner-devices/00000000-0000-0000-0000-000000000000/reactivate", `{"confirmed":true}`, uids[0], 404)
+	do("POST", "/api/v1/scanner-devices/"+id+"/reactivate", `{"confirmed":false}`, uids[0], 400)
+	var reactivated dto.IssuedCredential
+	w = do("POST", "/api/v1/scanner-devices/"+id+"/reactivate", `{"confirmed":true}`, uids[0], 200)
+	if json.Unmarshal(w.Body.Bytes(), &reactivated) != nil || !reactivated.Device.IsActive || reactivated.Device.DeviceID != id || reactivated.Device.Name != issued.Device.Name || !reactivated.Device.CreatedAt.Equal(issued.Device.CreatedAt) || reactivated.Device.CreatedBy != issued.Device.CreatedBy || reactivated.Device.Direction == nil || *reactivated.Device.Direction != "IN" || reactivated.Device.CredentialVersion != rotated.Device.CredentialVersion+1 || reactivated.Credential == rotated.Credential {
+		t.Fatal("reactivation changed identity/direction or did not replace credential")
+	}
+	do("GET", "/api/v1/device/check", "", issued.Credential, 401)
+	do("GET", "/api/v1/device/check", "", rotated.Credential, 401)
+	do("GET", "/api/v1/device/check", "", reactivated.Credential, 200)
+	if eventBefore != snapshot("SELECT row_to_json(e)::text FROM hostelhive.attendance_events e WHERE device_id=$1") || presenceBefore != snapshot("SELECT row_to_json(p)::text FROM hostelhive.student_presence p WHERE device_id=$1") {
+		t.Fatal("reactivation changed attendance history or presence")
+	}
+	if count := snapshot("SELECT count(*)::text FROM hostelhive.scanner_device_audit WHERE device_id=$1 AND action='reactivated'"); count != "1" {
+		t.Fatal("reactivation audit missing")
+	}
+	beforeRepeat := snapshot("SELECT row_to_json(d)::text FROM hostelhive.scanner_devices d WHERE device_id=$1")
+	w = do("POST", "/api/v1/scanner-devices/"+id+"/reactivate", `{"confirmed":true}`, uids[0], 409)
+	if !strings.Contains(w.Body.String(), "scanner_already_active") || strings.Contains(w.Body.String(), "credential") || beforeRepeat != snapshot("SELECT row_to_json(d)::text FROM hostelhive.scanner_devices d WHERE device_id=$1") {
+		t.Fatal("active retry changed credential or leaked secret")
+	}
+	do("GET", "/api/v1/device/check", "", reactivated.Credential, 200)
+	// A failed audit insert rolls back activation, verifier and version together.
+	do("POST", "/api/v1/scanner-devices/"+id+"/deactivate", "", uids[0], 200)
+	beforeFailure := snapshot("SELECT row_to_json(d)::text FROM hostelhive.scanner_devices d WHERE device_id=$1")
+	func() {
+		exec(`ALTER TABLE hostelhive.scanner_device_audit ADD CONSTRAINT test_reactivation_audit_rejected CHECK(action<>'reactivated') NOT VALID`)
+		defer exec(`ALTER TABLE hostelhive.scanner_device_audit DROP CONSTRAINT test_reactivation_audit_rejected`)
+		v, e := service.Reactivate(ctx, uids[0], id, dto.ReactivateDevice{Confirmed: true})
+		if !errors.Is(e, d.ErrUnavailable) || v.Credential != "" {
+			t.Fatal("failed audit reported successful credential issuance")
+		}
+		if beforeFailure != snapshot("SELECT row_to_json(d)::text FROM hostelhive.scanner_devices d WHERE device_id=$1") {
+			t.Fatal("audit failure did not roll back scanner state")
+		}
+	}()
+	// Concurrent submissions must issue one usable credential, not rotate twice.
+	responses := make(chan dto.IssuedCredential, 2)
+	errorsFound := make(chan error, 2)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			v, e := service.Reactivate(ctx, uids[0], id, dto.ReactivateDevice{Confirmed: true})
+			responses <- v
+			errorsFound <- e
+		}()
+	}
+	wg.Wait()
+	close(responses)
+	close(errorsFound)
+	successes, conflicts := 0, 0
+	for e := range errorsFound {
+		if e == nil {
+			successes++
+		} else if errors.Is(e, d.ErrAlreadyActive) {
+			conflicts++
+		} else {
+			t.Fatal(e)
+		}
+	}
+	if successes != 1 || conflicts != 1 {
+		t.Fatal("concurrent reactivation did not serialize")
+	}
+	for v := range responses {
+		if v.Credential != "" {
+			do("GET", "/api/v1/device/check", "", v.Credential, 200)
+		}
+	}
+	do("GET", "/api/v1/device/check", "", reactivated.Credential, 401)
+	// Rollback may not discard the new security audit history.
+	downSQL, e := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "000033_scanner_reactivation.down.sql"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	conn, e := pool.Acquire(ctx)
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, downErr := conn.Exec(ctx, string(downSQL))
+	_, rollbackErr := conn.Exec(ctx, "ROLLBACK")
+	conn.Release()
+	if downErr == nil || !strings.Contains(downErr.Error(), "Cannot roll back scanner reactivation") || rollbackErr != nil {
+		t.Fatal("rollback guard did not preserve audit history")
+	}
+	// Account mutation while a management request is blocked must be rechecked.
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -209,7 +325,7 @@ func TestScannerDevicePostgresLifecycle(t *testing.T) {
 	}
 	blocked := make(chan error, 1)
 	go func() {
-		_, err := service.Register(ctx, uids[0], dto.RegisterDevice{Name: prefix + "-blocked"})
+		_, err := service.Reactivate(ctx, uids[0], id, dto.ReactivateDevice{Confirmed: true})
 		blocked <- err
 	}()
 	deadline := time.Now().Add(5 * time.Second)
