@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	pgx "github.com/jackc/pgx/v5"
@@ -11,6 +12,7 @@ import (
 
 	sdomain "github.com/Hostel-Hive/hostelhive-backend/internal/modules/student/domain"
 	sdto "github.com/Hostel-Hive/hostelhive-backend/internal/modules/student/dto"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/postgres"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/shared/validation"
 )
 
@@ -183,6 +185,13 @@ func (s *Store) create(ctx context.Context, actor string, input sdto.CreateInput
 	if !eligible {
 		return sdomain.Profile{}, sdomain.ErrAccount
 	}
+	v.Faculty, err = postgres.ActiveFaculty(ctx, tx, v.Faculty)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return sdomain.Profile{}, sdomain.ErrInvalid
+	}
+	if err != nil {
+		return sdomain.Profile{}, sdomain.ErrUnavailable
+	}
 	var id string
 	err = tx.QueryRow(ctx, "INSERT INTO hostelhive.students(user_id,index_no,full_name,faculty,year,contact_phone) VALUES($1,$2,$3,$4,$5,$6) RETURNING student_id::text", input.UserID, v.IndexNo, v.FullName, v.Faculty, v.Year, v.ContactPhone).Scan(&id)
 	if err != nil {
@@ -208,6 +217,22 @@ func (s *Store) Update(ctx context.Context, actor, id string, input sdto.Details
 		return sdomain.Profile{}, err
 	}
 	defer rollback(tx)
+	var oldFaculty string
+	err = tx.QueryRow(ctx, "SELECT faculty FROM hostelhive.students WHERE student_id=$1 AND deleted_at IS NULL FOR UPDATE", id).Scan(&oldFaculty)
+	if err != nil {
+		return sdomain.Profile{}, dbError(err)
+	}
+	if strings.EqualFold(strings.TrimSpace(v.Faculty), strings.TrimSpace(oldFaculty)) {
+		v.Faculty = oldFaculty // Existing inactive assignments may still be edited.
+	} else {
+		v.Faculty, err = postgres.ActiveFaculty(ctx, tx, v.Faculty)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return sdomain.Profile{}, sdomain.ErrInvalid
+		}
+		if err != nil {
+			return sdomain.Profile{}, sdomain.ErrUnavailable
+		}
+	}
 	tag, err := tx.Exec(ctx, "UPDATE hostelhive.students SET index_no=$2,full_name=$3,faculty=$4,year=$5,contact_phone=$6 WHERE student_id=$1 AND deleted_at IS NULL", id, v.IndexNo, v.FullName, v.Faculty, v.Year, v.ContactPhone)
 	if err != nil {
 		return sdomain.Profile{}, dbError(err)

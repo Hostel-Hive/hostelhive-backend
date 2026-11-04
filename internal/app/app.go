@@ -25,6 +25,10 @@ import (
 	complainthandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/handler"
 	complaintrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/repository"
 	complaintservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/service"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/faculty"
+	facultyhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/faculty/handler"
+	facultyrepo "github.com/Hostel-Hive/hostelhive-backend/internal/modules/faculty/repository"
+	facultyservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/faculty/service"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity"
 	identityhandler "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/handler"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/repository"
@@ -111,6 +115,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		defer func() { stopInvitations(); <-invitationDone }()
 	}
 	announcement.Register(announcementhandler.New(announcementservice.New(announcementrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
+	faculty.Register(facultyhandler.New(facultyservice.New(facultyrepo.New(pool)), cfg.AccountManagementTimeout), handler, protected)
 	notificationStore := notificationrepo.New(pool)
 	notification.RegisterPush(notificationhandler.NewPush(notificationservice.NewPush(notificationStore), cfg.AccountManagementTimeout), handler, protected)
 	if cfg.FCMEnabled {

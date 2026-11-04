@@ -154,6 +154,32 @@ func (s *Devices) Rotate(ctx context.Context, actor, id string, hash []byte) (do
 	return d, nil
 }
 
+func (s *Devices) Reactivate(ctx context.Context, actor, id string, hash []byte) (domain.Device, error) {
+	tx, actorID, err := s.begin(ctx, actor)
+	if err != nil {
+		return domain.Device{}, err
+	}
+	defer rollback(tx)
+	d, err := scan(tx.QueryRow(ctx, "SELECT "+columns+" FROM hostelhive.scanner_devices WHERE device_id=$1 FOR UPDATE", id))
+	if err != nil {
+		return domain.Device{}, err
+	}
+	if d.IsActive {
+		return domain.Device{}, domain.ErrAlreadyActive
+	}
+	d, err = scan(tx.QueryRow(ctx, "UPDATE hostelhive.scanner_devices SET is_active=true,credential_hash=$2,credential_version=credential_version+1,updated_at=clock_timestamp(),updated_by=$3 WHERE device_id=$1 RETURNING "+columns, id, hash, actorID))
+	if err != nil {
+		return domain.Device{}, err
+	}
+	if err = audit(ctx, tx, d, actorID, "reactivated"); err != nil {
+		return domain.Device{}, domain.ErrUnavailable
+	}
+	if tx.Commit(ctx) != nil {
+		return domain.Device{}, domain.ErrUnavailable
+	}
+	return d, nil
+}
+
 func (s *Devices) Deactivate(ctx context.Context, actor, id string) (domain.Device, error) {
 	tx, actorID, err := s.begin(ctx, actor)
 	if err != nil {

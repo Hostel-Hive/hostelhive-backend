@@ -6,8 +6,10 @@ import (
 	"errors"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/announcement/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/announcement/dto"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/postgres"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"strings"
 	"time"
 )
 
@@ -98,13 +100,14 @@ func (s *Store) Publish(ctx context.Context, uid string, in dto.Publish) (domain
 		return domain.Publication{}, e
 	}
 	if in.Audience == "faculty" {
-		var known bool
-		if e = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM hostelhive.students WHERE deleted_at IS NULL AND lower(btrim(faculty))=$1)`, in.Faculty).Scan(&known); e != nil {
-			return domain.Publication{}, domain.ErrUnavailable
-		}
-		if !known {
+		name, err := postgres.ActiveFaculty(ctx, tx, in.Faculty)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Publication{}, domain.ErrInvalid
 		}
+		if err != nil {
+			return domain.Publication{}, domain.ErrUnavailable
+		}
+		in.Faculty = strings.ToLower(name)
 	}
 	v, e := scan(tx.QueryRow(ctx, `INSERT INTO hostelhive.announcements(request_id,published_by,title,content,audience,faculty) VALUES($1,$2,$3,$4,$5,NULLIF($6,'')) RETURNING to_jsonb(announcements)`, in.RequestID, id, in.Title, in.Content, in.Audience, in.Faculty))
 	if e != nil {
@@ -120,7 +123,9 @@ func (s *Store) Publish(ctx context.Context, uid string, in dto.Publish) (domain
 // Student profile was locked by begin, including against a concurrent transfer.
 const audienceScope = `($2::text IN ('admin','warden') OR a.audience='all_students'
  OR (a.audience='faculty' AND EXISTS(SELECT 1 FROM hostelhive.students member
- WHERE member.user_id=$1 AND member.deleted_at IS NULL AND lower(btrim(member.faculty))=a.faculty)))`
+ WHERE member.user_id=$1 AND member.deleted_at IS NULL AND (lower(btrim(member.faculty))=a.faculty
+ OR EXISTS(SELECT 1 FROM hostelhive.faculty_names current_name JOIN hostelhive.faculty_names old_name USING(faculty_id)
+ WHERE current_name.name_key=lower(btrim(member.faculty)) AND old_name.name_key=a.faculty)))))`
 
 func (s *Store) Get(ctx context.Context, uid, aid string) (domain.Announcement, error) {
 	tx, id, role, e := s.begin(ctx, uid)

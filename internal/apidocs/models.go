@@ -9,6 +9,8 @@ import (
 	attendancedto "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/dto"
 	complaint "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/domain"
 	complaintdto "github.com/Hostel-Hive/hostelhive-backend/internal/modules/complaint/dto"
+	faculty "github.com/Hostel-Hive/hostelhive-backend/internal/modules/faculty/domain"
+	facultydto "github.com/Hostel-Hive/hostelhive-backend/internal/modules/faculty/dto"
 	identity "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/domain"
 	identitydto "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/dto"
 	identityservice "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/service"
@@ -29,6 +31,7 @@ import (
 
 func (d *document) models() {
 	for name, v := range map[string]any{
+		"Faculty": faculty.Faculty{}, "FacultyPage": faculty.Page{},
 		"OwnStudentImageResult":    studentdomain.OwnImageResult{},
 		"StudentRestorationResult": studentdomain.RestorationResult{},
 		"StudentCheckoutResult":    studentdomain.CheckoutResult{},
@@ -62,6 +65,8 @@ func (d *document) models() {
 	}{})
 	for name, v := range map[string]any{
 		"StudentCheckoutInput": studentdto.CheckoutInput{},
+		"FacultyDetails":       facultydto.Details{},
+		"ReactivateScanner":    attendancedto.ReactivateDevice{},
 		"ProvisionAccount":     identitydto.Input{}, "ChangeRole": identitydto.RoleInput{}, "RegisterStudent": identitydto.StudentInvitationInput{}, "ResendInvitation": identitydto.InvitationResend{},
 		"CreateStudent": studentdto.CreateInput{}, "StudentDetails": studentdto.Details{}, "PatchOwnStudentProfile": studentdto.OwnProfilePatch{}, "StaffDetails": staffdto.Details{}, "SelfStaffDetails": staffdto.SelfDetails{},
 		"BlockDetails": inventorydto.BlockDetails{}, "CreateRoom": inventorydto.CreateRoom{}, "RoomDetails": inventorydto.RoomDetails{}, "CreateBed": inventorydto.CreateBed{}, "BedDetails": inventorydto.BedDetails{},
@@ -72,6 +77,8 @@ func (d *document) models() {
 		d.input(name, v)
 	}
 	d.optional("StudentCheckoutInput", "notes")
+	d.constrain("FacultyDetails", "name", object{"minLength": 1, "maxLength": 120, "example": "Science", "description": "Trimmed display name without control characters. Current and historical names are unique ignoring case."})
+	d.constrain("ReactivateScanner", "confirmed", object{"enum": []bool{true}, "example": true})
 	d.constrain("StudentCheckoutInput", "reason", object{"enum": []string{"graduated", "withdrawn", "moved_out", "accommodation_cancelled", "other"}, "example": "graduated"})
 	d.constrain("StudentCheckoutInput", "notes", object{"maxLength": 1000, "description": "Optional trimmed text without control characters."})
 	d.constrain("StudentCheckoutInput", "deactivate_account", object{"nullable": false, "description": "Required explicit boolean. True immediately denies local access and queues Firebase disable/session revocation. False preserves current account access; it never reactivates an inactive account."})

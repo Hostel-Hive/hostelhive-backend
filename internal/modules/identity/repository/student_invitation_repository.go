@@ -8,6 +8,7 @@ import (
 
 	d "github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/domain"
 	"github.com/Hostel-Hive/hostelhive-backend/internal/modules/identity/dto"
+	"github.com/Hostel-Hive/hostelhive-backend/internal/platform/postgres"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -104,6 +105,13 @@ func (s *InvitationStore) RegisterInvitation(ctx context.Context, actor, ip stri
 	}
 	if reserved {
 		return d.StudentInvitation{}, false, d.ErrInvitationConflict
+	}
+	v.Faculty, e = postgres.ActiveFaculty(ctx, tx, v.Faculty)
+	if errors.Is(e, pgx.ErrNoRows) {
+		return d.StudentInvitation{}, false, d.ErrInvitationInvalid
+	}
+	if e != nil {
+		return d.StudentInvitation{}, false, d.ErrInvitationUnavailable
 	}
 	var user, student, id string
 	e = tx.QueryRow(ctx, "INSERT INTO hostelhive.users(firebase_uid,email,role,is_active) VALUES($1,$2,'student',true) RETURNING user_id::text", "hhi_"+uuid.NewString(), v.Email).Scan(&user)

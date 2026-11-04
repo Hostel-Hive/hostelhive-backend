@@ -2,11 +2,15 @@ package dto
 
 import "github.com/Hostel-Hive/hostelhive-backend/internal/modules/attendance/domain"
 
+type ReactivateDevice struct {
+	Confirmed bool `json:"confirmed"`
+}
+
 type RegisterDevice struct {
 	Name string `json:"name"`
 }
 
-// IssuedCredential is returned only on registration or rotation. Persistence
+// IssuedCredential is returned only on registration, rotation or reactivation. Persistence
 // never stores Credential, and ordinary device listings cannot return it.
 type IssuedCredential struct {
 	Device     domain.Device `json:"device"`

@@ -73,6 +73,22 @@ func (s *Devices) Rotate(ctx context.Context, actor, id string) (dto.IssuedCrede
 	return dto.IssuedCredential{Device: device, Credential: credential}, nil
 }
 
+func (s *Devices) Reactivate(ctx context.Context, actor, id string, in dto.ReactivateDevice) (dto.IssuedCredential, error) {
+	if strings.TrimSpace(actor) == "" || !validation.UUID(id) || !in.Confirmed {
+		return dto.IssuedCredential{}, domain.ErrInvalid
+	}
+	id = strings.ToLower(id)
+	credential, hash, err := newCredential(id)
+	if err != nil {
+		return dto.IssuedCredential{}, err
+	}
+	device, err := s.repo.Reactivate(ctx, actor, id, hash)
+	if err != nil {
+		return dto.IssuedCredential{}, err
+	}
+	return dto.IssuedCredential{Device: device, Credential: credential}, nil
+}
+
 func (s *Devices) Deactivate(ctx context.Context, actor, id string) (domain.Device, error) {
 	if strings.TrimSpace(actor) == "" || !validation.UUID(id) {
 		return domain.Device{}, domain.ErrInvalid
